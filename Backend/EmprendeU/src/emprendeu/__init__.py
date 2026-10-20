@@ -1,2 +1,4 @@
-def main() -> None:
-    print("Hello from emprendeu!")
+"""Backend de EmprendeU.
+
+La aplicacion ASGI se construye en `emprendeu.main.create_app()`.
+"""
