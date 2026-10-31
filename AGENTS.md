@@ -33,19 +33,30 @@ EmprendeU/
 
 ## 3. Estado real del código (verificado el 2026-10-20)
 
-El backend ya tiene su capa de persistencia. La web y el móvil siguen en el
-scaffolding de su generador.
+El backend está completo. La web tiene el panel de administración conectado de punta
+a punta; el móvil tiene autenticación, Inicio y Camino conectados (faltan Coach IA,
+Mentorías y el Perfil completo).
 
 - **Backend**: todas las dependencias (ejecución y `dev`) están instaladas y
   bloqueadas en `uv.lock`. Existe la app ASGI (`emprendeu.main:create_app`), la
-  configuración por entorno, el engine async, y los **modelos SQLAlchemy de las 38
-  tablas del schema `cieu`** repartidos en 11 módulos, con la migración base de
-  Alembic aplicable desde cero. Verificado: el esquema que produce Alembic es
-  idéntico al de `Backend/EmprendeU/database/EmprendeU_postgresql.sql`.
-  **Falta todo lo HTTP**: ningún módulo expone router, servicio ni repositorio aún.
-- **Web**: `app/layout.tsx`, `app/page.tsx` (plantilla de `create-next-app`),
-  `components/ui/button.tsx` y `lib/utils.ts` (reexporta `cn`). Nada más.
-- **Móvil**: `lib/main.dart` es el contador por defecto de Flutter. Sin paquetes de dominio.
+  configuración por entorno, el engine async, y los **modelos SQLAlchemy de las 41
+  tablas del schema `cieu`** (las 38 del modelo original + `perfil_mentor`,
+  `disponibilidad_mentor` y `parametros_seguimiento`) repartidos en 11 módulos. El
+  esquema parte de `Backend/EmprendeU/database/EmprendeU_postgresql.sql` y desde
+  entonces evoluciona solo con migraciones de Alembic (ver `AGENTS.md` del backend).
+  **Backend completo** (fases 0 a 9): los 11 módulos exponen HTTP bajo `/api/v1`, con
+  auditoría, 52 tests contra PostgreSQL real, Docker y CI. Detalle en
+  `Backend/EmprendeU/AGENTS.md` §4 y `ROADMAP.md`.
+- **Web**: tokens de marca, fuentes, auth conectada (cookie `httpOnly`, `proxy.ts`) y el
+  **panel de administración completo** (Resumen, Usuarios, Roles y permisos, Parámetros,
+  Catálogos y XP, Auditoría) conectado al backend, con permisos por rol. Faltan las
+  pantallas de `mentoring`, `entrepreneurs`/`ventures` (listado de emprendimientos) y el coach.
+- **Móvil**: tema, router con barra inferior, `core/` (red, errores, almacenamiento, conectividad) y
+  las features `auth`, `ventures`, `gamification` (Camino), `mentoring` (compromisos y avances con cola
+  sin conexión) y `home` (Inicio), todas **conectadas al backend**. Faltan Coach IA, Mentorías (agendar)
+  y el Perfil completo. Tiene tests de integración opt-in contra el backend real.
+- **Diseño visual**: `Frontend/emprendeu/design.md` (panel de administración) y
+  `Frontend/app_emprendeu/design.md` (app del emprendedor), basados en el mockup del CIE-U.
 
 > Por eso la arquitectura de este documento es **prescriptiva, no descriptiva**: describe
 > cómo *debe* quedar el código, y es lo que hay que construir. Al implementar una parte,
@@ -116,27 +127,31 @@ aunque funcione.
 # Backend  (cwd: Backend/EmprendeU)
 uv sync --locked                          # instala ejecución + dev
 cp .env.example .env                      # y ajustar DATABASE_URL
-uv run alembic upgrade head               # crea el schema cieu y las 38 tablas
+uv run alembic upgrade head               # crea el schema cieu y todas las tablas
 uv run uvicorn emprendeu.main:app --reload --port 8000
-uv run pytest                             # tests (cuando existan)
-uv run ruff check src/ && uv run ruff format --check src/
+uv run pytest                             # 52 tests (necesita PostgreSQL)
+uv run ruff check . && uv run ruff format --check .
+uv run python -m emprendeu.modules.users.cli create-admin --email ... --nombre "..."
 
 # Web  (cwd: Frontend/emprendeu)
 pnpm install
+cp .env.example .env.local          # API_URL del backend
 pnpm dev
 pnpm build
 pnpm lint
 
 # Móvil  (cwd: Frontend/app_emprendeu)
 flutter pub get
-flutter run
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+dart run build_runner build          # tras tocar DTO freezed/json
 flutter analyze
 flutter test
 ```
 
 > El backend necesita un PostgreSQL 15+ accesible en `DATABASE_URL`; el
 > `README.md` del backend trae el comando de Docker para levantar uno de
-> desarrollo. Los paquetes del móvil siguen pendientes (ver su `AGENTS.md`).
+> desarrollo. Los paquetes del móvil ya están instalados (`flutter pub get`).
+> Para correr los tests del backend hace falta PostgreSQL arriba y `JWT_SECRET` en `.env`.
 
 ## 7. Checklist antes de dar por terminado un cambio
 

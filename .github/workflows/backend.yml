@@ -1,0 +1,46 @@
+name: backend
+
+on:
+  push:
+    paths: ["Backend/EmprendeU/**", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["Backend/EmprendeU/**", ".github/workflows/backend.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Backend/EmprendeU
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: emprendeu
+          POSTGRES_PASSWORD: emprendeu
+          POSTGRES_DB: emprendeu
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U emprendeu"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://emprendeu:emprendeu@localhost:5432/emprendeu
+      JWT_SECRET: ci-secret-solo-para-pruebas-0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - name: Esquema al dia con los modelos
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
+      - run: uv run pytest -q
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t emprendeu-api Backend/EmprendeU

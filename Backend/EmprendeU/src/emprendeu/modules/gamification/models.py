@@ -106,6 +106,8 @@ class Reto(Base):
         BigInteger,
         ForeignKey("etapas.etapasid", ondelete="RESTRICT", name="fk_retos_etapasid"),
     )
+    # Orden global del camino (fase 4). Define el desbloqueo secuencial.
+    orden: Mapped[int | None] = mapped_column(Integer)
 
     emprendimientos: Mapped[list[EmprendimientoReto]] = relationship(
         back_populates="reto"

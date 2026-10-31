@@ -6,6 +6,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Identity,
@@ -22,11 +23,16 @@ from emprendeu.db.base import Base
 
 class Usuario(Base):
     __tablename__ = "usuario"
-    __table_args__ = (UniqueConstraint("email", name="uq_usuario_email"),)
+    __table_args__ = (
+        UniqueConstraint("email", name="uq_usuario_email"),
+        CheckConstraint(
+            "estado IN ('habilitada', 'deshabilitada')", name="ck_usuario_estado"
+        ),
+    )
 
     apellido: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(254))
-    estado: Mapped[str | None] = mapped_column(String(40))
+    estado: Mapped[str | None] = mapped_column(String(40), server_default="habilitada")
     fecha_actualizacion: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
@@ -39,6 +45,8 @@ class Usuario(Base):
     usuario_id: Mapped[int] = mapped_column(
         "usuarioid", BigInteger, Identity(always=False), primary_key=True
     )
+    # Columna agregada despues del modelo original (migracion de la fase 1).
+    ultimo_acceso: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     roles: Mapped[list[RolUsuario]] = relationship(back_populates="usuario")
 

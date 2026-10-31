@@ -3,7 +3,7 @@ seguimientos, recomendaciones y asignaciones de acompanantes."""
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, time
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -13,9 +13,11 @@ from sqlalchemy import (
     ForeignKey,
     Identity,
     Index,
+    Integer,
     Numeric,
     String,
     Text,
+    Time,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -175,6 +177,11 @@ class Seguimiento(Base):
         ),
         Index("ix_seguimientos_emprendimientoid", "emprendimientoid"),
         Index("ix_seguimientos_usuarioid", "usuarioid"),
+        UniqueConstraint(
+            "usuarioid",
+            "referencia_cliente",
+            name="uq_seguimientos_usuarioid_referencia_cliente",
+        ),
     )
 
     estado: Mapped[str | None] = mapped_column(String(40))
@@ -200,6 +207,8 @@ class Seguimiento(Base):
             "usuario.usuarioid", ondelete="RESTRICT", name="fk_seguimientos_usuarioid"
         ),
     )
+    # Id generado por el cliente movil al registrar sin conexion (idempotencia).
+    referencia_cliente: Mapped[str | None] = mapped_column(String(64))
 
 
 class Recomendacion(Base):
@@ -284,5 +293,70 @@ class Asignacion(Base):
             "emprendimiento.emprendimientoid",
             ondelete="RESTRICT",
             name="fk_asignaciones_emprendimientoid",
+        ),
+    )
+
+
+class PerfilMentor(Base):
+    """Datos de mentoria de un usuario con rol asesor (fase 5)."""
+
+    __tablename__ = "perfil_mentor"
+    __table_args__ = (UniqueConstraint("usuarioid", name="uq_perfil_mentor_usuarioid"),)
+
+    especialidad: Mapped[str | None] = mapped_column(String(160))
+    perfil_mentor_id: Mapped[int] = mapped_column(
+        "perfil_mentorid", BigInteger, Identity(always=False), primary_key=True
+    )
+    usuario_id: Mapped[int] = mapped_column(
+        "usuarioid",
+        BigInteger,
+        ForeignKey(
+            "usuario.usuarioid", ondelete="RESTRICT", name="fk_perfil_mentor_usuarioid"
+        ),
+    )
+    # Reto que el emprendimiento debe haber cumplido para agendar con este mentor.
+    reto_requerido_id: Mapped[int | None] = mapped_column(
+        "reto_requeridoid",
+        BigInteger,
+        ForeignKey(
+            "retos.retosid",
+            ondelete="RESTRICT",
+            name="fk_perfil_mentor_reto_requeridoid",
+        ),
+    )
+
+
+class DisponibilidadMentor(Base):
+    """Horario semanal recurrente de un mentor (un registro por inicio de turno)."""
+
+    __tablename__ = "disponibilidad_mentor"
+    __table_args__ = (
+        CheckConstraint("dia_semana BETWEEN 0 AND 6", name="ck_disponibilidad_dia"),
+        CheckConstraint("duracion_min > 0", name="ck_disponibilidad_duracion"),
+        UniqueConstraint(
+            "usuarioid",
+            "dia_semana",
+            "hora_inicio",
+            name="uq_disponibilidad_mentor_usuarioid_dia_hora",
+        ),
+        Index("ix_disponibilidad_mentor_usuarioid", "usuarioid"),
+    )
+
+    dia_semana: Mapped[int] = mapped_column(Integer)  # 0 = lunes
+    duracion_min: Mapped[int] = mapped_column(Integer, default=60)
+    hora_inicio: Mapped[time] = mapped_column(Time)
+    disponibilidad_mentor_id: Mapped[int] = mapped_column(
+        "disponibilidad_mentorid",
+        BigInteger,
+        Identity(always=False),
+        primary_key=True,
+    )
+    usuario_id: Mapped[int] = mapped_column(
+        "usuarioid",
+        BigInteger,
+        ForeignKey(
+            "usuario.usuarioid",
+            ondelete="RESTRICT",
+            name="fk_disponibilidad_mentor_usuarioid",
         ),
     )

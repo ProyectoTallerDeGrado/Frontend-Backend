@@ -32,12 +32,57 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 | Utilidad `cn` | paquete `cn`, reexportado en `lib/utils.ts` | |
 | Gestor | **pnpm** 12.9.1 | usa `pnpm`, nunca `npm`/`yarn` |
 
-Sin librería de datos ni de formularios todavía. Cuando hagan falta:
-`zod` (validación) y, si el estado de servidor lo justifica,
-`@tanstack/react-query` **solo** para datos consumidos desde componentes cliente.
+`zod` (validación de `features/auth`) y `server-only` ya están instalados. Sin librería de datos ni de formularios todavía.
+Si el estado de servidor lo justifica, `@tanstack/react-query` **solo** para datos
+consumidos desde componentes cliente.
 
-> Estado real hoy: solo la plantilla de `create-next-app`
-> (`app/layout.tsx`, `app/page.tsx`, `components/ui/button.tsx`, `lib/utils.ts`).
+> **Diseño visual:** tokens, pantallas y componentes del panel de administración
+> están en [`design.md`](design.md). Léelo antes de escribir cualquier UI.
+
+> Estado real hoy: **panel de administración completo y conectado al backend**:
+> Resumen (`/`), Usuarios (`/users`), Roles y permisos (`/roles`), Parámetros
+> (`/settings/tracking`), Catálogos y XP (`/catalogs`) y Auditoría (`/audit`, con
+> exportación CSV), más login/registro. Seis features (`auth`, `users`, `audit`,
+> `alerts`, `gamification`, `ventures`, `indicators`), el shell en `components/layout/`
+> y los componentes shadcn `button, input, label, switch, checkbox, slider, sheet, badge`.
+
+### Cómo está armado el panel
+
+- **Datos en el servidor.** Cada página (Server Component) lee con `features/<f>/server/queries.ts`
+  vía `authedFetch` (cookie → Bearer) y valida la respuesta con zod. Las mutaciones son
+  **server actions** (`server/actions.ts`) que llaman al backend y hacen `revalidatePath`.
+- **Filtros y paginación en la URL** (`?q=&rol=&page=`, `?categoria=`, `?tab=`): la página se
+  renderiza en el servidor y los enlaces son navegables. Solo la búsqueda de usuarios es un
+  componente cliente (debounce de 350 ms que actualiza la URL).
+- **Permisos.** El menú y cada página usan los permisos del usuario (`hasPermission`): sin
+  permiso se muestra `NoAccess`, y los controles de edición se desactivan. El backend sigue
+  siendo la autoridad (devuelve 403).
+- **Composición entre features** solo por barrel: `catalogs/page.tsx` junta `ventures`
+  (etapas) y `gamification` (retos, insignias); `(app)/page.tsx` junta `indicators` y `audit`.
+- **Avisos** con un store de zustand (`components/layout/toast-store.ts`) y `<Toaster />`.
+- **Interruptor del diseño:** `components/ui/toggle-switch.tsx` (44×26, área de clic de 44 px).
+- **Fechas** en hora de Bolivia (`lib/format.ts`: «Hoy, 08:12», «Hace 3 días»).
+- Cambiar el rol de un usuario existente (`PATCH /users/{id}/rol`) está en la tabla de
+  usuarios: es lo que permite que una cuenta registrada desde la web llegue a usar el panel.
+
+### Autenticación (cómo funciona hoy)
+
+- **Sesión = cookie `emprendeu_session`** (`httpOnly`, `sameSite=lax`, `secure` en
+  producción) con el JWT del backend. El navegador nunca ve el token ni llama al
+  backend: todo pasa por **server actions** (`features/auth/server/actions.ts`) y
+  Server Components, vía `lib/api-client.ts` (`server-only`).
+- **Variable de entorno:** `API_URL` (por defecto `http://localhost:8000/api/v1`).
+  Plantilla en `.env.example`; local en `.env.local`. No hace falta CORS.
+- **Dos barreras:** `proxy.ts` (sin cookie → `/login`) y `requireSession()` en el layout
+  de `(app)`, que valida el token con `GET /auth/me`. `/login` y `/register` redirigen a
+  `/` si ya hay sesión.
+- **El panel es solo para personal.** Una cuenta con rol `emprendedor` se rechaza en el
+  login («usa la app móvil»). El registro público siempre crea un **emprendedor**, así
+  que la cuenta nueva no entra al panel hasta que un administrador le cambie el rol
+  (`PATCH /users/{id}/rol`).
+- Los formularios usan `useActionState`; los errores del contrato (`error.code`) se
+  traducen a mensajes en `actions.ts`. Las respuestas del backend se validan con zod
+  (`features/auth/schemas/api-schemas.ts`).
 
 ## 2. Qué significa "feature-based" aquí
 
@@ -68,15 +113,15 @@ features/
 components/
 ├── ui/                       # primitivas shadcn — generadas, sin lógica de negocio
 └── layout/                   # header, sidebar, shells compartidos
-lib/                          # api-client, env, constants, utils (sin negocio)
+lib/                          # api-client ✅, env ✅, constants, utils (sin negocio)
 hooks/                        # hooks genéricos reutilizables
-proxy.ts                      # (Next 16) antiguo middleware, si hace falta
+proxy.ts                   ✅ # (Next 16) antiguo middleware: protege rutas privadas
 ```
 
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
-`auth`, `users`, `projects`, `mentoring`, `events` — los mismos nombres que los
-módulos del backend (regla global §4.6). Registra aquí cada feature nueva.
+`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅ (todas conectadas al backend); pendientes `entrepreneurs`, `mentoring`, `ai_assistant`, `training`, `documents` — los
+mismos nombres que los módulos del backend (regla global §4.6). Registra aquí cada feature nueva.
 
 ## 4. Reglas de la web
 

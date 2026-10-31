@@ -66,19 +66,50 @@ Cuidado con dos cosas que cuestan tiempo si se pasan por alto:
 ```bash
 uv run ruff check src/
 uv run ruff format --check src/
-uv run pytest                 # cuando existan pruebas
+uv run pytest                 # requiere el PostgreSQL de desarrollo (usa <db>_test)
 ```
 
 ## Estado actual
 
-Hecho: configuración por entorno, engine y sesión async, handlers del formato de
-error global, app ASGI con `/health`, y los modelos de las 38 tablas del schema
-`cieu` en 11 módulos con su migración base.
+Backend **completo**: 11 módulos con su HTTP, auditoría transversal, 52 tests contra
+PostgreSQL real, Dockerfile, `docker-compose.yml` y CI (`.github/workflows/backend.yml`).
+El detalle de endpoints está en [AGENTS.md](AGENTS.md) §4 y en `/docs` (solo fuera de producción).
 
-Pendiente: todo el HTTP de negocio (`router.py`, `service.py`, `repository.py`,
-`schemas.py` por módulo), autenticación (`PyJWT` y `pwdlib` están instalados pero
-sin usar), logging con structlog, paginación y las pruebas.
+### Primer arranque
 
-Referencias: [dependencias con uv](https://docs.astral.sh/uv/concepts/projects/dependencies/),
-[SQLAlchemy con Psycopg](https://docs.sqlalchemy.org/en/20/dialects/postgresql.html#module-sqlalchemy.dialects.postgresql.psycopg)
-y [Alembic con async](https://alembic.sqlalchemy.org/en/latest/cookbook.html#using-asyncio-with-alembic).
+```bash
+uv run alembic upgrade head
+uv run python -m emprendeu.modules.users.cli create-admin \
+    --email admin@uagrm.edu.bo --nombre "Nombre Apellido"      # pide la contraseña
+uv run uvicorn emprendeu.main:app --reload --port 8000
+```
+
+### Con Docker
+
+```bash
+export JWT_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(48))")
+docker compose up --build              # API + PostgreSQL
+docker compose --profile ai up --build # + Ollama (luego: ollama pull nomic-embed-text llama3.2)
+```
+
+### Variables de entorno
+
+`DATABASE_URL`, `JWT_SECRET` (obligatoria), `ACCESS_TOKEN_EXPIRE_MINUTES`, `CORS_ORIGINS`,
+`ENVIRONMENT`, `LOGIN_MAX_ATTEMPTS`, `LOGIN_WINDOW_SECONDS`, `APP_TIMEZONE`,
+`BOOKING_MIN_STAGE_ORDER`, `OLLAMA_BASE_URL`, `OLLAMA_EMBED_MODEL`, `OLLAMA_CHAT_MODEL`,
+`UPLOAD_DIR`, `MAX_UPLOAD_MB`. Plantilla en `.env.example`.
+
+### Tarea programada
+
+Alertas de riesgo: `uv run python -m emprendeu.modules.alerts.jobs` (una vez al día).
+
+### Clientes
+
+- **Web** (`Frontend/emprendeu`): llama al API desde el servidor de Next (`API_URL`), así que
+  no necesita CORS. El panel solo admite roles distintos de `emprendedor`.
+- **Móvil** (`Frontend/app_emprendeu`): `--dart-define=API_BASE_URL=...` (emulador Android:
+  `http://10.0.2.2:8000/api/v1`). Solo admite el rol `emprendedor`.
+- `POST /auth/register` siempre crea un **emprendedor**; los demás roles los asigna un
+  administrador (`POST /users`, `PATCH /users/{id}/rol`).
+
+Lo pendiente está en [`ROADMAP.md`](ROADMAP.md).

@@ -6,10 +6,13 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Identity,
     Index,
+    Integer,
     String,
     Text,
     func,
@@ -70,3 +73,42 @@ class Alerta(Base):
     )
 
     tipo_alerta: Mapped[TipoAlerta] = relationship(back_populates="alertas")
+
+
+class ParametroSeguimiento(Base):
+    """Configuracion unica de deteccion de inactividad y riesgo (fila id = 1)."""
+
+    __tablename__ = "parametros_seguimiento"
+    __table_args__ = (
+        CheckConstraint(
+            "inactividad_dias BETWEEN 1 AND 365", name="ck_param_inactividad"
+        ),
+        CheckConstraint(
+            "caida_sentimiento_pct BETWEEN 1 AND 100", name="ck_param_caida"
+        ),
+        CheckConstraint(
+            "periodos_consecutivos BETWEEN 1 AND 12", name="ck_param_periodos"
+        ),
+    )
+
+    alertar_incumplimiento: Mapped[bool] = mapped_column(Boolean, default=False)
+    caida_sentimiento_pct: Mapped[int] = mapped_column(Integer, default=25)
+    fecha_actualizacion: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    inactividad_dias: Mapped[int] = mapped_column(Integer, default=14)
+    notificar_asesor: Mapped[bool] = mapped_column(Boolean, default=True)
+    notificar_coordinador: Mapped[bool] = mapped_column(Boolean, default=True)
+    periodos_consecutivos: Mapped[int] = mapped_column(Integer, default=2)
+    parametro_seguimiento_id: Mapped[int] = mapped_column(
+        "parametros_seguimientoid", BigInteger, primary_key=True
+    )
+    usuario_id: Mapped[int | None] = mapped_column(
+        "usuarioid",
+        BigInteger,
+        ForeignKey(
+            "usuario.usuarioid",
+            ondelete="RESTRICT",
+            name="fk_parametros_seguimiento_usuarioid",
+        ),
+    )

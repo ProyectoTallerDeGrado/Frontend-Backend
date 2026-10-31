@@ -51,9 +51,12 @@ Referencias: [dependencias con uv](https://docs.astral.sh/uv/concepts/projects/d
 [instalación de Psycopg](https://www.psycopg.org/psycopg3/docs/basic/install.html#binary-installation)
 y [dialecto Psycopg de SQLAlchemy](https://docs.sqlalchemy.org/en/20/dialects/postgresql.html#module-sqlalchemy.dialects.postgresql.psycopg).
 
-> Estado real hoy: existe la app ASGI, la configuración, el engine async y los
-> modelos de las 38 tablas. **No hay nada de HTTP de negocio**: ningún módulo tiene
-> `router.py`, `service.py` ni `repository.py`. Ese es el siguiente paso (§4).
+> Estado real hoy: **backend completo** (fases 0 a 9 de [`ROADMAP.md`](ROADMAP.md)).
+> Los 11 módulos tienen persistencia, servicio, repositorio, esquemas y router; hay
+> infraestructura transversal (`security`, `pagination`, `logging`, `ratelimit`,
+> errores 401/403/429/413/500), 52 tests contra PostgreSQL real, Dockerfile,
+> `docker-compose.yml` y CI. Lo único externo que falta para operar es Ollama
+> (opcional: sin él el coach responde 503 y el resto funciona).
 
 ## 2. Qué significa "modular" aquí
 
@@ -77,9 +80,10 @@ src/emprendeu/
 ├── core/                       infraestructura transversal, SIN reglas de negocio
 │   ├── config.py            ✅ Settings (pydantic-settings), leidos de entorno
 │   ├── errors.py            ✅ DomainError + handlers del formato de error global
-│   ├── security.py             hashing (pwdlib) y JWT (PyJWT)
-│   ├── pagination.py           Page[T] y parametros de paginacion
-│   └── logging.py              structlog
+│   ├── security.py          ✅ hashing (pwdlib/argon2) y JWT (PyJWT, HS256)
+│   ├── ratelimit.py         ✅ limitador de intentos (login) en memoria
+│   ├── pagination.py        ✅ Page[T] y PageParams (?page=&page_size=)
+│   └── logging.py           ✅ structlog + middleware X-Request-ID
 ├── db/
 │   ├── base.py              ✅ Base declarativa con MetaData(schema="cieu")
 │   ├── session.py           ✅ engine async + dependencia get_session
@@ -87,27 +91,28 @@ src/emprendeu/
 │   └── migrations/          ✅ Alembic (plantilla async)
 │       ├── env.py           ✅ URL desde Settings, include_schemas, CREATE SCHEMA
 │       ├── script.py.mako   ✅ plantilla ajustada para pasar ruff
-│       └── versions/        ✅ migracion base con las 38 tablas
+│       └── versions/        ✅ baseline + usuario (ultimo_acceso, CHECK) + semilla de roles/permisos
 ├── modules/                 ← TODO el negocio, uno por dominio
 │   └── <module>/
 │       ├── __init__.py      ✅ API PUBLICA del modulo
 │       ├── models.py        ✅ modelos de persistencia (SQLAlchemy)
-│       ├── router.py           APIRouter: HTTP puro (status, params, respuestas)
-│       ├── schemas.py          modelos Pydantic de entrada/salida
-│       ├── repository.py       acceso a datos: unico sitio con queries
-│       ├── service.py          reglas de negocio y orquestacion
-│       ├── dependencies.py     dependencias FastAPI propias del modulo
-│       ├── exceptions.py       errores de dominio del modulo
-│       └── tests/
+│       ├── router.py           APIRouter: HTTP puro (status, params, respuestas)     [users ✅]
+│       ├── schemas.py          modelos Pydantic de entrada/salida                      [users ✅]
+│       ├── repository.py       acceso a datos: unico sitio con queries                 [users ✅]
+│       ├── service.py          reglas de negocio y orquestacion                        [users ✅]
+│       ├── dependencies.py     dependencias FastAPI propias del modulo                 [users ✅]
+│       ├── exceptions.py       errores de dominio del modulo                           [users ✅]
+│       ├── permissions.py      (solo users) catalogo de permisos `modulo:accion`       [users ✅]
+│       └── tests/                                                                      [users ✅]
 ├── shared/                     utilidades reutilizables sin negocio
 └── api/
     └── v1.py                ✅ APIRouter raiz /api/v1: agrega los routers
-tests/                          tests de integracion end-to-end de la API
+tests/                       ✅ tests de integracion end-to-end de la API (+ conftest.py raiz con la BD de pruebas)
 ```
 
 ## 3b. Los 11 modulos y sus tablas
 
-Las 38 tablas del schema `cieu` estan repartidas asi. Nombres de modulo en
+Las 38 tablas originales del schema `cieu` (y 3 nuevas, marcadas con `*`) estan repartidas asi. Nombres de modulo en
 ingles; nombres de tabla y columna en espanol, porque los fija la base.
 
 | Modulo | Tablas |
@@ -115,12 +120,12 @@ ingles; nombres de tabla y columna en espanol, porque los fija la base.
 | `users` | `usuario`, `rol`, `permiso`, `rol_permiso`, `rol_usuario` |
 | `entrepreneurs` | `emprendedor`, `emprendimiento_emprendedores` |
 | `ventures` | `emprendimiento`, `etapas`, `emprendimiento_etapas`, `hito`, `necesidades`, `emprendimiento_necesidades` |
-| `mentoring` | `tipo`, `sesiones_acompanamiento`, `sesion_participantes`, `compromisos`, `seguimientos`, `recomendaciones`, `asignaciones` |
+| `mentoring` | `tipo`, `sesiones_acompanamiento`, `sesion_participantes`, `compromisos`, `seguimientos`, `recomendaciones`, `asignaciones`, `perfil_mentor`*, `disponibilidad_mentor`* |
 | `training` | `capacitaciones`, `capacitacion_participantes` |
 | `gamification` | `insignias`, `emprendedor_insignias`, `retos`, `emprendimiento_retos`, `movimientos_xp` |
 | `ai_assistant` | `conversaciones_ia`, `mensajes_ia`, `analisis_sentimiento`, `documentos_conocimiento`, `fragmentos_documento` |
 | `indicators` | `tipos_indicadores`, `valores_indicadores` |
-| `alerts` | `tipos`, `alertas` |
+| `alerts` | `tipos`, `alertas`, `parametros_seguimiento`* |
 | `documents` | `documentos` |
 | `audit` | `bitacora` |
 
@@ -163,16 +168,95 @@ que el esquema generado coincida con el de referencia:
 - **`relationship()` solo dentro del mismo modulo.** Navegar entre modulos es tarea
   de la capa de servicio.
 
-## 4. Orden de construccion (siguiente paso)
+## 4. Estado de los módulos y endpoints
 
-La capa de datos esta lista. Falta el HTTP:
+Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`).
 
-1. `core/security.py` (hash con `pwdlib`, JWT con `PyJWT`) y `core/pagination.py`.
-2. Primer modulo completo de punta a punta, probablemente `users` o `auth`:
-   `repository.py` → `service.py` → `schemas.py` → `router.py`, registrado en
-   `api/v1.py`. Sirve de plantilla para los demas.
-3. `core/logging.py` con structlog.
-4. Tests: `modules/<m>/tests/` para servicio y repositorio, `tests/` para la API.
+| Módulo | Endpoints principales |
+|---|---|
+| `users` ✅ | `POST /auth/login`, `/auth/register`, `/auth/change-password`, `GET /auth/me`; `GET/POST /users`, `PATCH /users/{id}/estado`, `/users/{id}/rol`; `GET /roles`, `GET/PUT /roles/{id}/permissions` |
+| `audit` ✅ | `GET /audit`, `GET /audit/export` (CSV); `AuditService.record(...)` para el resto de módulos |
+| `entrepreneurs` ✅ | `GET /entrepreneurs`, `/entrepreneurs/me` (GET/PATCH), `/entrepreneurs/{id}` |
+| `ventures` ✅ | `/stages`, `/ventures` (CRUD, `/me`, `PUT /{id}/stage`, historial), hitos (`/milestones`), necesidades (`/needs`) |
+| `gamification` ✅ | `/challenges`, `/badges` (catálogo), `GET /journey`, `POST /journey/challenges/{id}/complete`, `GET /gamification/me` |
+| `mentoring` ✅ | `/mentoring/mentors` (+ perfil, disponibilidad, `slots`), `booking-status`, `sessions` (agendar, `me`, completar, cancelar), `commitments`, `recommendations`, `progress`, `POST /mentoring/sync`, `assignments` |
+| `alerts` ✅ | `GET/PUT /alerts/settings`, `GET /alerts`, `PATCH /alerts/{id}`, `POST /alerts/evaluate`; tarea `alerts/jobs.py` |
+| `indicators` ✅ | `GET /indicators/overview` (resumen del panel), tipos y valores por emprendimiento |
+| `ai_assistant` ✅ | `POST /ai/chat`, conversaciones, `/ai/knowledge` (RAG), `/ai/status`, `/ai/sentiment/{id}` |
+| `training` ✅ | `/training` (CRUD, `me`, inscripción, participantes, asistencia) |
+| `documents` ✅ | `POST /documents` (multipart), listado, `download`, `DELETE` |
+
+### Convenciones que ya están fijadas en el código
+
+- **`__init__.py` de cada módulo** exporta modelos y servicio(s); **no** importa el
+  `router` (evita ciclos con `users`). `api/v1.py` importa `modules.<m>.router`.
+- **Comunicación entre módulos solo por servicio público.** Ningún módulo importa
+  `.models`, `.repository` ni `.exceptions` de otro (comprobado con un script).
+  Cuando hace falta leer una tabla ajena de forma ligera (nombre del actor en
+  `audit`, nombre/correo en `entrepreneurs`) se usa `sqlalchemy.table(...)` y no el modelo.
+- **Orden de dependencias entre módulos:** `audit`, `entrepreneurs` → `users` →
+  `ventures` → `gamification` → `mentoring` → `ai_assistant` → `alerts` → `indicators`.
+  `training` y `documents` solo dependen de `entrepreneurs`/`audit`/`users`.
+- **Alcance por rol:** los permisos `modulo:accion` mandan, pero un **emprendedor
+  solo ve sus propios emprendimientos** aunque la matriz le dé `consulta`.
+  `CurrentUser.can_staff(permiso)` y `require_staff_permission(...)` expresan
+  «permiso del rol **y** no ser emprendedor». Las acciones sobre lo propio
+  (agendar, cumplir retos, registrar avances) solo exigen estar autenticado y ser miembro.
+- **Servicios sin `Request`.** Cada servicio recibe `AsyncSession` (y, si hace falta,
+  `LLMClient`) y hace su propio `commit`. `AuditService.record` no hace commit: lo
+  hace quien lo llama, para que el cambio y su bitácora vayan en la misma transacción.
+- **IA detrás de `LLMClient`** (`ai_assistant/llm.py`): Ollama en producción, un doble
+  (`tests/fakes.py`) en tests, inyectado con `dependency_overrides[get_llm]`.
+- **Archivos** en disco local (`documents/storage.py`, `UPLOAD_DIR`), con nombre
+  generado, lista blanca de extensiones y tope de tamaño.
+- **Producción:** `ENVIRONMENT=production` exige `JWT_SECRET` de 32+ caracteres,
+  desactiva `/docs` y `/redoc`. Errores inesperados devuelven `internal_error` sin detalles.
+- **Zona horaria de negocio** `APP_TIMEZONE` (por defecto `America/La_Paz`) solo para
+  la agenda de mentorías; todo lo demás se guarda y expone en UTC.
+
+### Datos sembrados con tildes
+
+Las semillas originales iban sin tildes; la migración `c4d6e8f0a1b3` las corrige (etapas,
+retos, insignias, tipos de sesión y descripciones de rol). Las **claves técnicas** (nombre
+de rol, de permiso y de acción de auditoría) siguen sin tildes; el texto visible
+(`audit/catalog.py`, nombres de servicios del resumen) ya lleva tildes. Los mensajes de
+error del backend aún van sin tildes: los clientes traducen los códigos que muestran.
+
+### Operación
+
+- Primer administrador: `uv run python -m emprendeu.modules.users.cli create-admin ...`.
+- Detección de alertas: `uv run python -m emprendeu.modules.alerts.jobs` (cron diario),
+  o `POST /alerts/evaluate`.
+- Limitador de login en memoria: válido para **un** proceso; con varias réplicas hay que
+  moverlo a un almacén compartido (la interfaz no cambia).
+
+### Decisiones de diseño tomadas durante la construcción
+
+- **Roles** (`rol.nombre`): `administrador`, `coordinador`, `asesor`, `emprendedor`.
+  El registro publico (`POST /auth/register`) siempre crea un `emprendedor`; el resto
+  los crea un administrador con `POST /users`.
+- **Permisos** = `modulo:accion` (7 modulos x 4 acciones: consulta, registro,
+  modificacion, administrativo), sembrados por la migracion `7a1c4f2b9d30` con la
+  matriz por defecto del diseño. Los routers los exigen con `require_permission(...)`
+  (exportado por `modules.users`).
+- **Cuenta**: `usuario.estado` ∈ {`habilitada`, `deshabilitada`} (CHECK). Un token de
+  una cuenta deshabilitada se rechaza en cada peticion (403 `account_disabled`).
+- **JWT de acceso unico** (sin refresh), vida `ACCESS_TOKEN_EXPIRE_MINUTES` (60 por
+  defecto). `JWT_SECRET` es obligatorio y sin valor por defecto.
+- El esquema **ya no coincide** con `database/EmprendeU_postgresql.sql`. Cambios
+  posteriores (todos por migración): `usuario.ultimo_acceso`, CHECK `ck_usuario_estado`
+  y default de `usuario.estado`; `retos.orden`; `seguimientos.referencia_cliente` (+ único
+  por usuario); tablas nuevas `perfil_mentor` y `disponibilidad_mentor` (mentoring) y
+  `parametros_seguimiento` (alerts, fila única id = 1); y la semilla de roles, permisos,
+  etapas, retos, insignias, tipos y parámetros por defecto.
+- `Usuario.nombre`/`apellido`: el alta recibe `nombre_completo`; la primera palabra
+  es el nombre y el resto el apellido (se exigen al menos dos palabras).
+
+### Tests
+
+`conftest.py` (raiz) crea la base `<nombre>_test`, corre `alembic upgrade head` (asi
+se prueban migraciones y semilla) y envuelve cada test en una transaccion que se
+revierte. Requiere el PostgreSQL de desarrollo levantado.
 
 ## 5. Reglas del backend
 

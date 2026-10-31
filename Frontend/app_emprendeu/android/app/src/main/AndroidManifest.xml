@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- La app consume la API del CIE-U por red. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="app_emprendeu"
         android:name="${applicationName}"
