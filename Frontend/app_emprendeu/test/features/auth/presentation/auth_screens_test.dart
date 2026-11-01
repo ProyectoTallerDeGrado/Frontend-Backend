@@ -1,0 +1,134 @@
+import 'package:app_emprendeu/core/error/failure.dart';
+import 'package:app_emprendeu/core/error/result.dart';
+import 'package:app_emprendeu/features/auth/domain/entities/auth_session.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../../../support/test_app.dart';
+import '../fake_auth_repository.dart';
+
+Future<void> _pump(WidgetTester tester, FakeAuthRepository repo) =>
+    pumpApp(tester, TestWorld(auth: repo));
+
+Future<void> _enter(WidgetTester tester, String label, String text) async {
+  final field = find.widgetWithText(TextFormField, label);
+  await tester.ensureVisible(field);
+  await tester.enterText(field, text);
+}
+
+Future<void> _tap(WidgetTester tester, String text) async {
+  await tester.ensureVisible(find.text(text));
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.tap(find.text(text));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+}
+
+void main() {
+  testWidgets('sin sesión guardada se muestra el login', (tester) async {
+    await _pump(tester, FakeAuthRepository());
+    expect(find.text('Tu emprendimiento, acompañado.'), findsOneWidget);
+  });
+
+  testWidgets('con sesión guardada se abre directo la cuenta', (tester) async {
+    await _pump(tester, FakeAuthRepository(token: 'tok-1'));
+    expect(find.text('Hola, Camila'), findsOneWidget);
+  });
+
+  testWidgets('el login valida campos vacíos sin llamar al servidor', (
+    tester,
+  ) async {
+    final repo = FakeAuthRepository();
+    await _pump(tester, repo);
+    await _tap(tester, 'Ingresar');
+    expect(find.text('Ingresa tu correo electrónico.'), findsOneWidget);
+    expect(find.text('Ingresa tu contraseña.'), findsOneWidget);
+    expect(repo.loginCalls, 0);
+  });
+
+  testWidgets('login correcto entra a la cuenta', (tester) async {
+    final repo = FakeAuthRepository();
+    await _pump(tester, repo);
+    await _enter(tester, 'tu@correo.com', 'camila@correo.com');
+    await _enter(tester, '••••••••••', 'clave-larga-1');
+    await _tap(tester, 'Ingresar');
+    expect(repo.loginCalls, 1);
+    expect(find.text('Hola, Camila'), findsOneWidget);
+    expect(repo.token, 'tok-123');
+  });
+
+  testWidgets('credenciales incorrectas muestran el error', (tester) async {
+    final repo = FakeAuthRepository(
+      loginResult: const Result.err(InvalidCredentialsFailure()),
+    );
+    await _pump(tester, repo);
+    await _enter(tester, 'tu@correo.com', 'camila@correo.com');
+    await _enter(tester, '••••••••••', 'mala');
+    await _tap(tester, 'Ingresar');
+    expect(find.text('Correo o contraseña incorrectos.'), findsOneWidget);
+    expect(find.text('Tu emprendimiento, acompañado.'), findsOneWidget);
+    expect(repo.token, isNull);
+  });
+
+  testWidgets('cuenta del panel web se rechaza', (tester) async {
+    final repo = FakeAuthRepository(
+      loginResult: const Result.ok(
+        AuthSession(accessToken: 'tok-staff', user: staffUser),
+      ),
+    );
+    await _pump(tester, repo);
+    await _enter(tester, 'tu@correo.com', 'jroca@uagrm.edu.bo');
+    await _enter(tester, '••••••••••', 'clave-larga-1');
+    await _tap(tester, 'Ingresar');
+    expect(find.textContaining('panel web'), findsOneWidget);
+    expect(repo.token, isNull);
+  });
+
+  testWidgets('del login se llega al registro y se valida', (tester) async {
+    await _pump(tester, FakeAuthRepository());
+    await _tap(tester, 'Regístrate');
+    expect(find.text('Crea tu cuenta.'), findsOneWidget);
+    await _tap(tester, 'Crear cuenta');
+    expect(find.text('Este campo es obligatorio.'), findsOneWidget);
+    expect(find.text('Crea una contraseña.'), findsOneWidget);
+  });
+
+  testWidgets('registro correcto entra con la cuenta nueva', (tester) async {
+    final repo = FakeAuthRepository();
+    await _pump(tester, repo);
+    await _tap(tester, 'Regístrate');
+    await _enter(tester, 'Nombre y apellidos', 'Camila Justiniano');
+    await _enter(tester, 'tu@correo.com', 'camila@correo.com');
+    await _enter(tester, 'Mínimo 8 caracteres', 'clave-larga-1');
+    await _enter(tester, 'Repite tu contraseña', 'clave-larga-1');
+    await _tap(tester, 'Crear cuenta');
+    expect(repo.registerCalls, 1);
+    expect(find.text('Hola, Camila'), findsOneWidget);
+  });
+
+  testWidgets('correo repetido se marca en el campo', (tester) async {
+    final repo = FakeAuthRepository(
+      registerResult: const Result.err(
+        FieldFailure('email', 'Ya existe una cuenta con ese correo.'),
+      ),
+    );
+    await _pump(tester, repo);
+    await _tap(tester, 'Regístrate');
+    await _enter(tester, 'Nombre y apellidos', 'Camila Justiniano');
+    await _enter(tester, 'tu@correo.com', 'camila@correo.com');
+    await _enter(tester, 'Mínimo 8 caracteres', 'clave-larga-1');
+    await _enter(tester, 'Repite tu contraseña', 'clave-larga-1');
+    await _tap(tester, 'Crear cuenta');
+    expect(find.text('Ya existe una cuenta con ese correo.'), findsOneWidget);
+    expect(find.text('Crea tu cuenta.'), findsOneWidget);
+  });
+
+  testWidgets('cerrar sesión vuelve al login y borra el token', (tester) async {
+    final repo = FakeAuthRepository(token: 'tok-1');
+    await _pump(tester, repo);
+    await _tap(tester, 'Perfil');
+    await _tap(tester, 'Cerrar sesión');
+    expect(find.text('Tu emprendimiento, acompañado.'), findsOneWidget);
+    expect(repo.token, isNull);
+  });
+}

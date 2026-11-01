@@ -1,0 +1,123 @@
+"""Servicio de entrepreneurs. Es tambien la API publica del modulo."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from emprendeu.core.pagination import PageParams
+from emprendeu.modules.entrepreneurs.exceptions import EntrepreneurNotFound
+from emprendeu.modules.entrepreneurs.models import Emprendedor
+from emprendeu.modules.entrepreneurs.repository import EntrepreneurRepository
+from emprendeu.modules.entrepreneurs.schemas import EntrepreneurOut, VentureLink
+
+
+@dataclass(frozen=True, slots=True)
+class EntrepreneurRef:
+    """Datos minimos que otros modulos necesitan de un emprendedor."""
+
+    emprendedor_id: int
+    usuario_id: int
+    emprendimiento_ids: tuple[int, ...]
+
+    @property
+    def primary_venture_id(self) -> int | None:
+        return self.emprendimiento_ids[0] if self.emprendimiento_ids else None
+
+
+class EntrepreneurService:
+    def __init__(self, session: AsyncSession) -> None:
+        self._repo = EntrepreneurRepository(session)
+
+    # --- API para otros modulos -------------------------------------------
+
+    async def create_profile(self, usuario_id: int) -> EntrepreneurRef:
+        """Crea el perfil de emprendedor del usuario (idempotente)."""
+        existing = await self._repo.get_by_user(usuario_id)
+        if existing is None:
+            existing = await self._repo.add(
+                Emprendedor(usuario_id=usuario_id, estado="activo")
+            )
+        return await self._ref(existing)
+
+    async def ref_for_user(self, usuario_id: int) -> EntrepreneurRef | None:
+        found = await self._repo.get_by_user(usuario_id)
+        return await self._ref(found) if found else None
+
+    async def link_venture(
+        self, emprendedor_id: int, emprendimiento_id: int, rol: str | None = "fundador"
+    ) -> None:
+        await self._repo.link(emprendedor_id, emprendimiento_id, rol)
+
+    async def is_member(self, usuario_id: int, emprendimiento_id: int) -> bool:
+        return emprendimiento_id in await self._repo.venture_ids_of_user(usuario_id)
+
+    async def venture_ids_of_user(self, usuario_id: int) -> list[int]:
+        return await self._repo.venture_ids_of_user(usuario_id)
+
+    async def user_ids_of_venture(self, emprendimiento_id: int) -> list[int]:
+        return await self._repo.user_ids_of_venture(emprendimiento_id)
+
+    async def entrepreneur_ids_of_venture(self, emprendimiento_id: int) -> list[int]:
+        return await self._repo.entrepreneur_ids_of_venture(emprendimiento_id)
+
+    async def venture_ids_of_entrepreneur(self, emprendedor_id: int) -> list[int]:
+        return await self._repo.venture_ids_of_entrepreneur(emprendedor_id)
+
+    async def _ref(self, e: Emprendedor) -> EntrepreneurRef:
+        ids = await self._repo.venture_ids_of_entrepreneur(e.emprendedor_id)
+        return EntrepreneurRef(e.emprendedor_id, e.usuario_id, tuple(sorted(ids)))
+
+    # --- uso propio (router) ---------------------------------------------
+
+    async def _out(self, e: Emprendedor) -> EntrepreneurOut:
+        identity = await self._repo.identity(e.usuario_id)
+        nombre, apellido, email = identity if identity else (None, None, None)
+        return EntrepreneurOut(
+            emprendedor_id=e.emprendedor_id,
+            usuario_id=e.usuario_id,
+            nombre=nombre,
+            apellido=apellido,
+            email=email,
+            documento_identidad=e.documento_identidad,
+            estado=e.estado,
+            fecha_registro=e.fecha_registro,
+            emprendimientos=[
+                VentureLink(
+                    emprendimiento_id=link.emprendimiento_id,
+                    rol_en_emprendimiento=link.rol_en_emprendimiento,
+                )
+                for link in e.emprendimientos
+            ],
+        )
+
+    async def list(
+        self, params: PageParams, q: str | None
+    ) -> tuple[list[EntrepreneurOut], int]:
+        rows, total = await self._repo.list(
+            q=q, offset=params.offset, limit=params.page_size
+        )
+        return [await self._out(r) for r in rows], total
+
+    async def get(self, emprendedor_id: int) -> EntrepreneurOut:
+        found = await self._repo.get(emprendedor_id)
+        if found is None:
+            raise EntrepreneurNotFound
+        return await self._out(found)
+
+    async def me(self, usuario_id: int) -> EntrepreneurOut:
+        found = await self._repo.get_by_user(usuario_id)
+        if found is None:
+            raise EntrepreneurNotFound
+        return await self._out(found)
+
+    async def update_me(
+        self, usuario_id: int, documento: str | None
+    ) -> EntrepreneurOut:
+        found = await self._repo.get_by_user(usuario_id)
+        if found is None:
+            raise EntrepreneurNotFound
+        found.documento_identidad = documento or None
+        await self._repo.add(found)
+        return await self._out(found)

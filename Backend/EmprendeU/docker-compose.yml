@@ -1,0 +1,48 @@
+# Entorno completo de desarrollo/demostracion:  docker compose up --build
+# La IA local (Ollama) es opcional:             docker compose --profile ai up --build
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: emprendeu
+      POSTGRES_PASSWORD: emprendeu
+      POSTGRES_DB: emprendeu
+    ports:
+      - "5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U emprendeu"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://emprendeu:emprendeu@db:5432/emprendeu
+      # Genera el tuyo: python -c "import secrets; print(secrets.token_urlsafe(48))"
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en tu entorno}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      CORS_ORIGINS: '["http://localhost:3000"]'
+      OLLAMA_BASE_URL: http://ollama:11434
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads:/app/uploads
+
+  ollama:
+    profiles: ["ai"]
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
+volumes:
+  dbdata:
+  uploads:
+  ollama:

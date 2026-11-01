@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Entorno local
+.env
+
+# Archivos subidos (modulo documents)
+uploads/
