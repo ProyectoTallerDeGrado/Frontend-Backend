@@ -31,8 +31,7 @@ Cada fase se cierra con lint y tests en verde.
 - JWT de acceso único, sin refresh; recuperación de contraseña fuera de alcance.
 - Niveles de XP: 0 / 200 / 400 / 700 / 1100 (`gamification/levels.py`).
 - Sentimiento: índice heurístico por léxico (`ai_assistant/sentiment.py`), reemplazable.
-- Búsqueda semántica: similitud coseno en Python sobre embeddings JSONB. Para miles de
-  fragmentos conviene migrar a `pgvector`.
+- Búsqueda semántica: distancia coseno con `pgvector` (`vector(768)`, índice HNSW).
 - Detección de alertas por cron externo (`alerts/jobs.py`), no por scheduler dentro de la app.
 
 ## Pendiente / siguientes mejoras
@@ -42,4 +41,9 @@ Cada fase se cierra con lint y tests en verde.
 - Refresh tokens y recuperación de contraseña (requiere servicio de correo).
 - Limitador de login compartido (Redis) si se despliega con varias réplicas.
 - Almacén de objetos para `documents` si el volumen crece.
-- Habilitar/medir `pgvector` y paginar `EntrepreneurService.list` sin consulta por fila.
+- Habilitar/medir `pgvector` con volumen real.
+
+**Hecho:** `EntrepreneurService.list` resuelve nombre y correo en una sola consulta
+(`identities`), y un cambio de contraseña invalida los tokens anteriores
+(`usuario.password_changed_at`, ver F1; la cuenta deshabilitada ya se rechazaba por petición).
+Tras cambiar la contraseña el servidor devuelve una sesión nueva a quien la cambió.
