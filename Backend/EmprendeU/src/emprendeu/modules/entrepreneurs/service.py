@@ -96,8 +96,14 @@ class EntrepreneurService:
 
     # --- uso propio (router) ---------------------------------------------
 
-    async def _out(self, e: Emprendedor) -> EntrepreneurOut:
-        identity = await self._repo.identity(e.usuario_id)
+    async def _out(
+        self,
+        e: Emprendedor,
+        identity: tuple[str, str, str] | None | bool = False,
+    ) -> EntrepreneurOut:
+        # `False` = no precargada: se consulta. Las listas la pasan ya resuelta.
+        if identity is False:
+            identity = await self._repo.identity(e.usuario_id)
         nombre, apellido, email = identity if identity else (None, None, None)
         return EntrepreneurOut(
             emprendedor_id=e.emprendedor_id,
@@ -123,7 +129,8 @@ class EntrepreneurService:
         rows, total = await self._repo.list(
             q=q, offset=params.offset, limit=params.page_size
         )
-        return [await self._out(r) for r in rows], total
+        identities = await self._repo.identities([r.usuario_id for r in rows])
+        return [await self._out(r, identities.get(r.usuario_id)) for r in rows], total
 
     async def get(self, emprendedor_id: int) -> EntrepreneurOut:
         found = await self._repo.get(emprendedor_id)
