@@ -15,12 +15,13 @@ uv sync --locked
 # 2. PostgreSQL de desarrollo
 docker run -d --name emprendeu-db \
   -e POSTGRES_USER=emprendeu -e POSTGRES_PASSWORD=emprendeu -e POSTGRES_DB=emprendeu \
-  -p 5432:5432 postgres:17-alpine
+  -p 5432:5432 pgvector/pgvector:pg17     # imagen con pgvector (busqueda semantica del asistente)
 
 # 3. Configuración
 cp .env.example .env        # ajustar DATABASE_URL si hace falta
 
-# 4. Crear el schema cieu y las 38 tablas
+# 4. Crear el schema cieu y las 42 tablas (necesita las extensiones vector y btree_gist;
+#    la imagen de arriba las trae y el usuario del contenedor puede crearlas)
 uv run alembic upgrade head
 
 # 5. Levantar la API
@@ -38,10 +39,12 @@ Comprobación rápida: `curl http://127.0.0.1:8000/health` devuelve
   `src/emprendeu/db/base.py` (`MetaData(schema="cieu")`).
 - **Creación de tablas**: **solo Alembic**. Nunca `create_all()` ni DDL a mano.
 - **Driver**: psycopg 3, con URL `postgresql+psycopg://`.
-- `database/EmprendeU_postgresql.sql` es el modelo exportado de Enterprise
-  Architect. Queda como **referencia histórica**: ya no se ejecuta, y los modelos
-  del ORM reproducen su esquema exactamente (verificado con `pg_dump`, esquemas
-  idénticos).
+- `database/cieu_schema_completo.sql` es la **referencia vigente** del esquema (42 tablas,
+  pgvector). El esquema real sale de las migraciones y coincide con ella (comparado columna
+  a columna, restricción a restricción). `database/EmprendeU_postgresql.sql` es el modelo
+  original exportado de Enterprise Architect: referencia **histórica**, ya no se ejecuta.
+- Las migraciones crean las extensiones `vector` y `btree_gist` en el schema `public`: el
+  usuario de la base debe poder crearlas (superusuario, o extensiones de confianza).
 
 ### Cambiar el esquema
 
@@ -71,7 +74,7 @@ uv run pytest                 # requiere el PostgreSQL de desarrollo (usa <db>_t
 
 ## Estado actual
 
-Backend **completo**: 11 módulos con su HTTP, auditoría transversal, 52 tests contra
+Backend **completo**: 11 módulos con su HTTP, auditoría transversal, 71 tests contra
 PostgreSQL real, Dockerfile, `docker-compose.yml` y CI (`.github/workflows/backend.yml`).
 El detalle de endpoints está en [AGENTS.md](AGENTS.md) §4 y en `/docs` (solo fuera de producción).
 
@@ -87,21 +90,24 @@ uv run uvicorn emprendeu.main:app --reload --port 8000
 ### Con Docker
 
 ```bash
-export JWT_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(48))")
-docker compose up --build              # API + PostgreSQL
+cp .env.example .env                   # y ajusta POSTGRES_*, JWT_SECRET (>= 32 caracteres) y CORS_ORIGINS
+docker compose up --build              # PostgreSQL (pgvector) + migraciones + API
+docker compose run --rm migrate        # solo aplicar migraciones
 docker compose --profile ai up --build # + Ollama (luego: ollama pull nomic-embed-text llama3.2)
 ```
 
 ### Variables de entorno
 
-`DATABASE_URL`, `JWT_SECRET` (obligatoria), `ACCESS_TOKEN_EXPIRE_MINUTES`, `CORS_ORIGINS`,
+`DATABASE_URL`, `JWT_SECRET` (obligatoria, mínimo 32 caracteres y distinta de la de ejemplo),
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DB_PORT`, `API_PORT` (solo `docker compose`),
+`ACCESS_TOKEN_EXPIRE_MINUTES`, `CORS_ORIGINS`,
 `ENVIRONMENT`, `LOGIN_MAX_ATTEMPTS`, `LOGIN_WINDOW_SECONDS`, `APP_TIMEZONE`,
 `BOOKING_MIN_STAGE_ORDER`, `OLLAMA_BASE_URL`, `OLLAMA_EMBED_MODEL`, `OLLAMA_CHAT_MODEL`,
 `UPLOAD_DIR`, `MAX_UPLOAD_MB`. Plantilla en `.env.example`.
 
 ### Tarea programada
 
-Alertas de riesgo: `uv run python -m emprendeu.modules.alerts.jobs` (una vez al día).
+Alertas de riesgo: `uv run python -m emprendeu.modules.alerts.jobs` (una vez al día). En Docker lo hace el servicio `alerts-job` de `docker-compose.yml` (`ALERTS_INTERVAL_SECONDS`, 86400 por defecto).
 
 ### Clientes
 

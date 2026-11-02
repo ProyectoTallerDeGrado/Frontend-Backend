@@ -46,3 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Artefactos de Gradle al compilar desde android/
+/android/build/

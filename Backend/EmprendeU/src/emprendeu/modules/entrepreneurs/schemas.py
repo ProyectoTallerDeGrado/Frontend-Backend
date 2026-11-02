@@ -27,3 +27,31 @@ class EntrepreneurUpdate(BaseModel):
     documento_identidad: Annotated[
         str | None, StringConstraints(strip_whitespace=True, max_length=50)
     ] = None
+
+
+class EntrepreneurCreate(BaseModel):
+    """Alta de un emprendedor por la coordinacion (crea usuario y perfil juntos)."""
+
+    nombre_completo: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=280)
+    ]
+    email: Annotated[
+        str,
+        StringConstraints(
+            strip_whitespace=True,
+            to_lower=True,
+            max_length=254,
+            pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+        ),
+    ]
+    documento_identidad: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=3, max_length=50)
+    ]
+    # Si se omite, el servidor genera una temporal y la devuelve una sola vez.
+    password: Annotated[str, StringConstraints(min_length=8, max_length=128)] | None = (
+        None
+    )
+
+
+class EntrepreneurCreated(EntrepreneurOut):
+    temporary_password: str | None = None

@@ -73,7 +73,9 @@ class AdminLockout(ConflictError):
         )
 
 
-class WrongCurrentPassword(Unauthorized):
+class WrongCurrentPassword(DomainError):
+    """400, no 401: un 401 haria que el cliente cerrara la sesion del usuario."""
+
     code = "wrong_password"
 
     def __init__(self) -> None:

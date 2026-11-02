@@ -131,4 +131,81 @@ void main() {
     expect(find.text('Tu emprendimiento, acompañado.'), findsOneWidget);
     expect(repo.token, isNull);
   });
+
+  group('cambiar contraseña', () {
+    Future<void> openForm(WidgetTester tester, FakeAuthRepository repo) async {
+      await _pump(tester, repo);
+      await _tap(tester, 'Perfil');
+      await _tap(tester, 'Cambiar contraseña');
+    }
+
+    testWidgets('correcto: guarda el token nuevo y sigue con sesión', (
+      tester,
+    ) async {
+      final repo = FakeAuthRepository(token: 'tok-viejo');
+      await openForm(tester, repo);
+      await _enter(tester, 'Contraseña actual', 'actual-1234');
+      await _enter(tester, 'Contraseña nueva', 'nueva-clave-99');
+      await _enter(tester, 'Repite la contraseña nueva', 'nueva-clave-99');
+      await tester.tap(find.widgetWithText(FilledButton, 'Cambiar contraseña'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(
+        const Duration(seconds: 1),
+      ); // termina el pop y el aviso
+      expect(repo.changePasswordCalls, 1);
+      expect(repo.lastCurrentPassword, 'actual-1234');
+      expect(repo.lastNewPassword, 'nueva-clave-99');
+      expect(repo.token, 'tok-nuevo');
+      // vuelve a la cuenta (sigue autenticada) y avisa
+      expect(find.text('Cerrar sesión'), findsOneWidget);
+      expect(find.textContaining('Contraseña actualizada'), findsOneWidget);
+    });
+
+    testWidgets(
+      'clave actual equivocada: error en el campo y no cierra la sesión',
+      (tester) async {
+        final repo = FakeAuthRepository(
+          token: 'tok-viejo',
+          changePasswordResult: const Result.err(
+            FieldFailure(
+              'currentPassword',
+              'La contraseña actual no es correcta.',
+            ),
+          ),
+        );
+        await openForm(tester, repo);
+        await _enter(tester, 'Contraseña actual', 'mala-clave');
+        await _enter(tester, 'Contraseña nueva', 'nueva-clave-99');
+        await _enter(tester, 'Repite la contraseña nueva', 'nueva-clave-99');
+        await tester.tap(
+          find.widgetWithText(FilledButton, 'Cambiar contraseña'),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(
+          find.text('La contraseña actual no es correcta.'),
+          findsOneWidget,
+        );
+        expect(repo.token, 'tok-viejo');
+        expect(find.text('Tu emprendimiento, acompañado.'), findsNothing);
+      },
+    );
+
+    testWidgets('valida sin llamar al servidor', (tester) async {
+      final repo = FakeAuthRepository(token: 'tok-viejo');
+      await openForm(tester, repo);
+      await _enter(tester, 'Contraseña actual', 'actual-1234');
+      await _enter(tester, 'Contraseña nueva', 'actual-1234');
+      await _enter(tester, 'Repite la contraseña nueva', 'otra-distinta');
+      await tester.tap(find.widgetWithText(FilledButton, 'Cambiar contraseña'));
+      await tester.pump();
+      expect(
+        find.text('La contraseña nueva debe ser distinta de la actual.'),
+        findsOneWidget,
+      );
+      expect(find.text('Las contraseñas no coinciden.'), findsOneWidget);
+      expect(repo.changePasswordCalls, 0);
+    });
+  });
 }

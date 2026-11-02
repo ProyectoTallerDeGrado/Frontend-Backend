@@ -43,6 +43,25 @@ async def test_conocimiento_exige_permiso_y_se_indexa(
     assert empty.status_code == 422
 
 
+async def test_modelo_con_otra_dimension_no_guarda_nada(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    h, _ = await _world(client, make_user, login)
+
+    async def short(texts: list[str]) -> list[list[float]]:
+        return [[1.0, 2.0] for _ in texts]  # la base espera 768 dimensiones
+
+    client._transport.app.state.fake_llm.embed = short  # type: ignore[attr-defined]
+    r = await client.post(
+        f"{API}/ai/knowledge",
+        json={"titulo": "Guia", "contenido": DOC},
+        headers=h["admin"],
+    )
+    assert r.status_code == 503 and r.json()["error"]["code"] == "ai_unavailable"
+    assert "768" in r.json()["error"]["message"]
+    assert (await client.get(f"{API}/ai/knowledge", headers=h["admin"])).json() == []
+
+
 async def test_chat_con_fuente_sin_fuente_y_derivacion(
     client: AsyncClient, make_user: MakeUser, login
 ) -> None:

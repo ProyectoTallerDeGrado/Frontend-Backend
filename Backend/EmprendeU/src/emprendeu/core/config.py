@@ -59,13 +59,12 @@ class Settings(BaseSettings):
         return self.environment.lower() == "production"
 
     @model_validator(mode="after")
-    def _check_production_secrets(self) -> "Settings":
-        """En produccion no se arranca con un secreto debil o de ejemplo."""
-        if self.is_production and (
-            len(self.jwt_secret) < 32 or self.jwt_secret.startswith("cambia-este")
-        ):
+    def _check_secrets(self) -> "Settings":
+        """No se arranca con un secreto debil o de ejemplo, en ningun entorno."""
+        if len(self.jwt_secret) < 32 or self.jwt_secret.startswith("cambia-este"):
             raise ValueError(
-                "JWT_SECRET debe tener al menos 32 caracteres y no ser el de ejemplo."
+                "JWT_SECRET debe tener al menos 32 caracteres y no ser el de ejemplo. "
+                'Genera uno: python -c "import secrets; print(secrets.token_urlsafe(48))"'
             )
         return self
 

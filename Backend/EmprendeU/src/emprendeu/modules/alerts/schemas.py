@@ -15,6 +15,8 @@ class SettingsOut(BaseModel):
     notificar_coordinador: bool
     notificar_asesor: bool
     alertar_incumplimiento: bool
+    # Plazo por defecto de un compromiso sin fecha limite (lo usa mentoring, CU18).
+    dias_limite_compromiso: int
     fecha_actualizacion: datetime | None
 
 
@@ -25,6 +27,8 @@ class SettingsUpdate(BaseModel):
     notificar_coordinador: bool
     notificar_asesor: bool
     alertar_incumplimiento: bool
+    # Opcional para no romper a clientes anteriores: si falta, se conserva el valor.
+    dias_limite_compromiso: Annotated[int, Field(ge=1, le=90)] | None = None
 
 
 class AlertOut(BaseModel):
@@ -37,10 +41,14 @@ class AlertOut(BaseModel):
     prioridad: str | None
     estado: str | None
     fecha_generacion: datetime | None
+    atendida_por_id: int | None = None
+    atendida_por: str | None = None
 
 
 class AlertUpdate(BaseModel):
-    estado: Literal["atendida", "descartada"]
+    """`revisada`: alguien la vio y sigue pendiente. `atendida` y `descartada` la cierran."""
+
+    estado: Literal["revisada", "atendida", "descartada"]
 
 
 class EvaluationResult(BaseModel):

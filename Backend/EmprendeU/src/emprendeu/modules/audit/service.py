@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import csv
-import io
 from datetime import UTC, date
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from emprendeu.core.csv_export import to_csv
 from emprendeu.core.pagination import PageParams
 from emprendeu.modules.audit.catalog import category_of, label_for
 from emprendeu.modules.audit.models import Bitacora
@@ -96,14 +95,9 @@ class AuditService:
         rows, _ = await self._repo.list(
             categoria=categoria, resultado=resultado, offset=0, limit=EXPORT_LIMIT
         )
-        buffer = io.StringIO()
-        writer = csv.writer(buffer)
-        writer.writerow(
-            ["fecha", "actor", "categoria", "accion", "objeto", "resultado"]
-        )
-        for entry, actor in rows:
-            out = _to_out(entry, actor)
-            writer.writerow(
+        return to_csv(
+            ["fecha", "actor", "categoria", "accion", "objeto", "resultado"],
+            (
                 [
                     out.fecha.isoformat() if out.fecha else "",
                     out.actor or "",
@@ -112,5 +106,6 @@ class AuditService:
                     out.objeto or "",
                     out.resultado,
                 ]
-            )
-        return buffer.getvalue()
+                for out in (_to_out(entry, actor) for entry, actor in rows)
+            ),
+        )

@@ -1,38 +1,82 @@
 # Entorno completo de desarrollo/demostracion:  docker compose up --build
 # La IA local (Ollama) es opcional:             docker compose --profile ai up --build
+#
+# Toda la configuracion sale del entorno (o del `.env` de esta carpeta); aqui no hay
+# credenciales. Copia `.env.example` a `.env` y ajusta los valores. Las variables
+# marcadas como obligatorias hacen fallar `docker compose` con un mensaje claro.
+#
+# El paso `migrate` crea/actualiza el esquema una vez y la API arranca despues.
+# La base usa pgvector (busqueda semantica del asistente) y la misma version 17
+# que ya usaba el proyecto, para no invalidar volumenes existentes.
 services:
   db:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     environment:
-      POSTGRES_USER: emprendeu
-      POSTGRES_PASSWORD: emprendeu
-      POSTGRES_DB: emprendeu
+      POSTGRES_USER: ${POSTGRES_USER:?define POSTGRES_USER (ver .env.example)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD (ver .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:?define POSTGRES_DB (ver .env.example)}
     ports:
-      - "5432:5432"
+      # Cambia DB_PORT si el 5432 de tu maquina ya esta ocupado.
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - dbdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U emprendeu"]
+      # `$$` lo expande el shell del contenedor, no compose.
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en tu entorno (ver .env.example)}
 
   api:
     build: .
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
-      DATABASE_URL: postgresql+psycopg://emprendeu:emprendeu@db:5432/emprendeu
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       # Genera el tuyo: python -c "import secrets; print(secrets.token_urlsafe(48))"
-      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en tu entorno}
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en tu entorno (ver .env.example)}
       ENVIRONMENT: ${ENVIRONMENT:-development}
-      CORS_ORIGINS: '["http://localhost:3000"]'
+      # Lista JSON de origenes permitidos, p. ej. ["http://localhost:3000"]
+      CORS_ORIGINS: ${CORS_ORIGINS:?define CORS_ORIGINS (ver .env.example)}
       OLLAMA_BASE_URL: http://ollama:11434
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     volumes:
       - uploads:/app/uploads
+
+  # Deteccion de riesgo de desercion (inactividad, sentimiento, compromisos vencidos):
+  # corre una vez al arrancar y luego cada ALERTS_INTERVAL_SECONDS (por defecto 24 h).
+  # Sin Docker: cron diario con `uv run python -m emprendeu.modules.alerts.jobs`.
+  alerts-job:
+    build: .
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - while true; do python -m emprendeu.modules.alerts.jobs; sleep ${ALERTS_INTERVAL_SECONDS:-86400}; done
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en tu entorno (ver .env.example)}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
 
   ollama:
     profiles: ["ai"]

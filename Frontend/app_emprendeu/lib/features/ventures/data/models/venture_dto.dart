@@ -22,6 +22,9 @@ abstract class VentureDto with _$VentureDto {
     @JsonKey(name: 'emprendimiento_id') required int emprendimientoId,
     required String nombre,
     @JsonKey(name: 'etapa_actual') StageDto? etapaActual,
+    String? descripcion,
+    String? sector,
+    String? estado,
   }) = _VentureDto;
 
   factory VentureDto.fromJson(Map<String, dynamic> json) =>
@@ -31,5 +34,8 @@ abstract class VentureDto with _$VentureDto {
     id: emprendimientoId,
     name: nombre,
     stageName: etapaActual?.nombre,
+    description: descripcion,
+    sector: sector,
+    status: estado,
   );
 }

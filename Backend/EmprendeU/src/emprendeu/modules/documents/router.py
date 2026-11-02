@@ -34,6 +34,7 @@ async def upload_document(
     user: CurrentUserDep,
     file: Annotated[UploadFile, File()],
     emprendimiento_id: Annotated[int | None, Form()] = None,
+    hito_id: Annotated[int | None, Form()] = None,
 ) -> DocumentOut:
     return await service.upload(
         user,
@@ -41,14 +42,18 @@ async def upload_document(
         file.content_type,
         _chunks(file),
         emprendimiento_id,
+        hito_id,
     )
 
 
 @router.get("", response_model=list[DocumentOut])
 async def list_documents(
-    service: Svc, user: CurrentUserDep, emprendimiento_id: int | None = None
+    service: Svc,
+    user: CurrentUserDep,
+    emprendimiento_id: int | None = None,
+    hito_id: int | None = None,
 ) -> list[DocumentOut]:
-    return await service.list(user, emprendimiento_id)
+    return await service.list(user, emprendimiento_id, hito_id)
 
 
 @router.get("/{documento_id}/download")

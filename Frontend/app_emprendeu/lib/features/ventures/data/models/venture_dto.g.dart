@@ -19,6 +19,9 @@ _VentureDto _$VentureDtoFromJson(Map<String, dynamic> json) => _VentureDto(
   etapaActual: json['etapa_actual'] == null
       ? null
       : StageDto.fromJson(json['etapa_actual'] as Map<String, dynamic>),
+  descripcion: json['descripcion'] as String?,
+  sector: json['sector'] as String?,
+  estado: json['estado'] as String?,
 );
 
 Map<String, dynamic> _$VentureDtoToJson(_VentureDto instance) =>
@@ -26,4 +29,7 @@ Map<String, dynamic> _$VentureDtoToJson(_VentureDto instance) =>
       'emprendimiento_id': instance.emprendimientoId,
       'nombre': instance.nombre,
       'etapa_actual': instance.etapaActual,
+      'descripcion': instance.descripcion,
+      'sector': instance.sector,
+      'estado': instance.estado,
     };

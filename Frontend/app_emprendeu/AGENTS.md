@@ -23,7 +23,7 @@ Los paquetes están instalados y en uso: `flutter_riverpod`, `go_router`, `dio`,
 (config, error, network, storage, connectivity, utils), `shared/widgets/` y cuatro
 features **conectadas al backend**: `auth` (login, registro, sesión), `ventures`
 (registrar y ver el emprendimiento), `gamification` (**Camino** y XP) y `mentoring`
-(compromisos y avances **con soporte sin conexión**), más `home` (la pantalla de
+(compromisos y avances **con soporte sin conexión**, y **agendar mentorías**), más `home` (la pantalla de
 **Inicio**, que solo compone las anteriores). Las decisiones quedan fijadas aquí:
 
 | Necesidad | Paquete designado | Alternativa descartada |
@@ -37,6 +37,7 @@ features **conectadas al backend**: `auth` (login, registro, sesión), `ventures
 | Tipografía (Sora, DM Sans) | **`google_fonts`** | empaquetar las fuentes a mano |
 | Cola/cachés locales (no secretos) | **`shared_preferences`** (detrás de `KeyValueStore`) | SQLite/Isar (excesivo para una cola pequeña) |
 | Estado de red | **`connectivity_plus`** (detrás de `ConnectivitySource`) | sondeo manual |
+| Elegir un archivo (evidencia) | **`file_picker`** (detrás de `EvidencePicker`, en `documents`) | pedir permisos de galería a mano |
 
 > Si el equipo prefiere **Bloc** en vez de Riverpod, hay que cambiarlo **en este
 > documento primero** y luego escribir código. No se mezclan dos gestores de estado.
@@ -99,10 +100,9 @@ test/                         # espejo exacto de lib/
 
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
-`auth` ✅, `ventures` ✅, `gamification` ✅ (Camino), `mentoring` ✅ (compromisos y avances),
-`home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
-(regla global §4.6). Pendientes: `ai_assistant` (Coach), las **Mentorías** (agendar) y el **Perfil**
-completo (insignias e historial de XP).
+`auth` ✅, `ventures` ✅ (editar, hitos), `gamification` ✅ (Camino, XP e insignias), `mentoring` ✅ (compromisos y avances, agendar y ver sesiones, historial),
+`documents` ✅ (evidencia de hitos), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
+(regla global §4.6). Pendiente: `ai_assistant` (Coach).
 
 > **`home` es una excepción documentada a la regla 6:** no tiene módulo en el backend porque
 > es una pantalla de **composición** (Inicio). No tiene `data` ni `domain`: solo `presentation`,
@@ -115,7 +115,7 @@ completo (insignias e historial de XP).
 3. Hecho: `app/app.dart`, `app/router.dart`, `app/theme/`, `app/providers.dart`.
 4. Hecho: `auth` completa; es la **plantilla de las demás** (ver «Cómo se conecta una feature»).
 5. Hecho: `ventures`, `gamification`, `mentoring` (con cola offline) y `home`.
-6. Siguiente: `ai_assistant` (Coach IA), mentorías (agendar) y Perfil completo; al sumar cada pestaña, se añade a `AppShell`.
+6. Siguiente: `ai_assistant` (Coach IA) y Perfil completo; al sumar cada pestaña, se añade a `AppShell`.
 
 ### Cómo se conecta una feature (patrón de `auth`)
 
@@ -135,9 +135,9 @@ completo (insignias e historial de XP).
 ### Navegación y estructura de pantallas
 
 - `app/router.dart` monta `StatefulShellRoute.indexedStack` con la barra inferior
-  (`shared/widgets/app_shell.dart`, `app_bottom_nav.dart`): **Inicio · Camino · Perfil**. Cada
-  feature exporta su lista de rutas (`homeRoutes`, `gamificationRoutes`, `accountRoutes`).
-  Las pestañas Coach IA y Mentorías se añadirán cuando existan sus pantallas.
+  (`shared/widgets/app_shell.dart`, `app_bottom_nav.dart`): **Inicio · Camino · Mentorías · Perfil**. Cada
+  feature exporta su lista de rutas (`homeRoutes`, `gamificationRoutes`, `mentoringRoutes`, `accountRoutes`).
+  La pestaña Coach IA se añadirá cuando exista su pantalla.
 - Tras iniciar sesión se va a `/home`; sin sesión, a `/login`. El `redirect` reacciona a
   `authControllerProvider`.
 - **Riverpod no reintenta solo:** `ProviderScope(retry: (_, _) => null)`. Los errores se
@@ -173,6 +173,30 @@ completo (insignias e historial de XP).
 - **Sesión:** el JWT se guarda con `flutter_secure_storage`. Esta app es solo para el rol
   `emprendedor`: una cuenta de personal se rechaza (`WrongPlatformFailure`) y su token no
   se guarda. El registro (`POST /auth/register`) crea un emprendedor y entra con él.
+- **Agendar y ver mentorías** (CU10, CU23; requiere conexión): `mentoring` tiene un segundo repositorio,
+  `BookingRepository`, aparte del de la cola sin conexión. La pestaña «Mentorías» lista las sesiones
+  (`GET /mentoring/sessions/me`) con chips de estado y un periodo (`showDateRangePicker`); «Agendar
+  mentoría» queda desactivado con el motivo si la etapa aún no lo permite (`booking-status`). El flujo
+  `/mentoring/book` es asesor asignado → día (14 días) → turno libre → tema opcional → confirmar. El caso
+  de uso `BookSessionUseCase` **vuelve a pedir los turnos del día antes de agendar**: si el horario se
+  ocupó, devuelve `SlotUnavailableFailure`, la pantalla avisa y renueva la lista. El emprendedor solo ve
+  asesores asignados y habilitados (lo filtra el backend).
+- **Historial del emprendimiento** (CU19, requiere conexión): botón «Ver historial del emprendimiento» en
+  Mentorías → `/mentoring/history`, que llama a `GET /mentoring/ventures/me/history?orden=` (`GetHistoryUseCase`,
+  `HistoryEvent`) y deja alternar entre «Más reciente primero» y «Cronológico».
+- **Perfil completo** (CU05, CU08, CU20; requiere conexión): la pestaña Perfil compone `MyVentureCard` (datos del
+  emprendimiento y accesos), `XpBadgesSection` (XP, nivel, barra hacia el siguiente nivel, insignias obtenidas y
+  últimos movimientos, de `GET /gamification/me`) y los botones de cuenta. «Editar emprendimiento»
+  (`/venture/edit`) cambia nombre, sector y descripción con `PATCH /ventures/{id}`; la etapa y el estado los fija la
+  coordinación y solo se muestran. «Hitos y evidencia» (`/venture/milestones`) lista los hitos y permite registrar uno,
+  adjuntar evidencia (PDF, imagen u hoja de documento) y marcarlo cumplido. La evidencia es la feature `documents`:
+  `POST /documents` multipart con `hito_id`. Si el hito se guarda pero la subida falla, el hito **se conserva**, se avisa y
+  la evidencia se puede adjuntar después desde la tarjeta del hito.
+- **Cambio de contraseña** (`/account/password`, desde la pestaña Perfil): `ChangePasswordUseCase`
+  llama a `POST /auth/change-password`, **guarda el token nuevo** (el anterior deja de valer en
+  el servidor) y la sesión sigue. «Contraseña actual incorrecta» es un 400 (`FieldFailure`), no
+  cierra la sesión. El router solo reevalúa `redirect` cuando se abre o cierra la sesión, no con
+  cada cambio del estado de auth (si no, reabría la ruta tras el `pop`).
 - **Prueba contra el backend real** (opt-in):
   `API_BASE_URL=http://localhost:8000/api/v1 flutter test --tags integration test/integration`.
 

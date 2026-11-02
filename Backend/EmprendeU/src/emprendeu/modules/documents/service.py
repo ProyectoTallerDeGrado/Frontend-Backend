@@ -10,7 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.errors import Forbidden
 from emprendeu.modules.audit import AuditService
-from emprendeu.modules.documents.exceptions import DocumentNotFound, FileTypeNotAllowed
+from emprendeu.modules.documents.exceptions import (
+    DocumentNotFound,
+    FileTypeNotAllowed,
+    MilestoneMismatch,
+)
 from emprendeu.modules.documents.models import Documento
 from emprendeu.modules.documents.repository import DocumentRepository
 from emprendeu.modules.documents.schemas import DocumentOut
@@ -31,6 +35,7 @@ def _out(d: Documento) -> DocumentOut:
         tipo=d.tipo,
         usuario_id=d.usuario_id,
         emprendimiento_id=d.emprendimiento_id,
+        hito_id=d.hito_id,
         fecha_subida=d.fecha_subida,
     )
 
@@ -60,6 +65,7 @@ class DocumentService:
         content_type: str | None,
         chunks: AsyncIterator[bytes],
         emprendimiento_id: int | None,
+        hito_id: int | None = None,
     ) -> DocumentOut:
         extension = extension_of(filename)
         if extension not in ALLOWED_EXTENSIONS:
@@ -68,6 +74,11 @@ class DocumentService:
             user, emprendimiento_id, "emprendedores:registro"
         ):
             raise Forbidden("No tienes acceso a este emprendimiento.")
+        if hito_id is not None and (
+            emprendimiento_id is None
+            or not await self._repo.milestone_belongs(hito_id, emprendimiento_id)
+        ):
+            raise MilestoneMismatch
         stored = await self._storage.save(chunks, extension)
         doc = Documento(
             nombre=safe_name(filename),
@@ -75,6 +86,7 @@ class DocumentService:
             tipo=(content_type or "")[:60] or None,
             usuario_id=user.usuario_id,
             emprendimiento_id=emprendimiento_id,
+            hito_id=hito_id,
             fecha_subida=datetime.now(UTC),
         )
         try:
@@ -94,7 +106,10 @@ class DocumentService:
         return _out(doc)
 
     async def list(
-        self, user: CurrentUser, emprendimiento_id: int | None
+        self,
+        user: CurrentUser,
+        emprendimiento_id: int | None,
+        hito_id: int | None = None,
     ) -> list[DocumentOut]:
         if emprendimiento_id is not None:
             if not await self._can_access(
@@ -102,16 +117,19 @@ class DocumentService:
             ):
                 raise Forbidden("No tienes acceso a este emprendimiento.")
             rows = await self._repo.list(
-                venture_ids=None, venture_id=emprendimiento_id, usuario_id=None
+                venture_ids=None,
+                venture_id=emprendimiento_id,
+                usuario_id=None,
+                hito_id=hito_id,
             )
         elif user.can_staff("emprendedores:consulta"):
             rows = await self._repo.list(
-                venture_ids=None, venture_id=None, usuario_id=None
+                venture_ids=None, venture_id=None, usuario_id=None, hito_id=hito_id
             )
         else:
             ids = await self._entrepreneurs.venture_ids_of_user(user.usuario_id)
             rows = await self._repo.list(
-                venture_ids=ids, venture_id=None, usuario_id=None
+                venture_ids=ids, venture_id=None, usuario_id=None, hito_id=hito_id
             )
         return [_out(d) for d in rows]
 

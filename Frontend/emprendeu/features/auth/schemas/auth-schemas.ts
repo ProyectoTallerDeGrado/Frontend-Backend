@@ -33,6 +33,25 @@ export const registerSchema = z
     message: "Las contraseñas no coinciden.",
   });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Ingresa tu contraseña actual."),
+    newPassword: z
+      .string()
+      .min(1, "Crea una contraseña nueva.")
+      .min(MIN_PASSWORD_LENGTH, `Usa al menos ${MIN_PASSWORD_LENGTH} caracteres.`)
+      .max(128, "Usa como máximo 128 caracteres."),
+    confirmPassword: z.string().min(1, "Repite la contraseña nueva."),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Las contraseñas no coinciden.",
+  })
+  .refine((v) => v.newPassword !== v.currentPassword, {
+    path: ["newPassword"],
+    message: "La contraseña nueva debe ser distinta de la actual.",
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 

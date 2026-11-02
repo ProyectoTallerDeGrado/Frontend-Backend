@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, StringConstraints
 
@@ -66,3 +66,76 @@ class Overview(BaseModel):
     emprendimientos_activos: int
     alertas_abiertas: int
     servicios: list[ServiceStatus]
+
+
+# --- dashboard ejecutivo (CU14) y reportes (CU21) -------------------------------------
+
+
+class StageCount(BaseModel):
+    etapa_id: int
+    etapa: str
+    orden: int | None
+    total: int
+
+
+class SessionsBlock(BaseModel):
+    programadas: int
+    realizadas: int
+    canceladas: int
+
+
+class CommitmentsBlock(BaseModel):
+    pendientes: int  # hoy
+    vencidos: int  # hoy: pendientes con fecha limite vencida
+    cumplidos_periodo: int  # cumplidos dentro del periodo
+
+
+class AlertsBlock(BaseModel):
+    abiertas: int
+    revisadas: int
+    atendidas: int
+    descartadas: int
+    por_tipo: dict[str, int]
+
+
+class IndicatorSummary(BaseModel):
+    tipo_indicador_id: int
+    nombre: str
+    unidad: str | None
+    registros: int
+    promedio: Decimal | None
+
+
+class Dashboard(BaseModel):
+    """Solo lectura: emprendimientos activos (de una etapa, si se filtra) en un periodo."""
+
+    desde: date | None
+    hasta: date | None
+    etapa_id: int | None
+    emprendimientos_total: int
+    por_etapa: list[StageCount]
+    sesiones: SessionsBlock
+    compromisos: CommitmentsBlock
+    avances: int
+    alertas: AlertsBlock
+    indicadores: list[IndicatorSummary]
+
+
+ReportKind = Literal["resumen", "sesiones", "alertas", "indicadores"]
+
+
+class ReportColumn(BaseModel):
+    clave: str
+    etiqueta: str
+
+
+class ReportOut(BaseModel):
+    tipo: ReportKind
+    titulo: str
+    columnas: list[ReportColumn]
+    filas: list[dict[str, str | int | float | None]]
+    total: int  # todas las filas del reporte
+    truncado: bool  # la vista previa muestra solo las primeras
+    desde: date | None
+    hasta: date | None
+    etapa_id: int | None

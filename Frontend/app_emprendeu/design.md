@@ -379,6 +379,12 @@ Columna a pantalla completa: cabecera fija, camino desplazable, barra inferior.
 
 ## 10. Pantalla 6 — Perfil y logros (`features/profile`)
 
+> **Mentorías:** la pestaña «Mentorías» (entre «Camino» y «Perfil») muestra las sesiones por estado y
+> periodo y el flujo «Agendar mentoría» (asesor → día → horario → tema → confirmar).
+>
+> **Implementado hasta ahora:** la pestaña «Perfil» es la pantalla «Cuenta» (datos, **Cambiar contraseña**
+> en `/account/password` y «Cerrar sesión»). El resto de este apartado sigue pendiente.
+
 Contenido desplazable (`padding: 56 20 28`, gap 22).
 
 1. **Identidad**: avatar 76 (círculo `navy900` con iniciales «CJ» Sora 20/700, rodeado de un aro punteado azul de 2 con

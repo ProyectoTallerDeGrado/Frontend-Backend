@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import and_, delete, func, select
+from sqlalchemy import column, delete, func, select, table
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.modules.mentoring.models import (
@@ -19,6 +19,13 @@ from emprendeu.modules.mentoring.models import (
     Tipo,
 )
 
+# Tabla de `alerts` que se lee solo para un valor (la convencion de fronteras del
+# proyecto pide `sqlalchemy.table` y no importar el modelo de otro modulo).
+_PARAMS = table(
+    "parametros_seguimiento", column("clave"), column("valor"), schema="cieu"
+)
+DEFAULT_COMMITMENT_DAYS = 7
+
 MENTOR_ROLE = "mentor"
 LEARNER_ROLE = "emprendedor"
 
@@ -27,12 +34,22 @@ def now() -> datetime:
     return datetime.now(UTC)
 
 
+def _effective_date():  # type: ignore[no-untyped-def]
+    """Cuando ocurrio la sesion: la fecha realizada si existe, si no la programada."""
+    return func.coalesce(
+        SesionAcompanamiento.fecha_realizada, SesionAcompanamiento.fecha_programada
+    )
+
+
 class MentoringRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def commit(self) -> None:
         await self._session.commit()
+
+    async def rollback(self) -> None:
+        await self._session.rollback()
 
     async def add(self, obj: object) -> None:
         self._session.add(obj)
@@ -56,9 +73,34 @@ class MentoringRepository:
         stmt = (
             select(DisponibilidadMentor)
             .where(DisponibilidadMentor.usuario_id == usuario_id)
-            .order_by(DisponibilidadMentor.dia_semana, DisponibilidadMentor.hora_inicio)
+            .order_by(DisponibilidadMentor.fecha_inicio)
         )
         return list((await self._session.execute(stmt)).scalars().all())
+
+    async def open_availability_between(
+        self, usuario_id: int, start: datetime, end: datetime
+    ) -> list[DisponibilidadMentor]:
+        """Intervalos `disponible` que tocan `[start, end)`."""
+        stmt = (
+            select(DisponibilidadMentor)
+            .where(
+                DisponibilidadMentor.usuario_id == usuario_id,
+                DisponibilidadMentor.estado == "disponible",
+                DisponibilidadMentor.fecha_inicio < end,
+                DisponibilidadMentor.fecha_fin > start,
+            )
+            .order_by(DisponibilidadMentor.fecha_inicio)
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
+    async def get_availability_row(
+        self, disponibilidad_id: int
+    ) -> DisponibilidadMentor | None:
+        return await self._session.get(DisponibilidadMentor, disponibilidad_id)
+
+    async def delete_availability_row(self, row: DisponibilidadMentor) -> None:
+        await self._session.delete(row)
+        await self._session.flush()
 
     async def replace_availability(
         self, usuario_id: int, items: list[DisponibilidadMentor]
@@ -134,7 +176,11 @@ class MentoringRepository:
         return list((await self._session.execute(stmt)).scalars().all())
 
     async def sessions_for_user(
-        self, usuario_id: int, estados: list[str] | None
+        self,
+        usuario_id: int,
+        estados: list[str] | None,
+        desde: datetime | None = None,
+        hasta: datetime | None = None,
     ) -> list[SesionAcompanamiento]:
         stmt = (
             select(SesionAcompanamiento)
@@ -148,12 +194,29 @@ class MentoringRepository:
         )
         if estados:
             stmt = stmt.where(SesionAcompanamiento.estado.in_(estados))
+        if desde is not None:
+            stmt = stmt.where(_effective_date() >= desde)
+        if hasta is not None:
+            stmt = stmt.where(_effective_date() < hasta)
         return list((await self._session.execute(stmt)).scalars().all())
 
     async def list_sessions(
-        self, *, estado: str | None, offset: int, limit: int
+        self,
+        *,
+        estado: str | None,
+        desde: datetime | None = None,
+        hasta: datetime | None = None,
+        emprendimiento_id: int | None = None,
+        offset: int,
+        limit: int,
     ) -> tuple[list[SesionAcompanamiento], int]:
         cond = [SesionAcompanamiento.estado == estado] if estado else []
+        if desde is not None:
+            cond.append(_effective_date() >= desde)
+        if hasta is not None:
+            cond.append(_effective_date() < hasta)
+        if emprendimiento_id is not None:
+            cond.append(SesionAcompanamiento.emprendimiento_id == emprendimiento_id)
         total = (
             await self._session.execute(
                 select(func.count()).select_from(SesionAcompanamiento).where(*cond)
@@ -178,7 +241,7 @@ class MentoringRepository:
     ) -> list[Compromiso]:
         stmt = (
             select(Compromiso)
-            .where(Compromiso.usuario_id == usuario_id)
+            .where(Compromiso.responsable_usuario_id == usuario_id)
             .order_by(
                 Compromiso.fecha_limite.asc().nulls_last(), Compromiso.compromiso_id
             )
@@ -189,14 +252,9 @@ class MentoringRepository:
 
     async def overdue_by_venture(self, moment: datetime) -> dict[int, int]:
         stmt = (
-            select(SesionAcompanamiento.emprendimiento_id, func.count())
-            .join(
-                Compromiso,
-                Compromiso.sesion_acompanamiento_id
-                == SesionAcompanamiento.sesion_acompanamiento_id,
-            )
+            select(Compromiso.emprendimiento_id, func.count())
             .where(Compromiso.estado == "pendiente", Compromiso.fecha_limite < moment)
-            .group_by(SesionAcompanamiento.emprendimiento_id)
+            .group_by(Compromiso.emprendimiento_id)
         )
         return {r[0]: r[1] for r in (await self._session.execute(stmt)).all()}
 
@@ -209,6 +267,12 @@ class MentoringRepository:
             select(Recomendacion)
             .where(Recomendacion.emprendimiento_id.in_(ids))
             .order_by(Recomendacion.fecha.desc())
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
+    async def commitments_of_venture(self, emprendimiento_id: int) -> list[Compromiso]:
+        stmt = select(Compromiso).where(
+            Compromiso.emprendimiento_id == emprendimiento_id
         )
         return list((await self._session.execute(stmt)).scalars().all())
 
@@ -252,6 +316,143 @@ class MentoringRepository:
             stmt = stmt.where(Asignacion.emprendimiento_id == emprendimiento_id)
         return list((await self._session.execute(stmt)).scalars().all())
 
+    async def active_assignment(
+        self, usuario_id: int, emprendimiento_id: int
+    ) -> Asignacion | None:
+        stmt = select(Asignacion).where(
+            Asignacion.usuario_id == usuario_id,
+            Asignacion.emprendimiento_id == emprendimiento_id,
+            Asignacion.estado == "activa",
+        )
+        return (await self._session.execute(stmt)).scalars().first()
+
+    async def assigned_mentor_ids(self, emprendimiento_id: int) -> list[int]:
+        stmt = select(Asignacion.usuario_id).where(
+            Asignacion.emprendimiento_id == emprendimiento_id,
+            Asignacion.estado == "activa",
+        )
+        return sorted(set((await self._session.execute(stmt)).scalars().all()))
+
+    async def commitment_days(self) -> int:
+        stmt = select(_PARAMS.c.valor).where(
+            _PARAMS.c.clave == "dias_limite_compromiso"
+        )
+        raw = (await self._session.execute(stmt)).scalar_one_or_none()
+        try:
+            days = int(raw) if raw is not None else DEFAULT_COMMITMENT_DAYS
+        except ValueError:
+            return DEFAULT_COMMITMENT_DAYS
+        return days if days > 0 else DEFAULT_COMMITMENT_DAYS
+
+    # --- resumenes por emprendimiento (dashboard y reportes) ------------------
+
+    async def session_counts(
+        self, ids: list[int], start: datetime | None, end: datetime | None
+    ) -> dict[int, dict[str, int]]:
+        if not ids:
+            return {}
+        stmt = select(
+            SesionAcompanamiento.emprendimiento_id,
+            SesionAcompanamiento.estado,
+            func.count(),
+        ).where(SesionAcompanamiento.emprendimiento_id.in_(ids))
+        if start is not None:
+            stmt = stmt.where(_effective_date() >= start)
+        if end is not None:
+            stmt = stmt.where(_effective_date() < end)
+        stmt = stmt.group_by(
+            SesionAcompanamiento.emprendimiento_id, SesionAcompanamiento.estado
+        )
+        out: dict[int, dict[str, int]] = {}
+        for venture_id, estado, total in (await self._session.execute(stmt)).all():
+            out.setdefault(venture_id, {})[estado or ""] = total
+        return out
+
+    async def commitment_counts(
+        self,
+        ids: list[int],
+        start: datetime | None,
+        end: datetime | None,
+        moment: datetime,
+    ) -> dict[int, dict[str, int]]:
+        """Por emprendimiento: pendientes y vencidos (hoy) y cumplidos en el periodo."""
+        if not ids:
+            return {}
+        out: dict[int, dict[str, int]] = {}
+
+        async def run(key: str, *conditions: object) -> None:
+            stmt = (
+                select(Compromiso.emprendimiento_id, func.count())
+                .where(Compromiso.emprendimiento_id.in_(ids), *conditions)
+                .group_by(Compromiso.emprendimiento_id)
+            )
+            for venture_id, total in (await self._session.execute(stmt)).all():
+                out.setdefault(venture_id, {})[key] = total
+
+        await run("pendientes", Compromiso.estado == "pendiente")
+        await run(
+            "vencidos",
+            Compromiso.estado == "pendiente",
+            Compromiso.fecha_limite < moment,
+        )
+        done: list[object] = [Compromiso.estado == "cumplido"]
+        if start is not None:
+            done.append(Compromiso.fecha_completado >= start)
+        if end is not None:
+            done.append(Compromiso.fecha_completado < end)
+        await run("cumplidos", *done)
+        return out
+
+    async def progress_stats(
+        self, ids: list[int], start: datetime | None, end: datetime | None
+    ) -> tuple[dict[int, int], dict[int, datetime]]:
+        """Avances registrados en el periodo y fecha del ultimo avance de cada uno."""
+        if not ids:
+            return {}, {}
+        in_period = select(Seguimiento.emprendimiento_id, func.count()).where(
+            Seguimiento.emprendimiento_id.in_(ids)
+        )
+        if start is not None:
+            in_period = in_period.where(Seguimiento.fecha >= start)
+        if end is not None:
+            in_period = in_period.where(Seguimiento.fecha < end)
+        counts = {
+            r[0]: r[1]
+            for r in (
+                await self._session.execute(
+                    in_period.group_by(Seguimiento.emprendimiento_id)
+                )
+            ).all()
+        }
+        last_stmt = (
+            select(Seguimiento.emprendimiento_id, func.max(Seguimiento.fecha))
+            .where(Seguimiento.emprendimiento_id.in_(ids))
+            .group_by(Seguimiento.emprendimiento_id)
+        )
+        last = {
+            r[0]: r[1] for r in (await self._session.execute(last_stmt)).all() if r[1]
+        }
+        return counts, last
+
+    async def sessions_of_ventures(
+        self,
+        ids: list[int],
+        start: datetime | None,
+        end: datetime | None,
+        limit: int = 5000,
+    ) -> list[SesionAcompanamiento]:
+        if not ids:
+            return []
+        stmt = select(SesionAcompanamiento).where(
+            SesionAcompanamiento.emprendimiento_id.in_(ids)
+        )
+        if start is not None:
+            stmt = stmt.where(_effective_date() >= start)
+        if end is not None:
+            stmt = stmt.where(_effective_date() < end)
+        stmt = stmt.order_by(_effective_date().desc()).limit(limit)
+        return list((await self._session.execute(stmt)).scalars().all())
+
     # --- actividad (alertas) ---------------------------------------------------
 
     async def last_activity_by_venture(self) -> dict[int, datetime]:
@@ -293,17 +494,9 @@ class MentoringRepository:
                 for r in (
                     await self._session.execute(
                         select(
-                            SesionAcompanamiento.emprendimiento_id,
+                            Compromiso.emprendimiento_id,
                             func.max(Compromiso.fecha_completado),
-                        )
-                        .join(
-                            Compromiso,
-                            and_(
-                                Compromiso.sesion_acompanamiento_id
-                                == SesionAcompanamiento.sesion_acompanamiento_id,
-                            ),
-                        )
-                        .group_by(SesionAcompanamiento.emprendimiento_id)
+                        ).group_by(Compromiso.emprendimiento_id)
                     )
                 ).all()
             ]

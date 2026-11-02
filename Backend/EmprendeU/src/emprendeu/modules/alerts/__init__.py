@@ -5,6 +5,12 @@ API publica: `AlertService` (`open_count`, `evaluate`). El `router` lo importa
 """
 
 from emprendeu.modules.alerts.models import Alerta, ParametroSeguimiento, TipoAlerta
-from emprendeu.modules.alerts.service import AlertService
+from emprendeu.modules.alerts.service import AlertCounts, AlertService
 
-__all__ = ["AlertService", "Alerta", "ParametroSeguimiento", "TipoAlerta"]
+__all__ = [
+    "AlertCounts",
+    "AlertService",
+    "Alerta",
+    "ParametroSeguimiento",
+    "TipoAlerta",
+]

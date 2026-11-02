@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.modules.ventures.models import (
@@ -92,6 +92,47 @@ class VentureRepository:
             func.lower(func.coalesce(Emprendimiento.estado, "activo")) == "activo"
         )
         return list((await self._session.execute(stmt)).scalars().all())
+
+    async def active_ventures_with_stage(
+        self, etapa_id: int | None
+    ) -> list[tuple[Emprendimiento, Etapa | None]]:
+        """Emprendimientos activos con su etapa actual (filtrables por ella)."""
+        stmt = (
+            select(Emprendimiento, Etapa)
+            .outerjoin(
+                EmprendimientoEtapa,
+                and_(
+                    EmprendimientoEtapa.emprendimiento_id
+                    == Emprendimiento.emprendimiento_id,
+                    func.lower(EmprendimientoEtapa.estado) == "activa",
+                ),
+            )
+            .outerjoin(Etapa, Etapa.etapa_id == EmprendimientoEtapa.etapa_id)
+            .where(
+                func.lower(func.coalesce(Emprendimiento.estado, "activo")) == "activo"
+            )
+            .order_by(Emprendimiento.nombre, Emprendimiento.emprendimiento_id)
+        )
+        if etapa_id is not None:
+            stmt = stmt.where(Etapa.etapa_id == etapa_id)
+        return [(r[0], r[1]) for r in (await self._session.execute(stmt)).all()]
+
+    async def stage_counts(self) -> dict[int, int]:
+        """Emprendimientos activos por etapa actual."""
+        stmt = (
+            select(EmprendimientoEtapa.etapa_id, func.count())
+            .join(
+                Emprendimiento,
+                Emprendimiento.emprendimiento_id
+                == EmprendimientoEtapa.emprendimiento_id,
+            )
+            .where(
+                func.lower(EmprendimientoEtapa.estado) == "activa",
+                func.lower(func.coalesce(Emprendimiento.estado, "activo")) == "activo",
+            )
+            .group_by(EmprendimientoEtapa.etapa_id)
+        )
+        return {r[0]: r[1] for r in (await self._session.execute(stmt)).all()}
 
     # --- etapa del emprendimiento ----------------------------------------
 

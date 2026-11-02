@@ -59,6 +59,12 @@ final class UnknownFailure extends Failure {
   const UnknownFailure([super.message = 'Ocurrió un error inesperado.']);
 }
 
+/// El horario elegido ya lo tomó otra persona (el backend responde `slot_unavailable`).
+final class SlotUnavailableFailure extends Failure {
+  const SlotUnavailableFailure()
+    : super('Ese horario ya no está disponible. Elige otro.');
+}
+
 /// El usuario aún no registró su emprendimiento (el backend responde `no_venture`).
 final class NoVentureFailure extends Failure {
   const NoVentureFailure() : super('Primero registra tu emprendimiento.');

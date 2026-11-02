@@ -127,3 +127,45 @@ async def test_token_de_cuenta_deshabilitada_despues_del_login(
     )
     assert off.status_code == 200
     assert (await client.get(f"{API}/auth/me", headers=victim_h)).status_code == 403
+
+
+async def test_cambiar_clave_invalida_los_tokens_anteriores(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    await make_user(email="u@test.com")
+    old = await login("u@test.com")
+    assert (await client.get(f"{API}/auth/me", headers=old)).status_code == 200
+
+    # una clave actual equivocada NO es un 401: no debe cerrar la sesion del cliente
+    wrong = await client.post(
+        f"{API}/auth/change-password",
+        json={"password_actual": "no-es-esta", "password_nueva": "otra-clave-larga-1"},
+        headers=old,
+    )
+    assert wrong.status_code == 400
+    assert wrong.json()["error"]["code"] == "wrong_password"
+    assert (await client.get(f"{API}/auth/me", headers=old)).status_code == 200
+
+    changed = await client.post(
+        f"{API}/auth/change-password",
+        json={"password_actual": PASSWORD, "password_nueva": "otra-clave-larga-1"},
+        headers=old,
+    )
+    assert changed.status_code == 200
+    new = {"Authorization": f"Bearer {changed.json()['access_token']}"}
+
+    # el token emitido antes del cambio ya no sirve; el nuevo si
+    assert (await client.get(f"{API}/auth/me", headers=old)).status_code == 401
+    assert (await client.get(f"{API}/auth/me", headers=new)).status_code == 200
+
+    stale = await client.post(
+        f"{API}/auth/login", json={"email": "u@test.com", "password": PASSWORD}
+    )
+    assert stale.status_code == 401
+    fresh = await client.post(
+        f"{API}/auth/login",
+        json={"email": "u@test.com", "password": "otra-clave-larga-1"},
+    )
+    assert fresh.status_code == 200
+    again = {"Authorization": f"Bearer {fresh.json()['access_token']}"}
+    assert (await client.get(f"{API}/auth/me", headers=again)).status_code == 200

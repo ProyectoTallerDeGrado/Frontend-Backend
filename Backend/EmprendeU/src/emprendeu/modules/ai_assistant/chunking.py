@@ -1,8 +1,6 @@
-"""Troceado de texto y similitud coseno (sin dependencias externas)."""
+"""Troceado de texto en fragmentos para la base de conocimiento."""
 
 from __future__ import annotations
-
-import math
 
 
 def chunk_text(text: str, *, size: int = 800, overlap: int = 100) -> list[str]:
@@ -28,12 +26,3 @@ def chunk_text(text: str, *, size: int = 800, overlap: int = 100) -> list[str]:
     if current:
         chunks.append(current)
     return chunks
-
-
-def cosine(a: list[float], b: list[float]) -> float:
-    if len(a) != len(b) or not a:
-        return 0.0
-    dot = sum(x * y for x, y in zip(a, b, strict=True))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    return dot / (na * nb) if na and nb else 0.0

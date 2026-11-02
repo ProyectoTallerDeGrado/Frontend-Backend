@@ -6,15 +6,13 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
-    Boolean,
-    CheckConstraint,
     DateTime,
     ForeignKey,
     Identity,
     Index,
-    Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -44,6 +42,7 @@ class Alerta(Base):
     __table_args__ = (
         Index("ix_alertas_emprendimientoid", "emprendimientoid"),
         Index("ix_alertas_tiposid", "tiposid"),
+        Index("ix_alertas_atendida_por", "atendida_por_usuarioid"),
     )
 
     descripcion: Mapped[str | None] = mapped_column(Text)
@@ -52,7 +51,6 @@ class Alerta(Base):
         DateTime(timezone=True), server_default=func.current_timestamp()
     )
     prioridad: Mapped[str | None] = mapped_column(String(30))
-    tipo: Mapped[str | None] = mapped_column(String(60))
     titulo: Mapped[str] = mapped_column(String(240))
     alerta_id: Mapped[int] = mapped_column(
         "alertasid", BigInteger, Identity(always=False), primary_key=True
@@ -72,36 +70,40 @@ class Alerta(Base):
         ForeignKey("tipos.tiposid", ondelete="RESTRICT", name="fk_alertas_tiposid"),
     )
 
+    # Quien la dejo atendida (CU13); `revisada` y `descartada` no lo fijan.
+    atendida_por_usuario_id: Mapped[int | None] = mapped_column(
+        "atendida_por_usuarioid",
+        BigInteger,
+        ForeignKey(
+            "usuario.usuarioid", ondelete="RESTRICT", name="fk_alertas_atendida_por"
+        ),
+    )
+
     tipo_alerta: Mapped[TipoAlerta] = relationship(back_populates="alertas")
 
 
 class ParametroSeguimiento(Base):
-    """Configuracion unica de deteccion de inactividad y riesgo (fila id = 1)."""
+    """Parametro de deteccion de inactividad y riesgo, en formato clave-valor.
+
+    Las claves conocidas estan en `alerts/repository.py` (`SETTING_KEYS`).
+    """
 
     __tablename__ = "parametros_seguimiento"
     __table_args__ = (
-        CheckConstraint(
-            "inactividad_dias BETWEEN 1 AND 365", name="ck_param_inactividad"
-        ),
-        CheckConstraint(
-            "caida_sentimiento_pct BETWEEN 1 AND 100", name="ck_param_caida"
-        ),
-        CheckConstraint(
-            "periodos_consecutivos BETWEEN 1 AND 12", name="ck_param_periodos"
-        ),
+        UniqueConstraint("clave", name="uq_parametros_seguimiento_clave"),
     )
 
-    alertar_incumplimiento: Mapped[bool] = mapped_column(Boolean, default=False)
-    caida_sentimiento_pct: Mapped[int] = mapped_column(Integer, default=25)
+    clave: Mapped[str] = mapped_column(String(80))
+    valor: Mapped[str] = mapped_column(String(255))
+    descripcion: Mapped[str | None] = mapped_column(Text)
     fecha_actualizacion: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
+        DateTime(timezone=True), server_default=func.current_timestamp()
     )
-    inactividad_dias: Mapped[int] = mapped_column(Integer, default=14)
-    notificar_asesor: Mapped[bool] = mapped_column(Boolean, default=True)
-    notificar_coordinador: Mapped[bool] = mapped_column(Boolean, default=True)
-    periodos_consecutivos: Mapped[int] = mapped_column(Integer, default=2)
     parametro_seguimiento_id: Mapped[int] = mapped_column(
-        "parametros_seguimientoid", BigInteger, primary_key=True
+        "parametrosseguimientoid",
+        BigInteger,
+        Identity(always=False),
+        primary_key=True,
     )
     usuario_id: Mapped[int | None] = mapped_column(
         "usuarioid",

@@ -43,6 +43,19 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     return _apply(result);
   }
 
+  /// Cambia la contraseña y se queda con la sesión nueva (la anterior ya no vale).
+  /// Devuelve `null` si salió bien, o el [Failure] para mostrarlo en el formulario.
+  Future<Failure?> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    final result = await ref.read(changePasswordUseCaseProvider)(
+      currentPassword,
+      newPassword,
+    );
+    return _apply(result);
+  }
+
   Future<void> logout() async {
     await ref.read(logoutUseCaseProvider)();
     await ref.read(localDataCleanerProvider).clearUserData();

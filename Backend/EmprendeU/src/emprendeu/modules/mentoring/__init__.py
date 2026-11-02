@@ -15,7 +15,7 @@ from emprendeu.modules.mentoring.models import (
     SesionParticipante,
     Tipo,
 )
-from emprendeu.modules.mentoring.service import MentoringService
+from emprendeu.modules.mentoring.service import MentoringService, VentureActivity
 
 __all__ = [
     "Asignacion",
@@ -28,4 +28,5 @@ __all__ = [
     "SesionAcompanamiento",
     "SesionParticipante",
     "Tipo",
+    "VentureActivity",
 ]

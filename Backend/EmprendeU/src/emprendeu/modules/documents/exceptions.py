@@ -18,3 +18,11 @@ class FileTypeNotAllowed(DomainError):
         super().__init__(
             "Tipo de archivo no permitido.", details={"permitidos": allowed}
         )
+
+
+class MilestoneMismatch(DomainError):
+    code = "milestone_mismatch"
+    status_code = 422
+
+    def __init__(self) -> None:
+        super().__init__("El hito no existe o no es de ese emprendimiento.")

@@ -9,7 +9,7 @@ part of 'mentoring_dto.dart';
 _CommitmentDto _$CommitmentDtoFromJson(Map<String, dynamic> json) =>
     _CommitmentDto(
       compromisoId: (json['compromiso_id'] as num).toInt(),
-      sesionId: (json['sesion_id'] as num).toInt(),
+      sesionId: (json['sesion_id'] as num?)?.toInt(),
       descripcion: json['descripcion'] as String?,
       estado: json['estado'] as String?,
       fechaLimite: json['fecha_limite'] == null

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.config import get_settings
 from emprendeu.modules.ai_assistant import schemas as s
-from emprendeu.modules.ai_assistant.chunking import chunk_text, cosine
+from emprendeu.modules.ai_assistant.chunking import chunk_text
 from emprendeu.modules.ai_assistant.exceptions import (
     AIUnavailable,
     ConversationNotFound,
@@ -19,6 +19,7 @@ from emprendeu.modules.ai_assistant.exceptions import (
 )
 from emprendeu.modules.ai_assistant.llm import LLMClient
 from emprendeu.modules.ai_assistant.models import (
+    EMBEDDING_DIM,
     AnalisisSentimiento,
     ConversacionIa,
     DocumentoConocimiento,
@@ -102,7 +103,7 @@ class AssistantService:
         chunks = chunk_text(body.contenido)
         if not chunks:
             raise EmptyKnowledge
-        vectors = await self._llm.embed(chunks)  # falla antes de tocar la base
+        vectors = self._checked(await self._llm.embed(chunks))  # falla antes de la base
         doc = DocumentoConocimiento(
             titulo=body.titulo,
             descripcion=body.descripcion,
@@ -117,7 +118,7 @@ class AssistantService:
                     documento_conocimiento_id=doc.documento_conocimiento_id,
                     numero_fragmento=i,
                     contenido=text,
-                    embedding={"vector": vec},
+                    embedding=vec,
                 )
                 for i, (text, vec) in enumerate(zip(chunks, vectors, strict=True))
             ]
@@ -178,21 +179,26 @@ class AssistantService:
 
     # --- chat -------------------------------------------------------------------
 
+    @staticmethod
+    def _checked(vectors: list[list[float]]) -> list[list[float]]:
+        """El modelo de embeddings debe devolver `EMBEDDING_DIM` dimensiones."""
+        for vector in vectors:
+            if len(vector) != EMBEDDING_DIM:
+                raise AIUnavailable(
+                    f"El modelo de embeddings devuelve {len(vector)} dimensiones y "
+                    f"la base espera {EMBEDDING_DIM}."
+                )
+        return vectors
+
     async def _retrieve(self, question: str) -> list[tuple[str, str]]:
         settings = get_settings()
-        fragments = await self._repo.active_fragments()
-        if not fragments:
+        if await self._repo.count_active_documents() == 0:
             return []
-        (query,) = await self._llm.embed([question])
-        scored = []
-        for frag, title in fragments:
-            vector = (frag.embedding or {}).get("vector")
-            if isinstance(vector, list):
-                scored.append((cosine(query, vector), frag.contenido, title))
-        scored.sort(key=lambda t: t[0], reverse=True)
+        (query,) = self._checked(await self._llm.embed([question]))
+        nearest = await self._repo.nearest_fragments(query, settings.ai_top_k)
         return [
             (text, title)
-            for sim, text, title in scored[: settings.ai_top_k]
+            for text, title, sim in nearest
             if sim >= settings.ai_min_similarity
         ]
 

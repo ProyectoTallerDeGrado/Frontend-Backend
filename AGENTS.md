@@ -39,22 +39,22 @@ Mentorías y el Perfil completo).
 
 - **Backend**: todas las dependencias (ejecución y `dev`) están instaladas y
   bloqueadas en `uv.lock`. Existe la app ASGI (`emprendeu.main:create_app`), la
-  configuración por entorno, el engine async, y los **modelos SQLAlchemy de las 41
+  configuración por entorno, el engine async, y los **modelos SQLAlchemy de las 42
   tablas del schema `cieu`** (las 38 del modelo original + `perfil_mentor`,
-  `disponibilidad_mentor` y `parametros_seguimiento`) repartidos en 11 módulos. El
-  esquema parte de `Backend/EmprendeU/database/EmprendeU_postgresql.sql` y desde
-  entonces evoluciona solo con migraciones de Alembic (ver `AGENTS.md` del backend).
+  `disponibilidad_mentor`, `parametros_seguimiento` y `postulaciones`) repartidos en 11 módulos. El
+  esquema parte de `Backend/EmprendeU/database/EmprendeU_postgresql.sql`, hoy reemplazado por la referencia
+  `database/cieu_schema_completo.sql`, y evoluciona solo con migraciones de Alembic (ver `AGENTS.md` del backend).
   **Backend completo** (fases 0 a 9): los 11 módulos exponen HTTP bajo `/api/v1`, con
-  auditoría, 52 tests contra PostgreSQL real, Docker y CI. Detalle en
+  auditoría, 71 tests contra PostgreSQL real, Docker y CI. Detalle en
   `Backend/EmprendeU/AGENTS.md` §4 y `ROADMAP.md`.
 - **Web**: tokens de marca, fuentes, auth conectada (cookie `httpOnly`, `proxy.ts`) y el
   **panel de administración completo** (Resumen, Usuarios, Roles y permisos, Parámetros,
-  Catálogos y XP, Auditoría) conectado al backend, con permisos por rol. Faltan las
-  pantallas de `mentoring`, `entrepreneurs`/`ventures` (listado de emprendimientos) y el coach.
+  Catálogos y XP, Auditoría) conectado al backend, con permisos por rol. Mentorías (asignaciones, disponibilidad y sesiones), Emprendimientos (avanzar etapa e historial), Alertas, Dashboard, Reportes (vista previa y CSV), Emprendedores (registro con documento único), Emprendimientos (crear, editar, progreso) y Mi cuenta. Faltan
+  capacitaciones, la carga de documentos de conocimiento y el coach.
 - **Móvil**: tema, router con barra inferior, `core/` (red, errores, almacenamiento, conectividad) y
   las features `auth`, `ventures`, `gamification` (Camino), `mentoring` (compromisos y avances con cola
-  sin conexión) y `home` (Inicio), todas **conectadas al backend**. Faltan Coach IA, Mentorías (agendar)
-  y el Perfil completo. Tiene tests de integración opt-in contra el backend real.
+  sin conexión) y `home` (Inicio), todas **conectadas al backend**. Mentorías (agendar y ver las sesiones, con
+  filtros por estado y periodo), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia (`documents`) y cambio de contraseña. Falta el Coach IA. Tiene tests de integración opt-in contra el backend real.
 - **Diseño visual**: `Frontend/emprendeu/design.md` (panel de administración) y
   `Frontend/app_emprendeu/design.md` (app del emprendedor), basados en el mockup del CIE-U.
 
@@ -126,10 +126,10 @@ aunque funcione.
 ```bash
 # Backend  (cwd: Backend/EmprendeU)
 uv sync --locked                          # instala ejecución + dev
-cp .env.example .env                      # y ajustar DATABASE_URL
+cp .env.example .env                      # y ajustar DATABASE_URL y JWT_SECRET (>= 32 caracteres)
 uv run alembic upgrade head               # crea el schema cieu y todas las tablas
 uv run uvicorn emprendeu.main:app --reload --port 8000
-uv run pytest                             # 52 tests (necesita PostgreSQL)
+uv run pytest                             # 71 tests (necesita PostgreSQL con pgvector)
 uv run ruff check . && uv run ruff format --check .
 uv run python -m emprendeu.modules.users.cli create-admin --email ... --nombre "..."
 

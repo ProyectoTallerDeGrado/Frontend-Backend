@@ -240,6 +240,10 @@ Layout `flex-wrap`, `min-height: 100vh`, fondo `surface-muted`.
 | `params` | Parámetros | `sliders-horizontal` |
 | `cat` | Catálogos y XP | `award` |
 | `aud` | Auditoría | `clipboard-list` |
+| `cuenta` | Mi cuenta (sin permiso: todo el personal) | `user-round` |
+| `asig` | Asignaciones (`asesorias:registro`; oculto al rol asesor) | `user-check` |
+| `disp` | Mi disponibilidad (`asesorias:modificacion`: el asesor) | `calendar-clock` |
+| `ses` | Sesiones (`asesorias:consulta`) | `calendar-days` |
 
   Activo: fondo `rgba(255,255,255,.14)`, texto blanco, `aria-current="page"`, punto `#FF5468` 6 px a la derecha.
   Inactivo: texto `#C9D6F5`. Hover: ver §3.4.
@@ -257,6 +261,10 @@ Layout `flex-wrap`, `min-height: 100vh`, fondo `surface-muted`.
 | Parámetros | Parámetros de seguimiento | Reglas que usa el sistema para detectar inactividad y riesgo de deserción. |
 | Catálogos | Catálogos y gamificación | Etapas del ciclo de vida, retos, recompensas XP e insignias. |
 | Auditoría | Auditoría | Registro de acciones sensibles realizadas en el sistema. |
+| Mi cuenta | Mi cuenta | Consulta tus datos y cambia tu contraseña de acceso. |
+| Asignaciones | Asignaciones | Habilita asesores y asígnalos a los emprendimientos que acompañarán. |
+| Disponibilidad | Mi disponibilidad | Define cuándo puedes atender mentorías; los emprendedores asignados agendan dentro de estos horarios. |
+| Sesiones | Sesiones | Mentorías por estado y periodo; registra lo que ocurrió, recomienda y deja compromisos. |
 
 **Toast global**: `position: fixed; right/bottom: 28px`, `max-width: 420px`, fondo `navy-900`, texto blanco 14 px,
 check verde en círculo de 26 px. Se oculta a los 3.2 s. `role="status"`.

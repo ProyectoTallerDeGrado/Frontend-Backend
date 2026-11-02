@@ -11,4 +11,5 @@ class DocumentOut(BaseModel):
     tipo: str | None
     usuario_id: int
     emprendimiento_id: int | None
+    hito_id: int | None = None
     fecha_subida: datetime | None

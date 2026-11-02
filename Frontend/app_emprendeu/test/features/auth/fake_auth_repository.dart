@@ -27,15 +27,20 @@ class FakeAuthRepository implements AuthRepository {
     this.registerResult = const Result.ok(null),
     this.meResult,
     this.token,
+    this.changePasswordResult,
   });
 
   Result<AuthSession>? loginResult;
   Result<void> registerResult;
   Result<AuthUser>? meResult;
   String? token;
+  Result<AuthSession>? changePasswordResult;
 
   int loginCalls = 0;
   int registerCalls = 0;
+  int changePasswordCalls = 0;
+  String? lastCurrentPassword;
+  String? lastNewPassword;
 
   @override
   Future<Result<AuthSession>> login(String email, String password) async {
@@ -54,6 +59,20 @@ class FakeAuthRepository implements AuthRepository {
   }) async {
     registerCalls++;
     return registerResult;
+  }
+
+  @override
+  Future<Result<AuthSession>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    changePasswordCalls++;
+    lastCurrentPassword = currentPassword;
+    lastNewPassword = newPassword;
+    return changePasswordResult ??
+        const Result.ok(
+          AuthSession(accessToken: 'tok-nuevo', user: entrepreneur),
+        );
   }
 
   @override

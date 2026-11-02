@@ -7,6 +7,7 @@ desde `api/v1.py` (no aqui, para evitar ciclos con `users`).
 from emprendeu.modules.entrepreneurs.models import (
     Emprendedor,
     EmprendimientoEmprendedor,
+    Postulacion,
 )
 from emprendeu.modules.entrepreneurs.service import EntrepreneurRef, EntrepreneurService
 
@@ -15,4 +16,5 @@ __all__ = [
     "EmprendimientoEmprendedor",
     "EntrepreneurRef",
     "EntrepreneurService",
+    "Postulacion",
 ]

@@ -13,6 +13,7 @@ import 'package:app_emprendeu/features/mentoring/domain/entities/commitment.dart
 import 'package:app_emprendeu/features/mentoring/domain/entities/progress_log.dart';
 import 'package:app_emprendeu/features/mentoring/domain/entities/sync_summary.dart';
 import 'package:app_emprendeu/features/mentoring/domain/repositories/mentoring_repository.dart';
+import 'package:app_emprendeu/features/ventures/domain/entities/milestone.dart';
 import 'package:app_emprendeu/features/ventures/domain/entities/venture.dart';
 import 'package:app_emprendeu/features/ventures/domain/repositories/ventures_repository.dart';
 
@@ -60,10 +61,74 @@ class FakeConnectivity implements ConnectivitySource {
 }
 
 class FakeVenturesRepository implements VenturesRepository {
-  FakeVenturesRepository({this.venture});
+  FakeVenturesRepository({this.venture, List<Milestone>? milestones})
+    : milestones = milestones ?? [];
 
   Venture? venture;
   int createCalls = 0;
+  int updateCalls = 0;
+  String? lastUpdatedName;
+  String? lastUpdatedSector;
+  String? lastUpdatedDescription;
+  final List<Milestone> milestones;
+  int milestoneCalls = 0;
+
+  @override
+  Future<Result<Venture>> update(
+    int ventureId, {
+    required String name,
+    String? description,
+    String? sector,
+  }) async {
+    updateCalls++;
+    lastUpdatedName = name;
+    lastUpdatedSector = sector;
+    lastUpdatedDescription = description;
+    venture = Venture(
+      id: ventureId,
+      name: name,
+      stageName: venture?.stageName,
+      description: description,
+      sector: sector,
+      status: venture?.status,
+    );
+    return Result.ok(venture!);
+  }
+
+  @override
+  Future<Result<List<Milestone>>> getMilestones(int ventureId) async =>
+      Result.ok(List.of(milestones));
+
+  @override
+  Future<Result<Milestone>> createMilestone(
+    int ventureId, {
+    required String title,
+    String? description,
+  }) async {
+    milestoneCalls++;
+    final created = Milestone(
+      id: 50 + milestoneCalls,
+      title: title,
+      description: description,
+      done: false,
+    );
+    milestones.add(created);
+    return Result.ok(created);
+  }
+
+  @override
+  Future<Result<Milestone>> completeMilestone(int milestoneId) async {
+    final i = milestones.indexWhere((h) => h.id == milestoneId);
+    final done = Milestone(
+      id: milestoneId,
+      title: milestones[i].title,
+      description: milestones[i].description,
+      done: true,
+      doneAt: DateTime.now(),
+    );
+    milestones[i] = done;
+    return Result.ok(done);
+  }
 
   @override
   Future<Result<Venture?>> getMine() async => Result.ok(venture);

@@ -2,7 +2,7 @@
 class Commitment {
   const Commitment({
     required this.id,
-    required this.sessionId,
+    this.sessionId,
     required this.description,
     required this.done,
     this.dueDate,
@@ -10,7 +10,7 @@ class Commitment {
   });
 
   final int id;
-  final int sessionId;
+  final int? sessionId;
   final String description;
   final bool done;
   final DateTime? dueDate;

@@ -47,6 +47,10 @@ class Usuario(Base):
     )
     # Columna agregada despues del modelo original (migracion de la fase 1).
     ultimo_acceso: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Los tokens emitidos antes de este instante se rechazan (cambio de contrasena).
+    password_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
 
     roles: Mapped[list[RolUsuario]] = relationship(back_populates="usuario")
 

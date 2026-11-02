@@ -4,7 +4,10 @@ import { redirect } from "next/navigation";
 
 import { ApiError, apiFetch } from "@/lib/api-client";
 
+import { authedFetch } from "./authed-fetch";
+
 import {
+  changePasswordSchema,
   fieldErrors,
   loginSchema,
   registerSchema,
@@ -90,6 +93,41 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
     return { message: messageFor(error), values };
   }
   redirect("/login?registrado=1");
+}
+
+/**
+ * Cambia la contraseña de la sesión actual. El backend invalida todos los tokens
+ * anteriores y devuelve uno nuevo, que reemplaza a la cookie para no cerrar la sesión.
+ */
+export async function changePasswordAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: text(formData, "currentPassword"),
+    newPassword: text(formData, "newPassword"),
+    confirmPassword: text(formData, "confirmPassword"),
+  });
+  if (!parsed.success) return { errors: fieldErrors(parsed.error) };
+
+  try {
+    const session = loginResponseSchema.parse(
+      await authedFetch("/auth/change-password", {
+        method: "POST",
+        body: {
+          password_actual: parsed.data.currentPassword,
+          password_nueva: parsed.data.newPassword,
+        },
+      }),
+    );
+    await setSessionToken(session.access_token, session.expires_in);
+  } catch (error) {
+    if (error instanceof ApiError && error.code === "wrong_password") {
+      return { errors: { currentPassword: "La contraseña actual no es correcta." } };
+    }
+    return { message: messageFor(error) };
+  }
+  return {
+    success: true,
+    message: "Contraseña actualizada. Se cerraron las demás sesiones abiertas con la contraseña anterior.",
+  };
 }
 
 export async function logoutAction(): Promise<void> {

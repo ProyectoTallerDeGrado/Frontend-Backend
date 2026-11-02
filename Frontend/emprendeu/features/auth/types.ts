@@ -9,6 +9,8 @@ export type SessionUser = z.infer<typeof apiUserSchema>;
 export type FormState = {
   errors?: Record<string, string>;
   message?: string;
+  /** La operación terminó bien (el formulario se vacía y se muestra `message`). */
+  success?: boolean;
   values?: Record<string, string>;
 };
 

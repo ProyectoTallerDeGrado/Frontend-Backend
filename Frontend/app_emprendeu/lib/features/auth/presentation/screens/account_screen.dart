@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../gamification/index.dart';
+import '../../../ventures/index.dart';
+import '../auth_routes.dart';
 import '../controllers/auth_controller.dart';
 
-/// Destino mínimo tras iniciar sesión, hasta que exista la pantalla de Inicio.
+/// Pestaña «Perfil»: cuenta, emprendimiento, XP e insignias, y cierre de sesión.
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
 
@@ -42,12 +46,22 @@ class AccountScreen extends ConsumerWidget {
       ),
     );
 
+    final outlined = OutlinedButton.styleFrom(
+      foregroundColor: AppColors.ink,
+      side: const BorderSide(color: AppColors.borderStrong, width: 1.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      textStyle: text.bodyMedium?.copyWith(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 'Sesión iniciada',
@@ -71,7 +85,21 @@ class AccountScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 14),
+              const MyVentureCard(),
+              const SizedBox(height: 14),
+              const XpBadgesSection(),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push(AuthRoutes.changePassword),
+                  icon: const Icon(Icons.lock_outline, size: 18),
+                  label: const Text('Cambiar contraseña'),
+                  style: outlined,
+                ),
+              ),
+              const SizedBox(height: 14),
               SizedBox(
                 height: 52,
                 child: OutlinedButton.icon(
@@ -79,20 +107,7 @@ class AccountScreen extends ConsumerWidget {
                       ref.read(authControllerProvider.notifier).logout(),
                   icon: const Icon(Icons.logout, size: 18),
                   label: const Text('Cerrar sesión'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.ink,
-                    side: const BorderSide(
-                      color: AppColors.borderStrong,
-                      width: 1.5,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    textStyle: text.bodyMedium?.copyWith(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  style: outlined,
                 ),
               ),
             ],

@@ -1,6 +1,7 @@
 import 'package:app_emprendeu/core/error/failure.dart';
 import 'package:app_emprendeu/core/error/result.dart';
 import 'package:app_emprendeu/features/auth/domain/entities/auth_session.dart';
+import 'package:app_emprendeu/features/auth/domain/usecases/change_password_usecase.dart';
 import 'package:app_emprendeu/features/auth/domain/usecases/login_usecase.dart';
 import 'package:app_emprendeu/features/auth/domain/usecases/register_usecase.dart';
 import 'package:app_emprendeu/features/auth/domain/usecases/restore_session_usecase.dart';
@@ -35,6 +36,38 @@ void main() {
       final result = await LoginUseCase(repo)('a@b.co', 'mala');
       expect(failureOf(result), isA<InvalidCredentialsFailure>());
       expect(repo.token, isNull);
+    });
+  });
+
+  group('ChangePasswordUseCase', () {
+    test(
+      'guarda el token nuevo: el anterior ya no vale en el servidor',
+      () async {
+        final repo = FakeAuthRepository(token: 'tok-viejo');
+        final result = await ChangePasswordUseCase(repo)(
+          'actual-123',
+          'nueva-4567',
+        );
+        expect(result, isA<Ok<AuthSession>>());
+        expect(repo.token, 'tok-nuevo');
+        expect(repo.lastCurrentPassword, 'actual-123');
+        expect(repo.lastNewPassword, 'nueva-4567');
+      },
+    );
+
+    test('si falla conserva el token y propaga el fallo', () async {
+      final repo = FakeAuthRepository(
+        token: 'tok-viejo',
+        changePasswordResult: const Result.err(
+          FieldFailure(
+            'currentPassword',
+            'La contraseña actual no es correcta.',
+          ),
+        ),
+      );
+      final result = await ChangePasswordUseCase(repo)('mala', 'nueva-4567');
+      expect(failureOf(result), isA<FieldFailure>());
+      expect(repo.token, 'tok-viejo');
     });
   });
 

@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$CommitmentDto {
 
-@JsonKey(name: 'compromiso_id') int get compromisoId;@JsonKey(name: 'sesion_id') int get sesionId; String? get descripcion; String? get estado;@JsonKey(name: 'fecha_limite') DateTime? get fechaLimite;
+@JsonKey(name: 'compromiso_id') int get compromisoId;@JsonKey(name: 'sesion_id') int? get sesionId; String? get descripcion; String? get estado;@JsonKey(name: 'fecha_limite') DateTime? get fechaLimite;
 /// Create a copy of CommitmentDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $CommitmentDtoCopyWith<$Res>  {
   factory $CommitmentDtoCopyWith(CommitmentDto value, $Res Function(CommitmentDto) _then) = _$CommitmentDtoCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'compromiso_id') int compromisoId,@JsonKey(name: 'sesion_id') int sesionId, String? descripcion, String? estado,@JsonKey(name: 'fecha_limite') DateTime? fechaLimite
+@JsonKey(name: 'compromiso_id') int compromisoId,@JsonKey(name: 'sesion_id') int? sesionId, String? descripcion, String? estado,@JsonKey(name: 'fecha_limite') DateTime? fechaLimite
 });
 
 
@@ -71,11 +71,11 @@ class _$CommitmentDtoCopyWithImpl<$Res>
 
 /// Create a copy of CommitmentDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? compromisoId = null,Object? sesionId = null,Object? descripcion = freezed,Object? estado = freezed,Object? fechaLimite = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? compromisoId = null,Object? sesionId = freezed,Object? descripcion = freezed,Object? estado = freezed,Object? fechaLimite = freezed,}) {
   return _then(CommitmentDto(
 compromisoId: null == compromisoId ? _self.compromisoId : compromisoId // ignore: cast_nullable_to_non_nullable
-as int,sesionId: null == sesionId ? _self.sesionId : sesionId // ignore: cast_nullable_to_non_nullable
-as int,descripcion: freezed == descripcion ? _self.descripcion : descripcion // ignore: cast_nullable_to_non_nullable
+as int,sesionId: freezed == sesionId ? _self.sesionId : sesionId // ignore: cast_nullable_to_non_nullable
+as int?,descripcion: freezed == descripcion ? _self.descripcion : descripcion // ignore: cast_nullable_to_non_nullable
 as String?,estado: freezed == estado ? _self.estado : estado // ignore: cast_nullable_to_non_nullable
 as String?,fechaLimite: freezed == fechaLimite ? _self.fechaLimite : fechaLimite // ignore: cast_nullable_to_non_nullable
 as DateTime?,
@@ -163,7 +163,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'compromiso_id')  int compromisoId, @JsonKey(name: 'sesion_id')  int sesionId,  String? descripcion,  String? estado, @JsonKey(name: 'fecha_limite')  DateTime? fechaLimite)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'compromiso_id')  int compromisoId, @JsonKey(name: 'sesion_id')  int? sesionId,  String? descripcion,  String? estado, @JsonKey(name: 'fecha_limite')  DateTime? fechaLimite)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CommitmentDto() when $default != null:
 return $default(_that.compromisoId,_that.sesionId,_that.descripcion,_that.estado,_that.fechaLimite);case _:
@@ -184,7 +184,7 @@ return $default(_that.compromisoId,_that.sesionId,_that.descripcion,_that.estado
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'compromiso_id')  int compromisoId, @JsonKey(name: 'sesion_id')  int sesionId,  String? descripcion,  String? estado, @JsonKey(name: 'fecha_limite')  DateTime? fechaLimite)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'compromiso_id')  int compromisoId, @JsonKey(name: 'sesion_id')  int? sesionId,  String? descripcion,  String? estado, @JsonKey(name: 'fecha_limite')  DateTime? fechaLimite)  $default,) {final _that = this;
 switch (_that) {
 case _CommitmentDto():
 return $default(_that.compromisoId,_that.sesionId,_that.descripcion,_that.estado,_that.fechaLimite);case _:
@@ -204,7 +204,7 @@ return $default(_that.compromisoId,_that.sesionId,_that.descripcion,_that.estado
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'compromiso_id')  int compromisoId, @JsonKey(name: 'sesion_id')  int sesionId,  String? descripcion,  String? estado, @JsonKey(name: 'fecha_limite')  DateTime? fechaLimite)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'compromiso_id')  int compromisoId, @JsonKey(name: 'sesion_id')  int? sesionId,  String? descripcion,  String? estado, @JsonKey(name: 'fecha_limite')  DateTime? fechaLimite)?  $default,) {final _that = this;
 switch (_that) {
 case _CommitmentDto() when $default != null:
 return $default(_that.compromisoId,_that.sesionId,_that.descripcion,_that.estado,_that.fechaLimite);case _:
@@ -219,11 +219,11 @@ return $default(_that.compromisoId,_that.sesionId,_that.descripcion,_that.estado
 @JsonSerializable()
 
 class _CommitmentDto extends CommitmentDto {
-  const _CommitmentDto({@JsonKey(name: 'compromiso_id') required this.compromisoId, @JsonKey(name: 'sesion_id') required this.sesionId, this.descripcion, this.estado, @JsonKey(name: 'fecha_limite') this.fechaLimite}): super._();
+  const _CommitmentDto({@JsonKey(name: 'compromiso_id') required this.compromisoId, @JsonKey(name: 'sesion_id') this.sesionId, this.descripcion, this.estado, @JsonKey(name: 'fecha_limite') this.fechaLimite}): super._();
   factory _CommitmentDto.fromJson(Map<String, dynamic> json) => _$CommitmentDtoFromJson(json);
 
 @override@JsonKey(name: 'compromiso_id') final  int compromisoId;
-@override@JsonKey(name: 'sesion_id') final  int sesionId;
+@override@JsonKey(name: 'sesion_id') final  int? sesionId;
 @override final  String? descripcion;
 @override final  String? estado;
 @override@JsonKey(name: 'fecha_limite') final  DateTime? fechaLimite;
@@ -263,7 +263,7 @@ abstract mixin class _$CommitmentDtoCopyWith<$Res> implements $CommitmentDtoCopy
   factory _$CommitmentDtoCopyWith(_CommitmentDto value, $Res Function(_CommitmentDto) _then) = __$CommitmentDtoCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'compromiso_id') int compromisoId,@JsonKey(name: 'sesion_id') int sesionId, String? descripcion, String? estado,@JsonKey(name: 'fecha_limite') DateTime? fechaLimite
+@JsonKey(name: 'compromiso_id') int compromisoId,@JsonKey(name: 'sesion_id') int? sesionId, String? descripcion, String? estado,@JsonKey(name: 'fecha_limite') DateTime? fechaLimite
 });
 
 
@@ -280,11 +280,11 @@ class __$CommitmentDtoCopyWithImpl<$Res>
 
 /// Create a copy of CommitmentDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? compromisoId = null,Object? sesionId = null,Object? descripcion = freezed,Object? estado = freezed,Object? fechaLimite = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? compromisoId = null,Object? sesionId = freezed,Object? descripcion = freezed,Object? estado = freezed,Object? fechaLimite = freezed,}) {
   return _then(_CommitmentDto(
 compromisoId: null == compromisoId ? _self.compromisoId : compromisoId // ignore: cast_nullable_to_non_nullable
-as int,sesionId: null == sesionId ? _self.sesionId : sesionId // ignore: cast_nullable_to_non_nullable
-as int,descripcion: freezed == descripcion ? _self.descripcion : descripcion // ignore: cast_nullable_to_non_nullable
+as int,sesionId: freezed == sesionId ? _self.sesionId : sesionId // ignore: cast_nullable_to_non_nullable
+as int?,descripcion: freezed == descripcion ? _self.descripcion : descripcion // ignore: cast_nullable_to_non_nullable
 as String?,estado: freezed == estado ? _self.estado : estado // ignore: cast_nullable_to_non_nullable
 as String?,fechaLimite: freezed == fechaLimite ? _self.fechaLimite : fechaLimite // ignore: cast_nullable_to_non_nullable
 as DateTime?,
