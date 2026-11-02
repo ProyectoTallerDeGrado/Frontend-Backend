@@ -56,14 +56,14 @@ void main() {
       await pumpApp(tester, _loggedIn(ventures: ventures), height: 1700);
 
       expect(find.text('Registra tu emprendimiento'), findsOneWidget);
-      expect(find.text('Compromisos pendientes'), findsNothing);
+      expect(find.text('Tareas y compromisos pendientes'), findsNothing);
 
       await tester.enterText(find.byType(TextField), 'Mi Café');
       await _tapText(tester, 'Registrar emprendimiento');
 
       expect(ventures.createCalls, 1);
       expect(find.text('Mi Café'), findsOneWidget);
-      expect(find.text('Compromisos pendientes'), findsOneWidget);
+      expect(find.text('Tareas y compromisos pendientes'), findsOneWidget);
     },
   );
 
@@ -81,6 +81,59 @@ void main() {
     expect(find.text('1 por hacer'), findsOneWidget);
     expect(mentoring.commitments.last.done, isTrue);
   });
+
+  testWidgets(
+    'CU22: lo cumplido sale de la lista de pendientes y queda plegado aparte',
+    (tester) async {
+      final mentoring = FakeMentoringRepository();
+      await pumpApp(tester, _loggedIn(mentoring: mentoring), height: 1700);
+      expect(find.text('Cumplidos (0)'), findsNothing);
+
+      await tester.tap(
+        find.bySemanticsLabel(
+          RegExp('Marcar como cumplido: Actualizar costos'),
+        ),
+      );
+      await settle(tester);
+
+      // ya no está entre los pendientes; aparece un acceso a los cumplidos
+      expect(find.text('Actualizar costos del prototipo'), findsNothing);
+      expect(
+        find.text('Enviar guion de entrevista a la mentora'),
+        findsOneWidget,
+      );
+      expect(find.text('Cumplidos (1)'), findsOneWidget);
+
+      await tester.tap(find.text('Cumplidos (1)'));
+      await settle(tester);
+      expect(find.text('Actualizar costos del prototipo'), findsOneWidget);
+
+      // devolverlo a pendiente lo regresa a la lista
+      await tester.tap(
+        find.bySemanticsLabel(
+          RegExp('Marcar como pendiente: Actualizar costos'),
+        ),
+      );
+      await settle(tester);
+      expect(find.text('2 por hacer'), findsOneWidget);
+      expect(find.text('Cumplidos (1)'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'CU22: sin tareas pendientes se felicita; sin compromisos se explica',
+    (tester) async {
+      final mentoring = FakeMentoringRepository(commitments: []);
+      await pumpApp(tester, _loggedIn(mentoring: mentoring), height: 1700);
+      expect(
+        find.text(
+          'Aún no tienes compromisos. Tu mentor los asignará en cada sesión.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('0 por hacer'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'registrar un avance sin conexión lo deja pendiente y luego se sincroniza',

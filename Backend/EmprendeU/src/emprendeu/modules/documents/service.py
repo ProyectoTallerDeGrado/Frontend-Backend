@@ -25,7 +25,11 @@ from emprendeu.modules.documents.storage import (
     safe_name,
 )
 from emprendeu.modules.entrepreneurs import EntrepreneurService
+from emprendeu.modules.mentoring import MentoringService
 from emprendeu.modules.users import CurrentUser
+
+# Un asesor sube y elimina documentos solo de los emprendimientos que tiene asignados.
+ASSIGNED_ADVISOR_PERMISSIONS = {"emprendedores:registro", "emprendedores:modificacion"}
 
 
 def _out(d: Documento) -> DocumentOut:
@@ -48,13 +52,28 @@ class DocumentService:
         self._storage = storage or LocalStorage()
         self._audit = AuditService(session)
         self._entrepreneurs = EntrepreneurService(session)
+        self._mentoring = MentoringService(session)
+
+    async def _staff_may(
+        self, user: CurrentUser, venture_id: int | None, permission: str
+    ) -> bool:
+        """Personal con el permiso, o asesor con el emprendimiento asignado."""
+        if venture_id is None:
+            return False
+        if user.can_staff(permission):
+            return True
+        return (
+            user.rol == "asesor"
+            and permission in ASSIGNED_ADVISOR_PERMISSIONS
+            and await self._mentoring.has_active_assignment(user.usuario_id, venture_id)
+        )
 
     async def _can_access(
         self, user: CurrentUser, venture_id: int | None, permission: str
     ) -> bool:
         if venture_id is None:
             return False
-        if user.can_staff(permission):
+        if await self._staff_may(user, venture_id, permission):
             return True
         return await self._entrepreneurs.is_member(user.usuario_id, venture_id)
 
@@ -156,8 +175,8 @@ class DocumentService:
 
     async def delete(self, user: CurrentUser, documento_id: int) -> None:
         doc = await self._get(user, documento_id, "emprendedores:modificacion")
-        if doc.usuario_id != user.usuario_id and not user.can_staff(
-            "emprendedores:modificacion"
+        if doc.usuario_id != user.usuario_id and not await self._staff_may(
+            user, doc.emprendimiento_id, "emprendedores:modificacion"
         ):
             raise Forbidden("Solo quien subio el archivo o el personal puede borrarlo.")
         stored = doc.ruta

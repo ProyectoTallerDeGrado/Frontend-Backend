@@ -5,10 +5,12 @@ import '../../../../core/error/result.dart';
 import '../../../documents/index.dart';
 import '../../domain/entities/milestone.dart';
 import '../../domain/entities/venture.dart';
+import '../../domain/entities/venture_need.dart';
 import '../../domain/repositories/ventures_repository.dart';
 import '../../domain/usecases/create_venture_usecase.dart';
 import '../../domain/usecases/get_my_venture_usecase.dart';
 import '../../domain/usecases/milestones_usecases.dart';
+import '../../domain/usecases/needs_usecases.dart';
 import '../../domain/usecases/update_venture_usecase.dart';
 
 /// Contrato del repositorio; la implementación se inyecta en `app/providers.dart`.
@@ -39,6 +41,22 @@ final createMilestoneUseCaseProvider = Provider(
 
 final completeMilestoneUseCaseProvider = Provider(
   (ref) => CompleteMilestoneUseCase(ref.watch(venturesRepositoryProvider)),
+);
+
+final getNeedsUseCaseProvider = Provider(
+  (ref) => GetNeedsUseCase(ref.watch(venturesRepositoryProvider)),
+);
+
+final addNeedUseCaseProvider = Provider(
+  (ref) => AddNeedUseCase(ref.watch(venturesRepositoryProvider)),
+);
+
+final resolveNeedUseCaseProvider = Provider(
+  (ref) => ResolveNeedUseCase(ref.watch(venturesRepositoryProvider)),
+);
+
+final getNeedCatalogUseCaseProvider = Provider(
+  (ref) => GetNeedCatalogUseCase(ref.watch(venturesRepositoryProvider)),
 );
 
 /// Emprendimiento del usuario (`null` = todavía no registró ninguno).
@@ -124,3 +142,52 @@ class MilestonesController extends Notifier<void> {
 
 final milestonesControllerProvider =
     NotifierProvider<MilestonesController, void>(MilestonesController.new);
+
+/// Necesidades y dificultades de un emprendimiento.
+final needsProvider = FutureProvider.autoDispose.family<List<VentureNeed>, int>(
+  (ref, ventureId) async =>
+      (await ref.watch(getNeedsUseCaseProvider)(ventureId)).getOrThrow(),
+);
+
+/// Catálogo de necesidades (nombres) para sugerir; si falla, simplemente no se sugiere.
+final needCatalogProvider = FutureProvider.autoDispose<List<String>>(
+  (ref) async =>
+      (await ref.watch(getNeedCatalogUseCaseProvider)()).valueOrNull ??
+      const <String>[],
+);
+
+/// Registrar y resolver necesidades. Devuelve el [Failure] para mostrarlo, o `null` si salió bien.
+class NeedsController extends Notifier<void> {
+  @override
+  void build() {}
+
+  Future<Failure?> add({
+    required int ventureId,
+    required String name,
+    required String priority,
+    String? description,
+  }) async {
+    final result = await ref.read(addNeedUseCaseProvider)(
+      ventureId,
+      name: name,
+      priority: priority,
+      description: description,
+    );
+    if (result is Ok) {
+      ref
+        ..invalidate(needsProvider)
+        ..invalidate(needCatalogProvider);
+    }
+    return result.failureOrNull;
+  }
+
+  Future<Failure?> resolve(int needId) async {
+    final result = await ref.read(resolveNeedUseCaseProvider)(needId);
+    if (result is Ok) ref.invalidate(needsProvider);
+    return result.failureOrNull;
+  }
+}
+
+final needsControllerProvider = NotifierProvider<NeedsController, void>(
+  NeedsController.new,
+);

@@ -32,6 +32,11 @@ Failure mapDioException(DioException e) {
       return const SlotUnavailableFailure();
     case 'ai_unavailable':
       return const AssistantUnavailableFailure();
+    case 'need_exists':
+      return const FieldFailure(
+        'name',
+        'Ya registraste esa necesidad y sigue sin resolver.',
+      );
     case 'wrong_password':
       // 400 (no 401): una clave actual equivocada no debe cerrar la sesión.
       return const FieldFailure(

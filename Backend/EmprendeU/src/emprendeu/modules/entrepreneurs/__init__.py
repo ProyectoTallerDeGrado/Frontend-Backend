@@ -9,9 +9,14 @@ from emprendeu.modules.entrepreneurs.models import (
     EmprendimientoEmprendedor,
     Postulacion,
 )
-from emprendeu.modules.entrepreneurs.service import EntrepreneurRef, EntrepreneurService
+from emprendeu.modules.entrepreneurs.service import (
+    ApplicationRef,
+    EntrepreneurRef,
+    EntrepreneurService,
+)
 
 __all__ = [
+    "ApplicationRef",
     "Emprendedor",
     "EmprendimientoEmprendedor",
     "EntrepreneurRef",

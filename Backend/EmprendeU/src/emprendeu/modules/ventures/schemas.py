@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, StringConstraints, model_validator
 
 Name = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)
@@ -100,8 +100,21 @@ class NeedOut(BaseModel):
 
 
 class VentureNeedCreate(BaseModel):
-    necesidad_id: int
+    """Una necesidad del catalogo (`necesidad_id`) o una nueva por `nombre` (se crea si no existe)."""
+
+    necesidad_id: int | None = None
+    nombre: Annotated[
+        str | None,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=160),
+    ] = None
+    descripcion: str | None = None  # solo al crear una necesidad nueva
     prioridad: Literal["baja", "media", "alta"] = "media"
+
+    @model_validator(mode="after")
+    def _one_of(self) -> VentureNeedCreate:
+        if (self.necesidad_id is None) == (self.nombre is None):
+            raise ValueError("Indica la necesidad del catalogo o un nombre, no ambos.")
+        return self
 
 
 class VentureNeedOut(BaseModel):

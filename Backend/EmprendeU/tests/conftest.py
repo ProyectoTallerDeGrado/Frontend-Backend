@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.security import hash_password
 from emprendeu.modules.entrepreneurs import EntrepreneurService
+from emprendeu.modules.entrepreneurs.dependencies import get_application_limiter
 from emprendeu.modules.users.dependencies import get_login_limiter
 from emprendeu.modules.users.models import Usuario
 from emprendeu.modules.users.repository import UserRepository
@@ -59,5 +60,6 @@ def login(client: AsyncClient) -> Callable[[str], Awaitable[dict[str, str]]]:
 
 
 @pytest.fixture(autouse=True)
-def _reset_login_limiter() -> None:
+def _reset_limiters() -> None:
     get_login_limiter().reset()
+    get_application_limiter().reset()

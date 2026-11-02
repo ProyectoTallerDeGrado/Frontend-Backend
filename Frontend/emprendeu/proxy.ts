@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIE = "emprendeu_session";
-const PUBLIC_PATHS = ["/login", "/register"];
+const PUBLIC_PATHS = ["/login", "/register", "/postular"];
 
 /**
  * Primera barrera: sin cookie de sesión no se entra a rutas privadas.

@@ -15,6 +15,7 @@ import 'package:app_emprendeu/features/mentoring/domain/entities/sync_summary.da
 import 'package:app_emprendeu/features/mentoring/domain/repositories/mentoring_repository.dart';
 import 'package:app_emprendeu/features/ventures/domain/entities/milestone.dart';
 import 'package:app_emprendeu/features/ventures/domain/entities/venture.dart';
+import 'package:app_emprendeu/features/ventures/domain/entities/venture_need.dart';
 import 'package:app_emprendeu/features/ventures/domain/repositories/ventures_repository.dart';
 
 class InMemoryKeyValueStore implements KeyValueStore {
@@ -61,8 +62,65 @@ class FakeConnectivity implements ConnectivitySource {
 }
 
 class FakeVenturesRepository implements VenturesRepository {
-  FakeVenturesRepository({this.venture, List<Milestone>? milestones})
-    : milestones = milestones ?? [];
+  FakeVenturesRepository({
+    this.venture,
+    List<Milestone>? milestones,
+    List<VentureNeed>? needs,
+  }) : milestones = milestones ?? [],
+       needs = needs ?? [];
+
+  final List<VentureNeed> needs;
+  List<String> catalog = ['Capital de trabajo', 'Asesoría legal'];
+  int addNeedCalls = 0;
+  String? lastNeedName;
+  String? lastNeedPriority;
+  String? lastNeedDescription;
+  Failure? addNeedFailure;
+
+  @override
+  Future<Result<List<VentureNeed>>> getNeeds(int ventureId) async =>
+      Result.ok(List.of(needs));
+
+  @override
+  Future<Result<List<String>>> getNeedCatalog() async => Result.ok(catalog);
+
+  @override
+  Future<Result<VentureNeed>> addNeed(
+    int ventureId, {
+    required String name,
+    required String priority,
+    String? description,
+  }) async {
+    addNeedCalls++;
+    lastNeedName = name;
+    lastNeedPriority = priority;
+    lastNeedDescription = description;
+    if (addNeedFailure != null) return Result.err(addNeedFailure!);
+    final created = VentureNeed(
+      id: 300 + addNeedCalls,
+      name: name,
+      resolved: false,
+      priority: priority,
+      detectedAt: DateTime.now(),
+    );
+    needs.add(created);
+    return Result.ok(created);
+  }
+
+  @override
+  Future<Result<VentureNeed>> resolveNeed(int needId) async {
+    final i = needs.indexWhere((n) => n.id == needId);
+    final old = needs[i];
+    needs[i] = VentureNeed(
+      id: old.id,
+      name: old.name,
+      resolved: true,
+      priority: old.priority,
+      detectedAt: old.detectedAt,
+      resolvedAt: DateTime.now(),
+    );
+    return Result.ok(needs[i]);
+  }
 
   Venture? venture;
   int createCalls = 0;

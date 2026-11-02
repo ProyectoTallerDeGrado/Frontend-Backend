@@ -55,7 +55,7 @@ y [dialecto Psycopg de SQLAlchemy](https://docs.sqlalchemy.org/en/20/dialects/po
 > Estado real hoy: **backend completo** (fases 0 a 9 de [`ROADMAP.md`](ROADMAP.md)).
 > Los 11 módulos tienen persistencia, servicio, repositorio, esquemas y router; hay
 > infraestructura transversal (`security`, `pagination`, `logging`, `ratelimit`,
-> errores 401/403/429/413/500), 78 tests contra PostgreSQL real, Dockerfile,
+> errores 401/403/429/413/500), 91 tests contra PostgreSQL real, Dockerfile,
 > `docker-compose.yml` y CI. Lo único externo que falta para operar es Ollama
 > (opcional: sin él el coach responde 503 y el resto funciona).
 
@@ -178,15 +178,15 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 |---|---|
 | `users` ✅ | `POST /auth/login`, `/auth/register`, `/auth/change-password`, `GET /auth/me`; `GET/POST /users`, `PATCH /users/{id}/estado`, `/users/{id}/rol`; `GET /roles`, `GET/PUT /roles/{id}/permissions` |
 | `audit` ✅ | `GET /audit`, `GET /audit/export` (CSV); `AuditService.record(...)` para el resto de módulos |
-| `entrepreneurs` ✅ | `GET/POST /entrepreneurs` (el alta crea usuario + emprendedor), `/entrepreneurs/me` (GET/PATCH), `/entrepreneurs/{id}` |
-| `ventures` ✅ | `/stages`, `/ventures` (CRUD, `/me`, `PUT /{id}/stage`, historial), hitos (`/milestones`), necesidades (`/needs`) |
+| `entrepreneurs` ✅ | `GET/POST /entrepreneurs` (el alta crea usuario + emprendedor), `/entrepreneurs/me` (GET/PATCH), `/entrepreneurs/{id}`; postulaciones: `POST /applications` (público, sin sesión), `GET /applications` y `/{id}`, `POST /applications/{id}/admit` y `/reject` |
+| `ventures` ✅ | `/stages`, `/ventures` (CRUD, `/me`, `PUT /{id}/stage`, historial), hitos (`/milestones`), necesidades (`/needs` y `/ventures/{id}/needs`, esta última acepta un nombre nuevo) |
 | `gamification` ✅ | `/challenges`, `/badges` (catálogo), `GET /journey`, `POST /journey/challenges/{id}/complete`, `GET /gamification/me` |
 | `mentoring` ✅ | `/mentoring/mentors` (+ `PUT {id}/enabled`, perfil, `slots`, horarios: `GET/PUT/POST {id}/availability`, `PATCH/DELETE /availability/{id}`), `booking-status`, `sessions` (agendar, `me` y lista con filtros `estado/desde/hasta`, `register`, completar, cancelar), `commitments` (`POST`, `me`), `recommendations` (`POST`, `me`), `progress`, `POST /mentoring/sync`, `assignments`, historial `GET /mentoring/ventures/{id}/history` y `/ventures/me/history` |
 | `alerts` ✅ | `GET/PUT /alerts/settings`, `GET /alerts`, `PATCH /alerts/{id}` (`revisada`, `atendida`, `descartada`), `POST /alerts/evaluate`; tarea `alerts/jobs.py` |
 | `indicators` ✅ | `GET /indicators/overview` (resumen del panel), `GET /indicators/dashboard` (filtros `desde`, `hasta`, `etapa_id`), `GET /indicators/reports/{kind}` y `/export` (CSV) con `kind` ∈ `resumen`, `sesiones`, `alertas`, `indicadores`; tipos y valores por emprendimiento |
 | `ai_assistant` ✅ | `POST /ai/chat`, `GET /ai/conversations/me` y `/{id}/messages`, `GET/POST /ai/knowledge` (texto), `POST /ai/knowledge/upload` (archivo txt/md/pdf/docx), `DELETE /ai/knowledge/{id}` (desactivar), `GET /ai/status`, `GET /ai/sentiment/{emprendedor_id}` |
-| `training` ✅ | `/training` (CRUD, `me`, inscripción, participantes, asistencia) |
-| `documents` ✅ | `POST /documents` (multipart, `emprendimiento_id` y `hito_id` opcionales), listado (filtros `emprendimiento_id`, `hito_id`), `download`, `DELETE` |
+| `training` ✅ | `/training` (alta, edición y estado), `GET /training/{id}`, `/published` y `/me` (con la asistencia propia), `POST /{id}/enroll`, `GET/POST /{id}/participants`, `PATCH /{id}/participants/{emprendedor_id}` |
+| `documents` ✅ | `POST /documents` (multipart, `emprendimiento_id` y `hito_id` opcionales), listado (filtros `emprendimiento_id`, `hito_id`), `GET /{id}/download`, `DELETE /{id}` |
 
 ### Convenciones que ya están fijadas en el código
 
@@ -315,6 +315,28 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
   chat se hace `rollback` de todo (conversación nueva, pregunta y sentimiento): nada queda a medias (503
   `ai_unavailable`). **RF07:** `analisis_sentimiento` guarda solo el índice numérico, la fecha y el emprendedor, sin texto y
   **sin enlace al mensaje** (`mensajes_iaid` queda nulo); el personal ve únicamente la serie semanal agregada.
+- **Admisión (fase 6, CU26):** `POST /applications` es **público** (sin sesión): una postulación pendiente por correo
+  (409 `application_pending`), campo trampa `sitio_web` (si viene lleno se finge éxito y no se guarda) y límite de
+  intentos por IP (`APPLICATION_MAX_ATTEMPTS` por `APPLICATION_WINDOW_SECONDS`, 429). La web llama a la API desde su servidor,
+  así que la API ve siempre la IP del servidor web: con `APPLICATION_TRUST_FORWARDED_FOR=true` la clave del límite es la
+  primera IP de `X-Forwarded-For` (la web la reenvía). **Activarlo confía en quien llama**: solo si la API no queda abierta directo
+  a internet; por defecto es `false`. Revisar es de personal (`emprendedores:consulta`); decidir, de coordinación
+  (`emprendedores:registro`). **Admitir** (`VentureService.admit_application`, porque `ventures` depende de `users` y `entrepreneurs`)
+  crea en **una sola transacción** el usuario (rol emprendedor, nombre y apellido tal cual se postuló, clave temporal que se
+  muestra una vez), su perfil, el emprendimiento (primera etapa activa, con el fundador) y vincula la postulación; si algo falla
+  (correo ya registrado 409 `email_taken`, documento repetido 409 `document_already_registered`, error intermedio) no queda nada y
+  la postulación sigue pendiente. Rechazar exige observación. La decisión es **definitiva**: 409 `application_decided` y,
+  además, los CHECK de `postulaciones` la hacen inmutable en la base (la fila se toma `FOR UPDATE`).
+- **Capacitaciones (fase 6, CU27 a CU29):** estados `borrador` → `publicada` → `realizada` o `cancelada` (un borrador también
+  puede cancelarse; la migración `e2a7c4d96b18` pasa las `programada` existentes a `publicada`). Publicar exige fecha (422
+  `date_required`). Crear, editar, publicar, agregar participantes y marcar asistencia es **solo de coordinación** (permiso
+  `asesorias:registro`; el asesor consulta) y un participante no se repite (409 `already_enrolled`). El emprendedor no ve
+  borradores y `GET /training/published` devuelve publicadas y realizadas con `inscrito` y `mi_asistencia`. Inscribirse solo en
+  una `publicada` (409 `training_not_open`).
+- **Documentos y necesidades (fase 6, CU30 y CU24):** un **asesor con el emprendimiento asignado** (consulta a `mentoring` por su
+  servicio público, `has_active_assignment`) sube y elimina documentos de ese emprendimiento; coordinación en todos; el emprendedor, en
+  el suyo. Un emprendedor registra una necesidad por nombre (`POST /ventures/{id}/needs`): si no existe en el catálogo se crea; la
+  misma sin resolver da 409 `need_exists` y una resuelta que reaparece se reabre (la base no repite el par).
 - La matriz por defecto da a `administrador` solo `asesorias:consulta`: quien registra sesiones y
   gestiona asignaciones es coordinación (`consulta/registro`) y el asesor (`consulta/registro/modificacion`).
 - `fragmentos_documento.embedding` es `vector(768)` (pgvector, `EMBEDDING_DIM`); la búsqueda usa

@@ -26,6 +26,21 @@ class DocumentsRemoteDataSource {
     return EvidenceDto.fromJson(response.data!);
   }
 
+  Future<void> delete(int documentId) async {
+    await _dio.delete<void>('/documents/$documentId');
+  }
+
+  Future<List<int>> download(int documentId) async {
+    final response = await _dio.get<List<int>>(
+      '/documents/$documentId/download',
+      options: Options(
+        responseType: ResponseType.bytes,
+        receiveTimeout: const Duration(seconds: 60),
+      ),
+    );
+    return response.data!;
+  }
+
   Future<List<EvidenceDto>> listForVenture(int ventureId) async {
     final response = await _dio.get<List<dynamic>>(
       '/documents',

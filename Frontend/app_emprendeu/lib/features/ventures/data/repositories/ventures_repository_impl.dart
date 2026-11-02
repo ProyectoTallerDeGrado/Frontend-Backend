@@ -5,6 +5,7 @@ import '../../../../core/error/result.dart';
 import '../../../../core/network/api_error_mapper.dart';
 import '../../domain/entities/milestone.dart';
 import '../../domain/entities/venture.dart';
+import '../../domain/entities/venture_need.dart';
 import '../../domain/repositories/ventures_repository.dart';
 import '../datasources/ventures_remote_data_source.dart';
 
@@ -73,5 +74,34 @@ class VenturesRepositoryImpl implements VenturesRepository {
   @override
   Future<Result<Milestone>> completeMilestone(int milestoneId) => _guard(
     () async => (await _remote.completeMilestone(milestoneId)).toEntity(),
+  );
+
+  @override
+  Future<Result<List<VentureNeed>>> getNeeds(int ventureId) => _guard(
+    () async => [for (final n in await _remote.needs(ventureId)) n.toEntity()],
+  );
+
+  @override
+  Future<Result<VentureNeed>> addNeed(
+    int ventureId, {
+    required String name,
+    required String priority,
+    String? description,
+  }) => _guard(
+    () async => (await _remote.addNeed(
+      ventureId,
+      name: name,
+      priority: priority,
+      description: description,
+    )).toEntity(),
+  );
+
+  @override
+  Future<Result<VentureNeed>> resolveNeed(int needId) =>
+      _guard(() async => (await _remote.resolveNeed(needId)).toEntity());
+
+  @override
+  Future<Result<List<String>>> getNeedCatalog() => _guard(
+    () async => [for (final n in await _remote.needCatalog()) n.nombre],
   );
 }

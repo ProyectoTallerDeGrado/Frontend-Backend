@@ -34,8 +34,8 @@ EmprendeU/
 ## 3. Estado real del código (verificado el 2026-10-20)
 
 El backend está completo. La web tiene el panel de administración conectado de punta
-a punta; el móvil tiene autenticación, Inicio y Camino conectados (faltan
-Mentorías y el Perfil completo).
+a punta; el móvil tiene las pantallas del emprendedor conectadas. Con la fase 6 están
+construidos todos los casos de uso del plan; queda la fase 7 (calidad y entrega).
 
 - **Backend**: todas las dependencias (ejecución y `dev`) están instaladas y
   bloqueadas en `uv.lock`. Existe la app ASGI (`emprendeu.main:create_app`), la
@@ -45,16 +45,15 @@ Mentorías y el Perfil completo).
   esquema parte de `Backend/EmprendeU/database/EmprendeU_postgresql.sql`, hoy reemplazado por la referencia
   `database/cieu_schema_completo.sql`, y evoluciona solo con migraciones de Alembic (ver `AGENTS.md` del backend).
   **Backend completo** (fases 0 a 9): los 11 módulos exponen HTTP bajo `/api/v1`, con
-  auditoría, 78 tests contra PostgreSQL real, Docker y CI. Detalle en
+  auditoría, 91 tests contra PostgreSQL real, Docker y CI. Detalle en
   `Backend/EmprendeU/AGENTS.md` §4 y `ROADMAP.md`.
 - **Web**: tokens de marca, fuentes, auth conectada (cookie `httpOnly`, `proxy.ts`) y el
   **panel de administración completo** (Resumen, Usuarios, Roles y permisos, Parámetros,
-  Catálogos y XP, Auditoría) conectado al backend, con permisos por rol. Mentorías (asignaciones, disponibilidad y sesiones), Emprendimientos (avanzar etapa e historial), Alertas, Dashboard, Reportes (vista previa y CSV), Emprendedores (registro con documento único), Emprendimientos (crear, editar, progreso), Base de conocimiento del coach (subir documentos y ver su estado) y Mi cuenta. Faltan
-  capacitaciones y la gestión de documentos del emprendimiento.
+  Catálogos y XP, Auditoría) conectado al backend, con permisos por rol. Mentorías (asignaciones, disponibilidad y sesiones), Emprendimientos (avanzar etapa e historial), Alertas, Dashboard, Reportes (vista previa y CSV), Emprendedores (registro con documento único), Emprendimientos (crear, editar, progreso), Base de conocimiento del coach (subir documentos y ver su estado), Admisión (con la página pública `/postular`), Capacitaciones (participantes y asistencia), Documentos y Mi cuenta.
 - **Móvil**: tema, router con barra inferior, `core/` (red, errores, almacenamiento, conectividad) y
   las features `auth`, `ventures`, `gamification` (Camino), `mentoring` (compromisos y avances con cola
   sin conexión) y `home` (Inicio), todas **conectadas al backend**. Mentorías (agendar y ver las sesiones, con
-  filtros por estado y periodo), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia (`documents`) el Coach IA (chat con fuentes) y cambio de contraseña. Tiene tests de integración opt-in contra el backend real.
+  filtros por estado y periodo), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia y Documentos (`documents`), necesidades y dificultades, Capacitaciones (`training`), tareas y compromisos pendientes, el Coach IA (chat con fuentes) y cambio de contraseña. Tiene tests de integración opt-in contra el backend real.
 - **Diseño visual**: `Frontend/emprendeu/design.md` (panel de administración) y
   `Frontend/app_emprendeu/design.md` (app del emprendedor), basados en el mockup del CIE-U.
 
@@ -129,7 +128,7 @@ uv sync --locked                          # instala ejecución + dev
 cp .env.example .env                      # y ajustar DATABASE_URL y JWT_SECRET (>= 32 caracteres)
 uv run alembic upgrade head               # crea el schema cieu y todas las tablas
 uv run uvicorn emprendeu.main:app --reload --port 8000
-uv run pytest                             # 78 tests (necesita PostgreSQL con pgvector)
+uv run pytest                             # 91 tests (necesita PostgreSQL con pgvector)
 uv run ruff check . && uv run ruff format --check .
 uv run python -m emprendeu.modules.users.cli create-admin --email ... --nombre "..."
 

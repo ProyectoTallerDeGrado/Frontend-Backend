@@ -44,8 +44,8 @@ consumidos desde componentes cliente.
 > (`/settings/tracking`), Catálogos y XP (`/catalogs`) y Auditoría (`/audit`, con
 > exportación CSV), **Mi cuenta** (`/account`: datos de la sesión y cambio de contraseña,
 > visible para todo el personal), **Mentorías** (`/mentoring/assignments`,
-> `/mentoring/availability` y `/mentoring/sessions`) y login/registro. Diez features (`auth`, `users`, `audit`,
-> `alerts`, `gamification`, `ventures`, `indicators`, `mentoring`, `entrepreneurs`, `ai_assistant`), el shell en `components/layout/`
+> `/mentoring/availability` y `/mentoring/sessions`) y login/registro. Doce features (`auth`, `users`, `audit`,
+> `alerts`, `gamification`, `ventures`, `indicators`, `mentoring`, `entrepreneurs`, `ai_assistant`, `training`, `documents`), el shell en `components/layout/`
 > y los componentes shadcn `button, input, label, switch, checkbox, slider, sheet, badge`.
 
 ### Cómo está armado el panel
@@ -92,6 +92,15 @@ consumidos desde componentes cliente.
   `POST /ai/knowledge/upload` desde una server action con `FormData` (`lib/api-client.ts` admite `FormData` y un plazo
   mayor, 120 s, porque calcular embeddings tarda; `next.config.ts` sube el límite de las server actions a 11 MB). Si el
   servicio de IA no responde, el intento queda visible en estado «Error».
+- **Admisión, capacitaciones y documentos** (fase 6): `features/entrepreneurs` suma `/admissions` (`AdmissionsScreen`: pestañas
+  Pendientes, Admitidas y Rechazadas; «Revisar» abre una hoja con los datos y los botones Admitir y Rechazar; al admitir se muestra
+  **una vez** la clave temporal; rechazar exige observación) y la **página pública `/postular`** (`ApplicationView`, en `proxy.ts`
+  como ruta pública; el campo trampa `sitio_web` va oculto). Como la web llama a la API desde el servidor, la acción
+  `submitApplicationAction` **reenvía la IP real** en `X-Forwarded-For` (`apiFetch` acepta cabeceras extra). `features/training`:
+  `/training` (lista con pestañas por estado; crear, editar y publicar, solo coordinación) y `/training/[id]/participants`
+  (agregar participante sin repetir y marcar «Asistió»/«No asistió»; el asesor solo consulta). `features/documents`: `/documents`
+  (filtro por emprendimiento, subir, eliminar y **descargar** por `app/(app)/documents/[id]/download/route.ts`, que usa la sesión
+  y nunca expone el token). El asesor ve el botón de subir, pero el backend solo lo permite en emprendimientos asignados.
 - **Cambio de contraseña** (`features/auth`: `changePasswordAction`, `ChangePasswordForm`,
   `AccountView`): el backend invalida los tokens anteriores y devuelve uno nuevo, que la acción
   guarda en la cookie para que la sesión actual siga; las demás sesiones se cierran. «Contraseña
@@ -154,7 +163,7 @@ proxy.ts                   ✅ # (Next 16) antiguo middleware: protege rutas pri
 
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
-`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅, `ai_assistant` ✅ (todas conectadas al backend); pendientes `training`, `documents` — los
+`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅, `ai_assistant` ✅, `training` ✅, `documents` ✅ (todas conectadas al backend) — los
 mismos nombres que los módulos del backend (regla global §4.6). Registra aquí cada feature nueva.
 
 ## 4. Reglas de la web

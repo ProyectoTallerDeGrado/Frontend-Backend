@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/error/failure.dart';
 import '../../../../core/error/result.dart';
@@ -59,4 +62,20 @@ class DocumentsRepositoryImpl implements DocumentsRepository {
       for (final d in await _remote.listForVenture(ventureId)) d.toEntity(),
     ],
   );
+
+  @override
+  Future<Result<void>> delete(int documentId) =>
+      _guard(() => _remote.delete(documentId));
+
+  @override
+  Future<Result<String>> download(int documentId, String name) =>
+      _guard(() async {
+        final bytes = await _remote.download(documentId);
+        final dir = await getTemporaryDirectory();
+        // Nombre seguro: sin rutas y con el id delante para no pisar otro archivo igual.
+        final safe = name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+        final file = File('${dir.path}/$documentId-$safe');
+        await file.writeAsBytes(bytes, flush: true);
+        return file.path;
+      });
 }

@@ -11,12 +11,13 @@ from emprendeu.core.errors import Forbidden
 from emprendeu.core.pagination import PageParams
 from emprendeu.modules.audit import AuditService
 from emprendeu.modules.entrepreneurs import EntrepreneurService
-from emprendeu.modules.users import CurrentUser
+from emprendeu.modules.users import CurrentUser, build_user_service
 from emprendeu.modules.ventures import schemas as s
 from emprendeu.modules.ventures.exceptions import (
     EntrepreneurRequired,
     InvalidStageTransition,
     MilestoneNotFound,
+    NeedAlreadyReported,
     NeedNotFound,
     ReservedFields,
     StageInactive,
@@ -81,6 +82,7 @@ class VentureService:
         self._repo = VentureRepository(session)
         self._audit = AuditService(session)
         self._entrepreneurs = EntrepreneurService(session)
+        self._session = session
 
     # --- API publica para otros modulos ------------------------------------
 
@@ -176,25 +178,18 @@ class VentureService:
 
     # --- emprendimientos ---------------------------------------------------
 
-    async def create(self, user: CurrentUser, body: s.VentureCreate) -> s.VentureOut:
-        # CU05: el personal crea el emprendimiento de un emprendedor concreto; un
-        # emprendedor solo puede crear el suyo.
-        if user.can_staff("emprendedores:registro"):
-            if body.emprendedor_id is None:
-                raise EntrepreneurRequired
-            owner = await self._entrepreneurs.ref_for_entrepreneur(body.emprendedor_id)
-            if owner is None:
-                raise EntrepreneurRequired
-        else:
-            owner = await self._entrepreneurs.ref_for_user(user.usuario_id)
-            if body.emprendedor_id is not None and (
-                owner is None or owner.emprendedor_id != body.emprendedor_id
-            ):
-                raise Forbidden("Solo puedes crear emprendimientos propios.")
+    async def _new_venture(
+        self,
+        nombre: str,
+        descripcion: str | None,
+        sector: str | None,
+        owner_id: int | None,
+    ) -> tuple[Emprendimiento, Etapa | None]:
+        """Emprendimiento activo, en la primera etapa activa y con su fundador. Sin commit."""
         venture = Emprendimiento(
-            nombre=body.nombre,
-            descripcion=body.descripcion,
-            sector=body.sector,
+            nombre=nombre,
+            descripcion=descripcion,
+            sector=sector,
             estado="activo",
             fecha_inicio=now(),
         )
@@ -211,10 +206,91 @@ class VentureService:
                     fecha_inicio=now(),
                 )
             )
-        if owner is not None:
+        if owner_id is not None:
             await self._entrepreneurs.link_venture(
-                owner.emprendedor_id, venture.emprendimiento_id, "fundador"
+                owner_id, venture.emprendimiento_id, "fundador"
             )
+        return venture, first
+
+    async def admit_application(
+        self, actor: CurrentUser, postulacion_id: int, observaciones: str | None
+    ) -> str | None:
+        """CU26: admite una postulacion. Todo o nada en una sola transaccion.
+
+        Crea el usuario (rol emprendedor), su perfil de emprendedor, el emprendimiento
+        (primera etapa, con el fundador) y vincula la postulacion. Devuelve la clave
+        temporal, que solo se muestra una vez. Si algo falla no queda nada creado y la
+        postulacion sigue pendiente.
+        """
+        try:
+            application = await self._entrepreneurs.claim_application(postulacion_id)
+            user, temporary = await build_user_service(
+                self._session
+            ).register_entrepreneur(
+                actor,
+                f"{application.nombre} {application.apellido}",
+                application.email,
+                application.documento_identidad,
+                None,
+                names=(application.nombre, application.apellido),
+                origin="admision de postulacion",
+                commit=False,
+            )
+            owner = await self._entrepreneurs.ref_for_user(user.usuario_id)
+            if owner is None:  # no deberia pasar: la cuenta nace con su perfil
+                raise EntrepreneurRequired
+            venture, _ = await self._new_venture(
+                application.nombre_emprendimiento,
+                application.descripcion_emprendimiento,
+                application.sector,
+                owner.emprendedor_id,
+            )
+            await self._entrepreneurs.mark_admitted(
+                postulacion_id,
+                emprendedor_id=owner.emprendedor_id,
+                emprendimiento_id=venture.emprendimiento_id,
+                actor_id=actor.usuario_id,
+                observaciones=observaciones,
+            )
+            await self._audit.record(
+                actor.usuario_id,
+                "negocio.postulacion",
+                f"{application.nombre} {application.apellido}",
+                tabla="postulaciones",
+                id_registro=postulacion_id,
+                despues={
+                    "accion": "admitir",
+                    "emprendedor_id": owner.emprendedor_id,
+                    "emprendimiento_id": venture.emprendimiento_id,
+                },
+            )
+            await self._repo.commit()
+        except BaseException:
+            await self._repo.rollback()
+            raise
+        return temporary
+
+    async def create(self, user: CurrentUser, body: s.VentureCreate) -> s.VentureOut:
+        # CU05: el personal crea el emprendimiento de un emprendedor concreto; un
+        # emprendedor solo puede crear el suyo.
+        if user.can_staff("emprendedores:registro"):
+            if body.emprendedor_id is None:
+                raise EntrepreneurRequired
+            owner = await self._entrepreneurs.ref_for_entrepreneur(body.emprendedor_id)
+            if owner is None:
+                raise EntrepreneurRequired
+        else:
+            owner = await self._entrepreneurs.ref_for_user(user.usuario_id)
+            if body.emprendedor_id is not None and (
+                owner is None or owner.emprendedor_id != body.emprendedor_id
+            ):
+                raise Forbidden("Solo puedes crear emprendimientos propios.")
+        venture, first = await self._new_venture(
+            body.nombre,
+            body.descripcion,
+            body.sector,
+            owner.emprendedor_id if owner else None,
+        )
         await self._audit.record(
             user.usuario_id,
             "negocio.emprendimiento",
@@ -448,9 +524,30 @@ class VentureService:
     ) -> s.VentureNeedOut:
         await self._require_access(user, emprendimiento_id, "seguimiento:registro")
         await self._venture(emprendimiento_id)
-        need = await self._repo.get_need(body.necesidad_id)
-        if need is None:
-            raise NeedNotFound
+        if body.necesidad_id is not None:
+            need = await self._repo.get_need(body.necesidad_id)
+            if need is None:
+                raise NeedNotFound
+        else:
+            # CU24: si la necesidad no esta en el catalogo, se crea.
+            name = body.nombre or ""
+            need = await self._repo.find_need_by_name(name)
+            if need is None:
+                need = Necesidad(nombre=name, descripcion=body.descripcion)
+                await self._repo.add(need)
+        existing = await self._repo.venture_need_row(
+            emprendimiento_id, need.necesidad_id
+        )
+        if existing is not None:
+            if existing.estado != "resuelta":
+                raise NeedAlreadyReported
+            # una necesidad resuelta que vuelve a aparecer se reabre (la base no repite pares)
+            existing.estado = "detectada"
+            existing.prioridad = body.prioridad
+            existing.fecha_detectada = now()
+            existing.fecha_resuelta = None
+            await self._repo.commit()
+            return self._need_out(existing, need.nombre)
         row = EmprendimientoNecesidad(
             emprendimiento_id=emprendimiento_id,
             necesidad_id=need.necesidad_id,

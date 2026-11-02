@@ -36,9 +36,9 @@ def staff(name: str) -> object:
 
 @router.get("", response_model=Page[s.TrainingOut])
 async def list_trainings(
-    params: PageParamsDep, service: Svc, _: CurrentUserDep, estado: str | None = None
+    params: PageParamsDep, service: Svc, user: CurrentUserDep, estado: str | None = None
 ) -> Page[s.TrainingOut]:
-    items, total = await service.list(params, estado)
+    items, total = await service.list(user, params, estado)
     return Page[s.TrainingOut].build(items, params, total)
 
 
@@ -46,9 +46,17 @@ async def list_trainings(
 async def create_training(
     body: s.TrainingCreate,
     service: Svc,
-    _: Annotated[CurrentUser, perm("asesorias:registro")],
+    user: Annotated[CurrentUser, perm("asesorias:registro")],
 ) -> s.TrainingOut:
-    return await service.create(body)
+    return await service.create(user, body)
+
+
+@router.get("/published", response_model=list[s.TrainingOut])
+async def published_trainings(
+    service: Svc, user: CurrentUserDep
+) -> list[s.TrainingOut]:
+    """CU29: publicadas, con la inscripcion y la asistencia propias."""
+    return await service.published(user)
 
 
 @router.get("/me", response_model=list[s.TrainingOut])
@@ -56,14 +64,21 @@ async def my_trainings(service: Svc, user: CurrentUserDep) -> list[s.TrainingOut
     return await service.mine(user)
 
 
+@router.get("/{capacitacion_id}", response_model=s.TrainingOut)
+async def get_training(
+    capacitacion_id: int, service: Svc, user: CurrentUserDep
+) -> s.TrainingOut:
+    return await service.get(user, capacitacion_id)
+
+
 @router.patch("/{capacitacion_id}", response_model=s.TrainingOut)
 async def update_training(
     capacitacion_id: int,
     body: s.TrainingUpdate,
     service: Svc,
-    _: Annotated[CurrentUser, perm("asesorias:modificacion")],
+    user: Annotated[CurrentUser, perm("asesorias:registro")],
 ) -> s.TrainingOut:
-    return await service.update(capacitacion_id, body)
+    return await service.update(user, capacitacion_id, body)
 
 
 @router.post("/{capacitacion_id}/enroll", response_model=s.TrainingOut)
@@ -91,9 +106,9 @@ async def add_participant(
     capacitacion_id: int,
     body: s.ParticipantAdd,
     service: Svc,
-    _: Annotated[CurrentUser, perm("asesorias:registro")],
+    user: Annotated[CurrentUser, perm("asesorias:registro")],
 ) -> s.ParticipantOut:
-    return await service.add_participant(capacitacion_id, body)
+    return await service.add_participant(user, capacitacion_id, body)
 
 
 @router.patch(
@@ -104,6 +119,6 @@ async def set_attendance(
     emprendedor_id: int,
     body: s.AttendanceUpdate,
     service: Svc,
-    _: Annotated[CurrentUser, perm("asesorias:modificacion")],
+    user: Annotated[CurrentUser, perm("asesorias:registro")],
 ) -> s.ParticipantOut:
-    return await service.set_attendance(capacitacion_id, emprendedor_id, body)
+    return await service.set_attendance(user, capacitacion_id, emprendedor_id, body)

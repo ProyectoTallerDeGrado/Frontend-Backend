@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../documents/index.dart';
 import '../ventures_routes.dart';
 import '../controllers/ventures_providers.dart';
 
@@ -51,6 +52,17 @@ class MyVentureCard extends ConsumerWidget {
                 onPressed: () => context.push(VenturesRoutes.milestones),
                 icon: const Icon(Icons.flag_outlined, size: 18),
                 label: const Text('Hitos y evidencia'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => context.push(VenturesRoutes.needs),
+                icon: const Icon(Icons.help_outline, size: 18),
+                label: const Text('Necesidades y dificultades'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () =>
+                    context.push(DocumentsRoutes.list, extra: venture.id),
+                icon: const Icon(Icons.folder_open, size: 18),
+                label: const Text('Documentos'),
               ),
             ],
           ),

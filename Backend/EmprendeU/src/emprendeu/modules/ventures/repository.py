@@ -25,6 +25,9 @@ class VentureRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    async def rollback(self) -> None:
+        await self._session.rollback()
+
     async def commit(self) -> None:
         await self._session.commit()
 
@@ -190,6 +193,19 @@ class VentureRepository:
 
     async def get_need(self, necesidad_id: int) -> Necesidad | None:
         return await self._session.get(Necesidad, necesidad_id)
+
+    async def find_need_by_name(self, nombre: str) -> Necesidad | None:
+        stmt = select(Necesidad).where(func.lower(Necesidad.nombre) == nombre.lower())
+        return (await self._session.execute(stmt.limit(1))).scalar_one_or_none()
+
+    async def venture_need_row(
+        self, emprendimiento_id: int, necesidad_id: int
+    ) -> EmprendimientoNecesidad | None:
+        stmt = select(EmprendimientoNecesidad).where(
+            EmprendimientoNecesidad.emprendimiento_id == emprendimiento_id,
+            EmprendimientoNecesidad.necesidad_id == necesidad_id,
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def venture_needs(
         self, emprendimiento_id: int

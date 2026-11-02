@@ -73,3 +73,10 @@ class ReservedFields(Forbidden):
             "Esos campos solo los cambia la coordinacion.",
             details={"campos": fields},
         )
+
+
+class NeedAlreadyReported(ConflictError):
+    code = "need_exists"
+
+    def __init__(self) -> None:
+        super().__init__("Esa necesidad ya esta registrada y sin resolver.")

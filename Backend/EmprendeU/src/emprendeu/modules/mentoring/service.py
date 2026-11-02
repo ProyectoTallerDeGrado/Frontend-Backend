@@ -872,6 +872,15 @@ class MentoringService:
             body.fecha_limite,
         )
 
+    async def has_active_assignment(
+        self, usuario_id: int, emprendimiento_id: int
+    ) -> bool:
+        """API publica: el asesor tiene este emprendimiento asignado y activo."""
+        return (
+            await self._repo.active_assignment(usuario_id, emprendimiento_id)
+            is not None
+        )
+
     async def my_commitments(
         self, user: CurrentUser, estado: str | None
     ) -> list[s.CommitmentOut]:

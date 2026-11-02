@@ -7,14 +7,31 @@ import '../../../../core/utils/date_format.dart';
 import '../../domain/entities/commitment.dart';
 import '../controllers/mentoring_providers.dart';
 
-/// «Compromisos pendientes»: lista con casillas que funcionan también sin conexión.
-class CommitmentsSection extends ConsumerWidget {
+/// «Tareas y compromisos pendientes» (CU22): lo que el emprendedor tiene por hacer, con
+/// casillas que funcionan también sin conexión. Lo cumplido queda plegado aparte.
+class CommitmentsSection extends ConsumerStatefulWidget {
   const CommitmentsSection({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CommitmentsSection> createState() => _CommitmentsSectionState();
+}
+
+class _CommitmentsSectionState extends ConsumerState<CommitmentsSection> {
+  bool _showDone = false;
+
+  @override
+  Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final commitments = ref.watch(commitmentsProvider);
+    final all = commitments.value ?? const <Commitment>[];
+    final pending = [
+      for (final c in all)
+        if (!c.done) c,
+    ];
+    final done = [
+      for (final c in all)
+        if (c.done) c,
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -26,12 +43,15 @@ class CommitmentsSection extends ConsumerWidget {
             Expanded(
               child: Semantics(
                 header: true,
-                child: Text('Compromisos pendientes', style: text.titleMedium),
+                child: Text(
+                  'Tareas y compromisos pendientes',
+                  style: text.titleMedium,
+                ),
               ),
             ),
             const SizedBox(width: 8),
             Text(
-              '${commitments.value?.where((c) => !c.done).length ?? 0} por hacer',
+              '${pending.length} por hacer',
               style: text.bodyMedium?.copyWith(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -49,18 +69,43 @@ class CommitmentsSection extends ConsumerWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: commitments.when(
-            data: (list) => list.isEmpty
-                ? Padding(
+            data: (_) => Column(
+              children: [
+                if (pending.isEmpty)
+                  Padding(
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    child: Text(
-                      'Aún no tienes compromisos. Tu mentor los asignará en cada sesión.',
-                      style: text.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: AppColors.muted,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        all.isEmpty
+                            ? 'Aún no tienes compromisos. Tu mentor los asignará en cada sesión.'
+                            : 'No tienes tareas pendientes. ¡Buen trabajo!',
+                        style: text.bodyMedium?.copyWith(
+                          fontSize: 14,
+                          color: AppColors.muted,
+                        ),
                       ),
                     ),
                   )
-                : Column(children: [for (final c in list) _CommitmentTile(c)]),
+                else
+                  for (final c in pending) _CommitmentTile(c),
+                if (done.isNotEmpty) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => setState(() => _showDone = !_showDone),
+                      icon: Icon(
+                        _showDone ? Icons.expand_less : Icons.expand_more,
+                        size: 20,
+                      ),
+                      label: Text('Cumplidos (${done.length})'),
+                    ),
+                  ),
+                  if (_showDone)
+                    for (final c in done) _CommitmentTile(c),
+                ],
+              ],
+            ),
             loading: () => const Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator()),

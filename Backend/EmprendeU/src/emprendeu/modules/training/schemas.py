@@ -26,7 +26,7 @@ class TrainingUpdate(BaseModel):
     fecha: datetime | None = None
     modalidad: Annotated[str | None, StringConstraints(max_length=40)] = None
     tipo: Annotated[str | None, StringConstraints(max_length=60)] = None
-    estado: Literal["programada", "realizada", "cancelada"] | None = None
+    estado: Literal["borrador", "publicada", "realizada", "cancelada"] | None = None
 
 
 class TrainingOut(BaseModel):
@@ -39,6 +39,8 @@ class TrainingOut(BaseModel):
     estado: str | None
     total_inscritos: int
     inscrito: bool | None = None
+    # Asistencia de quien consulta: None = pendiente de registrar.
+    mi_asistencia: bool | None = None
 
 
 class ParticipantAdd(BaseModel):
@@ -54,3 +56,7 @@ class ParticipantOut(BaseModel):
     emprendedor_id: int
     asistencia: bool | None  # None = pendiente de registrar
     fecha_registro: datetime | None
+    nombre: str | None = None
+    apellido: str | None = None
+    email: str | None = None
+    documento_identidad: str | None = None

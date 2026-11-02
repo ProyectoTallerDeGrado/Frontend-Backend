@@ -38,6 +38,7 @@ features **conectadas al backend**: `auth` (login, registro, sesión), `ventures
 | Cola/cachés locales (no secretos) | **`shared_preferences`** (detrás de `KeyValueStore`) | SQLite/Isar (excesivo para una cola pequeña) |
 | Estado de red | **`connectivity_plus`** (detrás de `ConnectivitySource`) | sondeo manual |
 | Elegir un archivo (evidencia) | **`file_picker`** (detrás de `EvidencePicker`, en `documents`) | pedir permisos de galería a mano |
+| Descargar y abrir un archivo | **`path_provider`** (carpeta temporal) + **`open_filex`** (detrás de `FileOpener`, en `documents`) | |
 
 > Si el equipo prefiere **Bloc** en vez de Riverpod, hay que cambiarlo **en este
 > documento primero** y luego escribir código. No se mezclan dos gestores de estado.
@@ -101,7 +102,7 @@ test/                         # espejo exacto de lib/
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
 `auth` ✅, `ventures` ✅ (editar, hitos), `gamification` ✅ (Camino, XP e insignias), `mentoring` ✅ (compromisos y avances, agendar y ver sesiones, historial),
-`documents` ✅ (evidencia de hitos), `ai_assistant` ✅ (Coach IA), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
+`documents` ✅ (evidencia y documentos), `training` ✅ (capacitaciones), `ai_assistant` ✅ (Coach IA), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
 (regla global §4.6).
 
 > **`home` es una excepción documentada a la regla 6:** no tiene módulo en el backend porque
@@ -191,6 +192,14 @@ test/                         # espejo exacto de lib/
   legal/financiero, un botón «Agendar una mentoría» que lleva a la pestaña Mentorías. Si el servicio de IA no responde
   (`ai_unavailable` → `AssistantUnavailableFailure`) **nada quedó guardado**: se quita la burbuja, se avisa con un
   mensaje claro y el texto vuelve al campo para reenviarlo. «Nueva conversación» abre otra sin borrar la anterior.
+- **Tareas, necesidades, capacitaciones y documentos** (fase 6, requieren conexión salvo lo ya indicado para compromisos):
+  «Tareas y compromisos pendientes» (CU22, en Inicio) lista solo lo **pendiente** del emprendedor (`responsable_usuarioid`, lo
+  filtra el servidor) con las casillas offline de siempre; lo cumplido queda plegado en «Cumplidos (n)». «Necesidades y
+  dificultades» (CU24, desde el Perfil, `/venture/needs`) registra por nombre con sugerencias del catálogo y prioridad;
+  repetir una sin resolver da el aviso `need_exists`. «Capacitaciones» (CU29, desde el Perfil, `/training`) muestra publicadas y
+  realizadas con la asistencia propia (Asististe, No asististe, Asistencia sin registrar, No participaste) y permite inscribirse en una
+  próxima. «Documentos» (CU30, desde «Mi emprendimiento», `/documents` con el id del emprendimiento en `extra`) sube, **descarga y
+  abre** (`GET /documents/{id}/download` a la carpeta temporal y `OpenFilex`) y elimina con confirmación.
 - **Perfil completo** (CU05, CU08, CU20; requiere conexión): la pestaña Perfil compone `MyVentureCard` (datos del
   emprendimiento y accesos), `XpBadgesSection` (XP, nivel, barra hacia el siguiente nivel, insignias obtenidas y
   últimos movimientos, de `GET /gamification/me`) y los botones de cuenta. «Editar emprendimiento»

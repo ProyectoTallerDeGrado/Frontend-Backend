@@ -53,6 +53,9 @@ services:
       # Lista JSON de origenes permitidos, p. ej. ["http://localhost:3000"]
       CORS_ORIGINS: ${CORS_ORIGINS:?define CORS_ORIGINS (ver .env.example)}
       OLLAMA_BASE_URL: http://ollama:11434
+      # Formulario publico de postulacion: con `true` el limite por IP usa X-Forwarded-For (la web
+      # reenvia la IP real). Activalo solo si la API no queda abierta directo a internet.
+      APPLICATION_TRUST_FORWARDED_FOR: ${APPLICATION_TRUST_FORWARDED_FOR:-false}
       OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
       OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3.2}
     ports:

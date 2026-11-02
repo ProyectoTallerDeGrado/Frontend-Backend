@@ -42,6 +42,15 @@ async def test_capacitaciones_inscripcion_y_asistencia(
     )
     assert created.status_code == 201
     cid = created.json()["capacitacion_id"]
+    assert created.json()["estado"] == "borrador"
+    # un borrador no se ve ni admite inscripciones hasta publicarse
+    assert (
+        await client.post(f"{API}/training/{cid}/enroll", headers=h["e"])
+    ).status_code == 409
+    published = await client.patch(
+        f"{API}/training/{cid}", json={"estado": "publicada"}, headers=h["coord"]
+    )
+    assert published.status_code == 200 and published.json()["estado"] == "publicada"
 
     enrolled = await client.post(f"{API}/training/{cid}/enroll", headers=h["e"])
     assert enrolled.status_code == 200 and enrolled.json()["total_inscritos"] == 1
@@ -65,14 +74,14 @@ async def test_capacitaciones_inscripcion_y_asistencia(
     marked = await client.patch(
         f"{API}/training/{cid}/participants/{eid}",
         json={"asistio": True},
-        headers=h["m"],
+        headers=h["coord"],
     )
     assert marked.json()["asistencia"] is True
     assert (
         await client.patch(
             f"{API}/training/{cid}/participants/999999",
             json={"asistio": True},
-            headers=h["m"],
+            headers=h["coord"],
         )
     ).status_code == 404
 
@@ -87,7 +96,7 @@ async def test_capacitaciones_inscripcion_y_asistencia(
     assert added.status_code == 201
 
     await client.patch(
-        f"{API}/training/{cid}", json={"estado": "cancelada"}, headers=h["m"]
+        f"{API}/training/{cid}", json={"estado": "cancelada"}, headers=h["coord"]
     )
     late = await client.post(f"{API}/training/{cid}/enroll", headers=h["otro"])
     assert late.status_code in (400, 409)

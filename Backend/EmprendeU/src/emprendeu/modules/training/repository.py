@@ -23,9 +23,16 @@ class TrainingRepository:
         return await self._session.get(Capacitacion, capacitacion_id)
 
     async def list(
-        self, *, estado: str | None, offset: int, limit: int
+        self,
+        *,
+        estado: str | None,
+        offset: int,
+        limit: int,
+        hide_drafts: bool = False,
     ) -> tuple[list[tuple[Capacitacion, int]], int]:
         cond = [Capacitacion.estado == estado] if estado else []
+        if hide_drafts:
+            cond.append(Capacitacion.estado != "borrador")
         total = (
             await self._session.execute(
                 select(func.count()).select_from(Capacitacion).where(*cond)
@@ -84,9 +91,10 @@ class TrainingRepository:
 
     async def for_entrepreneur(
         self, emprendedor_id: int
-    ) -> list[tuple[Capacitacion, int]]:
+    ) -> list[tuple[Capacitacion, int, bool | None]]:
+        """Capacitaciones en las que esta inscrito, con su asistencia."""
         stmt = (
-            select(Capacitacion)
+            select(Capacitacion, CapacitacionParticipante.asistencia)
             .join(
                 CapacitacionParticipante,
                 CapacitacionParticipante.capacitacion_id
@@ -95,5 +103,40 @@ class TrainingRepository:
             .where(CapacitacionParticipante.emprendedor_id == emprendedor_id)
             .order_by(Capacitacion.fecha.desc().nulls_last())
         )
-        rows = (await self._session.execute(stmt)).scalars().all()
-        return [(r, await self.count_participants(r.capacitacion_id)) for r in rows]
+        rows = (await self._session.execute(stmt)).all()
+        return [
+            (r[0], await self.count_participants(r[0].capacitacion_id), r[1])
+            for r in rows
+        ]
+
+    async def published_for(
+        self, emprendedor_id: int
+    ) -> list[tuple[Capacitacion, int, bool, bool | None]]:
+        """Publicadas (y ya realizadas): `(capacitacion, inscritos, inscrito, asistencia)`."""
+        stmt = (
+            select(
+                Capacitacion,
+                CapacitacionParticipante.capacitacion_participante_id,
+                CapacitacionParticipante.asistencia,
+            )
+            .outerjoin(
+                CapacitacionParticipante,
+                (
+                    CapacitacionParticipante.capacitacion_id
+                    == Capacitacion.capacitacion_id
+                )
+                & (CapacitacionParticipante.emprendedor_id == emprendedor_id),
+            )
+            .where(Capacitacion.estado.in_(("publicada", "realizada")))
+            .order_by(Capacitacion.fecha.desc().nulls_last())
+        )
+        rows = (await self._session.execute(stmt)).all()
+        return [
+            (
+                r[0],
+                await self.count_participants(r[0].capacitacion_id),
+                r[1] is not None,
+                r[2],
+            )
+            for r in rows
+        ]

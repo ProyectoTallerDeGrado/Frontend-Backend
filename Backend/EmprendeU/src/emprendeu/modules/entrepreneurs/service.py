@@ -3,17 +3,28 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.pagination import PageParams
+from emprendeu.modules.audit import AuditService
 from emprendeu.modules.entrepreneurs.exceptions import (
+    ApplicationDecided,
+    ApplicationNotFound,
+    ApplicationPending,
     DocumentAlreadyRegistered,
     EntrepreneurNotFound,
 )
-from emprendeu.modules.entrepreneurs.models import Emprendedor
+from emprendeu.modules.entrepreneurs.models import Emprendedor, Postulacion
 from emprendeu.modules.entrepreneurs.repository import EntrepreneurRepository
-from emprendeu.modules.entrepreneurs.schemas import EntrepreneurOut, VentureLink
+from emprendeu.modules.entrepreneurs.schemas import (
+    ApplicationCreate,
+    ApplicationOut,
+    EntrepreneurOut,
+    VentureLink,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,9 +40,28 @@ class EntrepreneurRef:
         return self.emprendimiento_ids[0] if self.emprendimiento_ids else None
 
 
+@dataclass(frozen=True, slots=True)
+class ApplicationRef:
+    """Datos de una postulacion pendiente que necesita quien la admite."""
+
+    postulacion_id: int
+    nombre: str
+    apellido: str
+    email: str
+    documento_identidad: str | None
+    nombre_emprendimiento: str
+    descripcion_emprendimiento: str | None
+    sector: str | None
+
+
+def _clean(value: str | None) -> str | None:
+    return (value or "").strip() or None
+
+
 class EntrepreneurService:
     def __init__(self, session: AsyncSession) -> None:
         self._repo = EntrepreneurRepository(session)
+        self._audit = AuditService(session)
 
     # --- API para otros modulos -------------------------------------------
 
@@ -58,6 +88,12 @@ class EntrepreneurService:
             raise DocumentAlreadyRegistered
         found.documento_identidad = clean
         await self._repo.add(found)
+
+    async def summaries(
+        self, emprendedor_ids: list[int]
+    ) -> dict[int, tuple[str, str, str, str | None]]:
+        """`{id: (nombre, apellido, correo, documento)}` para listados de otros modulos."""
+        return await self._repo.summaries(emprendedor_ids)
 
     async def ensure_document_free(self, documento: str) -> None:
         if await self._repo.document_in_use(" ".join(documento.split())):
@@ -149,3 +185,127 @@ class EntrepreneurService:
     ) -> EntrepreneurOut:
         await self.set_document(usuario_id, documento)
         return await self.me(usuario_id)
+
+    # --- postulaciones (CU26) ---------------------------------------------------------
+
+    async def submit_application(self, body: ApplicationCreate) -> None:
+        """Alta publica. Una por correo mientras siga pendiente (409 si hay otra)."""
+        if body.sitio_web.strip():  # campo trampa lleno: es un bot; se finge exito
+            return
+        if await self._repo.pending_application_by_email(body.email):
+            raise ApplicationPending
+        row = Postulacion(
+            nombre=body.nombre,
+            apellido=body.apellido,
+            email=body.email,
+            telefono=_clean(body.telefono),
+            documento_identidad=_clean(body.documento_identidad),
+            nombre_emprendimiento=body.nombre_emprendimiento,
+            descripcion_emprendimiento=_clean(body.descripcion_emprendimiento),
+            sector=_clean(body.sector),
+            estado="pendiente",
+        )
+        try:
+            await self._repo.add_application(row)
+            await self._repo.commit()
+        except IntegrityError as exc:  # dos envios a la vez con el mismo correo
+            await self._repo.rollback()
+            raise ApplicationPending from exc
+
+    async def _application_out(self, row: Postulacion) -> ApplicationOut:
+        decided_by = None
+        if row.decidido_por_usuario_id is not None:
+            identity = await self._repo.identity(row.decidido_por_usuario_id)
+            decided_by = f"{identity[0]} {identity[1]}" if identity else None
+        return ApplicationOut(
+            postulacion_id=row.postulacion_id,
+            nombre=row.nombre,
+            apellido=row.apellido,
+            email=row.email,
+            telefono=row.telefono,
+            documento_identidad=row.documento_identidad,
+            nombre_emprendimiento=row.nombre_emprendimiento,
+            descripcion_emprendimiento=row.descripcion_emprendimiento,
+            sector=row.sector,
+            fecha_postulacion=row.fecha_postulacion,
+            estado=row.estado,
+            fecha_decision=row.fecha_decision,
+            observaciones_decision=row.observaciones_decision,
+            decidido_por=decided_by,
+            emprendedor_id=row.emprendedor_id,
+            emprendimiento_id=row.emprendimiento_id,
+        )
+
+    async def list_applications(
+        self, params: PageParams, estado: str | None, q: str | None
+    ) -> tuple[list[ApplicationOut], int]:
+        rows, total = await self._repo.list_applications(
+            estado=estado, q=q, offset=params.offset, limit=params.page_size
+        )
+        return [await self._application_out(r) for r in rows], total
+
+    async def get_application(self, postulacion_id: int) -> ApplicationOut:
+        row = await self._repo.get_application(postulacion_id)
+        if row is None:
+            raise ApplicationNotFound
+        return await self._application_out(row)
+
+    async def _pending(self, postulacion_id: int) -> Postulacion:
+        row = await self._repo.get_application(postulacion_id, lock=True)
+        if row is None:
+            raise ApplicationNotFound
+        if row.estado != "pendiente":
+            raise ApplicationDecided
+        return row
+
+    async def reject_application(
+        self, actor_id: int, postulacion_id: int, observaciones: str
+    ) -> ApplicationOut:
+        row = await self._pending(postulacion_id)
+        row.estado = "rechazada"
+        row.fecha_decision = datetime.now(UTC)
+        row.decidido_por_usuario_id = actor_id
+        row.observaciones_decision = observaciones
+        await self._audit.record(
+            actor_id,
+            "negocio.postulacion",
+            f"{row.nombre} {row.apellido}",
+            tabla="postulaciones",
+            id_registro=postulacion_id,
+            despues={"accion": "rechazar"},
+        )
+        await self._repo.commit()
+        return await self._application_out(row)
+
+    async def claim_application(self, postulacion_id: int) -> ApplicationRef:
+        """Toma una postulacion pendiente (bloqueada) para admitirla. 409 si ya se decidio."""
+        row = await self._pending(postulacion_id)
+        return ApplicationRef(
+            postulacion_id=row.postulacion_id,
+            nombre=row.nombre,
+            apellido=row.apellido,
+            email=row.email,
+            documento_identidad=row.documento_identidad,
+            nombre_emprendimiento=row.nombre_emprendimiento,
+            descripcion_emprendimiento=row.descripcion_emprendimiento,
+            sector=row.sector,
+        )
+
+    async def mark_admitted(
+        self,
+        postulacion_id: int,
+        *,
+        emprendedor_id: int,
+        emprendimiento_id: int,
+        actor_id: int,
+        observaciones: str | None,
+    ) -> None:
+        """Vincula la postulacion con lo creado. No hace commit: lo hace quien admite."""
+        row = await self._pending(postulacion_id)
+        row.estado = "admitida"
+        row.fecha_decision = datetime.now(UTC)
+        row.decidido_por_usuario_id = actor_id
+        row.observaciones_decision = _clean(observaciones)
+        row.emprendedor_id = emprendedor_id
+        row.emprendimiento_id = emprendimiento_id
+        await self._repo.add_application(row)

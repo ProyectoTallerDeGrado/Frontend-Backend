@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     # Limite de intentos de login fallidos por (ip, correo).
     login_max_attempts: int = 5
     login_window_seconds: int = 900
+    # Formulario publico de postulacion: intentos por IP.
+    application_max_attempts: int = 5
+    application_window_seconds: int = 3600
+    # Detras del servidor web, la API ve siempre la IP de ese servidor. Con `true` se usa la
+    # primera IP de `X-Forwarded-For` como clave del limite (confia en quien llama: activalo
+    # solo si la API no esta abierta directo a internet).
+    application_trust_forwarded_for: bool = False
 
     # IA local (Ollama). Si no responde, el asistente devuelve 503.
     ollama_base_url: str = "http://localhost:11434"

@@ -22,11 +22,13 @@ type RequestOptions = {
   token?: string;
   /** Plazo de la petición; la carga de documentos (embeddings) necesita más que el normal. */
   timeoutMs?: number;
+  /** Cabeceras extra (p. ej. `X-Forwarded-For` con la IP real de quien usa el formulario público). */
+  headers?: Record<string, string>;
 };
 
 /** Cliente HTTP del backend. Solo se usa desde el servidor (acciones y componentes de servidor). */
 export async function apiFetch(path: string, options: RequestOptions = {}): Promise<unknown> {
-  const { method = "GET", body, token, timeoutMs = 15_000 } = options;
+  const { method = "GET", body, token, timeoutMs = 15_000, headers = {} } = options;
   const isForm = body instanceof FormData;
   let response: Response;
   try {
@@ -34,6 +36,7 @@ export async function apiFetch(path: string, options: RequestOptions = {}): Prom
       method,
       headers: {
         Accept: "application/json",
+        ...headers,
         ...(body !== undefined && !isForm ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },

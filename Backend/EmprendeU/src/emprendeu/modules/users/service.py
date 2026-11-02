@@ -223,28 +223,41 @@ class UserService:
         actor: CurrentUser,
         nombre_completo: str,
         email: str,
-        documento_identidad: str,
+        documento_identidad: str | None,
         password: str | None,
+        *,
+        names: tuple[str, str] | None = None,
+        origin: str = "registro de emprendedor",
+        commit: bool = True,
     ) -> tuple[Usuario, str | None]:
-        """CU04: cuenta + perfil de emprendedor + documento, todo o nada.
+        """CU04 y CU26: cuenta + perfil de emprendedor + documento, todo o nada.
 
-        El documento se comprueba antes de crear nada; el commit es uno solo.
+        El documento se comprueba antes de crear nada. Con `commit=False` quien llama
+        cierra la transaccion (la admision crea ademas el emprendimiento).
+        `names` evita partir el nombre completo cuando ya viene separado.
         """
-        await self._entrepreneurs.ensure_document_free(documento_identidad)
+        if documento_identidad:
+            await self._entrepreneurs.ensure_document_free(documento_identidad)
         temporary = None if password else secrets.token_urlsafe(9)
         user = await self._create_account(
-            nombre_completo, email, password or temporary or "", DEFAULT_ROLE
+            nombre_completo,
+            email,
+            password or temporary or "",
+            DEFAULT_ROLE,
+            names=names,
         )
-        await self._entrepreneurs.set_document(user.usuario_id, documento_identidad)
+        if documento_identidad:
+            await self._entrepreneurs.set_document(user.usuario_id, documento_identidad)
         await self._audit.record(
             actor.usuario_id,
             "usuarios.crear",
             f"{user.nombre} {user.apellido}",
             tabla="usuario",
             id_registro=user.usuario_id,
-            despues={"rol": DEFAULT_ROLE, "origen": "registro de emprendedor"},
+            despues={"rol": DEFAULT_ROLE, "origen": origin},
         )
-        await self._repo.commit()
+        if commit:
+            await self._repo.commit()
         return user, temporary
 
     async def change_role(
@@ -323,10 +336,15 @@ class UserService:
         return user
 
     async def _create_account(
-        self, nombre_completo: str, email: str, password: str, rol: str
+        self,
+        nombre_completo: str,
+        email: str,
+        password: str,
+        rol: str,
+        names: tuple[str, str] | None = None,
     ) -> Usuario:
         email = email.strip().lower()
-        nombre, apellido = split_full_name(nombre_completo)
+        nombre, apellido = names or split_full_name(nombre_completo)
         role = await self._repo.get_role_by_name(rol)
         if role is None:
             raise RoleNotFound

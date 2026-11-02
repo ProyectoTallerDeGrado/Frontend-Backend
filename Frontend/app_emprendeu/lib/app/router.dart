@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../features/ai_assistant/index.dart';
 import '../features/auth/index.dart';
+import '../features/documents/index.dart';
 import '../features/gamification/index.dart';
 import '../features/home/index.dart';
 import '../features/mentoring/index.dart';
+import '../features/training/index.dart';
 import '../features/ventures/index.dart';
 import '../shared/widgets/app_shell.dart';
 
@@ -41,6 +43,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       ...authRoutes,
       ...venturesRoutes,
+      ...documentsRoutes,
+      ...trainingRoutes,
       // Pantallas con sesión: barra inferior Inicio · Camino · Mentorías · Perfil.
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),

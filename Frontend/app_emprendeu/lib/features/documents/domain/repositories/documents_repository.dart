@@ -12,4 +12,10 @@ abstract interface class DocumentsRepository {
 
   /// Archivos del emprendimiento (incluida la evidencia de sus hitos).
   Future<Result<List<Evidence>>> listForVenture(int ventureId);
+
+  /// Elimina un archivo (quien lo subió o alguien del emprendimiento).
+  Future<Result<void>> delete(int documentId);
+
+  /// Descarga el archivo a una carpeta temporal y devuelve su ruta local.
+  Future<Result<String>> download(int documentId, String name);
 }

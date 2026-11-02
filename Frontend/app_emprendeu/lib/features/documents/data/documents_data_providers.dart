@@ -4,6 +4,7 @@ import '../../../core/network/providers.dart';
 import '../presentation/controllers/documents_providers.dart';
 import 'datasources/documents_remote_data_source.dart';
 import 'datasources/file_picker_data_source.dart';
+import 'datasources/open_filex_opener.dart';
 import 'repositories/documents_repository_impl.dart';
 
 final List<Override> documentsDataOverrides = [
@@ -13,4 +14,5 @@ final List<Override> documentsDataOverrides = [
     ),
   ),
   evidencePickerProvider.overrideWithValue(const FilePickerEvidencePicker()),
+  fileOpenerProvider.overrideWithValue(const OpenFilexOpener()),
 ];
