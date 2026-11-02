@@ -74,7 +74,7 @@ uv run pytest                 # requiere el PostgreSQL de desarrollo (usa <db>_t
 
 ## Estado actual
 
-Backend **completo**: 11 módulos con su HTTP, auditoría transversal, 91 tests contra
+Backend **completo**: 11 módulos con su HTTP, auditoría transversal, 97 tests contra
 PostgreSQL real, Dockerfile, `docker-compose.yml` y CI (`.github/workflows/backend.yml`).
 El detalle de endpoints está en [AGENTS.md](AGENTS.md) §4 y en `/docs` (solo fuera de producción).
 

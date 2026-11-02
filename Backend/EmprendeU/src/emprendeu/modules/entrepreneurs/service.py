@@ -87,7 +87,11 @@ class EntrepreneurService:
         if clean is not None and await self._repo.document_in_use(clean, usuario_id):
             raise DocumentAlreadyRegistered
         found.documento_identidad = clean
-        await self._repo.add(found)
+        try:
+            await self._repo.add(found)
+        except IntegrityError as exc:  # dos altas a la vez con el mismo documento
+            await self._repo.rollback()
+            raise DocumentAlreadyRegistered from exc
 
     async def summaries(
         self, emprendedor_ids: list[int]

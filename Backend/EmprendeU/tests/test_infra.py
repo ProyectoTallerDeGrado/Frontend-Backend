@@ -140,3 +140,37 @@ def test_el_secreto_debe_ser_fuerte_en_cualquier_entorno(
             Settings()  # type: ignore[call-arg]
     monkeypatch.setenv("JWT_SECRET", "a-1" * 11)  # 33 caracteres, no es el de ejemplo
     assert Settings().environment == environment  # type: ignore[call-arg]
+
+
+def test_el_limitador_no_acumula_claves_vencidas(monkeypatch) -> None:
+    """Una clave que no vuelve no debe quedarse en memoria para siempre."""
+    import time
+
+    from emprendeu.core import ratelimit
+    from emprendeu.core.ratelimit import SlidingWindowLimiter
+
+    clock = [1000.0]
+    monkeypatch.setattr(time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(ratelimit, "SWEEP_EVERY", 10)
+    limiter = SlidingWindowLimiter(max_attempts=3, window_seconds=60)
+
+    # consultar claves que nunca intentaron nada no deja entradas
+    for i in range(50):
+        assert limiter.is_blocked(f"consulta-{i}") is False
+    assert limiter.tracked_keys == 0
+
+    # 200 claves distintas (como quien rota IPs): se acumulan solo mientras su ventana vive
+    for i in range(200):
+        limiter.hit(f"ip-{i}")
+    assert limiter.tracked_keys == 200
+    clock[0] += 61  # vencen todas
+    for i in range(10):  # a la proxima barrida se limpian
+        limiter.hit(f"nueva-{i}")
+    assert limiter.tracked_keys <= 10
+
+    # y el bloqueo sigue funcionando
+    for _ in range(3):
+        limiter.hit("persona")
+    assert limiter.is_blocked("persona") is True
+    clock[0] += 61
+    assert limiter.is_blocked("persona") is False

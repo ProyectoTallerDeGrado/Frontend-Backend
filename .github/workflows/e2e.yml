@@ -1,0 +1,99 @@
+name: e2e
+
+# De extremo a extremo con todo levantado: PostgreSQL + API + web, un navegador real (Playwright) y
+# las pruebas de integracion del movil contra la API real. Es pesado: se lanza a mano desde la
+# pestana Actions de GitHub (o con `gh workflow run e2e`).
+on:
+  workflow_dispatch:
+
+env:
+  PG_USER: emprendeu
+  PG_DB: emprendeu
+  PG_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'ci-solo-pruebas-db' }}
+  JWT_SECRET: ${{ secrets.CI_JWT_SECRET || 'ci-secret-solo-para-pruebas-0123456789abcdef' }}
+  # Cuenta de administrador desechable que crea este job en su base efimera.
+  E2E_ADMIN_EMAIL: admin-e2e@ci.local
+  E2E_ADMIN_PASSWORD: ${{ secrets.CI_E2E_ADMIN_PASSWORD || 'ci-admin-solo-pruebas-1' }}
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: ${{ env.PG_USER }}
+          POSTGRES_PASSWORD: ${{ env.PG_PASSWORD }}
+          POSTGRES_DB: ${{ env.PG_DB }}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ${{ env.PG_USER }}"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://${{ env.PG_USER }}:${{ env.PG_PASSWORD }}@localhost:5432/${{ env.PG_DB }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- API ---------------------------------------------------------------------------
+      - uses: astral-sh/setup-uv@v5
+      - name: Base de datos y administrador
+        working-directory: Backend/EmprendeU
+        run: |
+          uv sync --locked
+          uv run alembic upgrade head
+          uv run python -m emprendeu.modules.users.cli create-admin --email "$E2E_ADMIN_EMAIL" --nombre "Admin E2E" --password "$E2E_ADMIN_PASSWORD"
+      - name: Levantar la API
+        working-directory: Backend/EmprendeU
+        env:
+          # La web reenvia la IP real del postulante; sin esto todos compartirian un solo cupo.
+          APPLICATION_TRUST_FORWARDED_FOR: "true"
+        run: |
+          nohup uv run uvicorn emprendeu.main:app --port 8000 > /tmp/api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:8000/health && break || sleep 1; done
+
+      # --- web ---------------------------------------------------------------------------
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: Frontend/emprendeu/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: Frontend/emprendeu/pnpm-lock.yaml
+      - name: Compilar y levantar la web
+        working-directory: Frontend/emprendeu
+        env:
+          API_URL: http://localhost:8000/api/v1
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          nohup pnpm start --port 3000 > /tmp/web.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/login > /dev/null && break || sleep 1; done
+      - name: Playwright (login y una pantalla por rol)
+        working-directory: Frontend/emprendeu
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_API_URL: http://localhost:8000/api/v1
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm e2e
+
+      # --- movil contra la API real ---------------------------------------------------------
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Integracion del movil
+        working-directory: Frontend/app_emprendeu
+        run: |
+          flutter pub get
+          flutter test --tags integration test/integration \
+            --dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1 \
+            --dart-define=E2E_ADMIN_EMAIL="$E2E_ADMIN_EMAIL" \
+            --dart-define=E2E_ADMIN_PASSWORD="$E2E_ADMIN_PASSWORD"
+
+      - name: Registros de la API y la web si algo fallo
+        if: failure()
+        run: |
+          echo "--- api ---"; tail -n 80 /tmp/api.log || true
+          echo "--- web ---"; tail -n 80 /tmp/web.log || true

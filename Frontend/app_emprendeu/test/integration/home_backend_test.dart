@@ -1,8 +1,6 @@
 @Tags(['integration'])
 library;
 
-import 'dart:io';
-
 import 'package:app_emprendeu/core/error/failure.dart';
 import 'package:app_emprendeu/core/error/result.dart';
 import 'package:app_emprendeu/core/network/auth_interceptor.dart';
@@ -24,13 +22,14 @@ import 'package:app_emprendeu/features/ventures/data/repositories/ventures_repos
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fakes.dart';
+import 'backend_url.dart';
 
 /// Recorre Inicio y Camino contra un backend real:
 ///
 ///     API_BASE_URL=http://localhost:8000/api/v1 \
 ///     flutter test --tags integration test/integration
 void main() {
-  final baseUrl = Platform.environment['API_BASE_URL'];
+  final baseUrl = backendUrl();
   final skip = baseUrl == null ? 'Define API_BASE_URL para correrla' : null;
 
   test(

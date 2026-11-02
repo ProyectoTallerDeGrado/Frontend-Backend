@@ -106,6 +106,8 @@ async def test_documentos_subida_descarga_y_permisos(
     client: AsyncClient, make_user: MakeUser, login
 ) -> None:
     h, vid = await _world(client, make_user, login)
+    # La carpeta de subidas es una sola para toda la sesion de pruebas: se compara contra lo previo.
+    before = set(Path(__import__("os").environ["UPLOAD_DIR"]).glob("*.pdf"))
     upload = await client.post(
         f"{API}/documents",
         files={
@@ -122,7 +124,9 @@ async def test_documentos_subida_descarga_y_permisos(
     doc = upload.json()
     assert doc["nombre"] == "plan de negocio.pdf" and doc["emprendimiento_id"] == vid
 
-    stored = list(Path(__import__("os").environ["UPLOAD_DIR"]).glob("*.pdf"))
+    stored = list(
+        set(Path(__import__("os").environ["UPLOAD_DIR"]).glob("*.pdf")) - before
+    )
     assert len(stored) == 1 and ".." not in stored[0].name
 
     got = await client.get(
@@ -151,7 +155,7 @@ async def test_documentos_subida_descarga_y_permisos(
     assert (
         await client.delete(f"{API}/documents/{doc['documento_id']}", headers=h["e"])
     ).status_code == 204
-    assert list(Path(__import__("os").environ["UPLOAD_DIR"]).glob("*.pdf")) == []
+    assert set(Path(__import__("os").environ["UPLOAD_DIR"]).glob("*.pdf")) == before
     assert (
         await client.get(
             f"{API}/documents/{doc['documento_id']}/download", headers=h["e"]

@@ -1,0 +1,35 @@
+name: web
+
+on:
+  push:
+    paths: ["Frontend/emprendeu/**", ".github/workflows/web.yml"]
+  pull_request:
+    paths: ["Frontend/emprendeu/**", ".github/workflows/web.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend/emprendeu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: Frontend/emprendeu/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: Frontend/emprendeu/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - name: Tipos
+        run: pnpm exec tsc --noEmit
+      - name: Pruebas unitarias (esquemas y lib)
+        run: pnpm test
+      - name: Compilacion de produccion
+        run: pnpm build
+        env:
+          # Solo se necesita para compilar; la web no llama al backend durante el build.
+          API_URL: http://localhost:8000/api/v1

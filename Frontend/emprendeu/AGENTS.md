@@ -198,3 +198,16 @@ mismos nombres que los módulos del backend (regla global §4.6). Registra aquí
     `node_modules/next/dist/docs/`** (lo exige el bloque gestionado de arriba):
     esta versión difiere de lo que el modelo "recuerda".
 12. **`pnpm lint` y `pnpm build` deben pasar** antes de dar un cambio por terminado.
+
+## 5. Pruebas
+
+- **Vitest** (`pnpm test`, `vitest.config.mts`): pruebas junto al código (`*.test.ts`) de los esquemas zod de cada
+  feature (`features/<f>/schemas/`) y de `lib/` (formato, fechas de Bolivia). Son puras: sin red ni navegador.
+- **Playwright** (`pnpm e2e`, `playwright.config.ts`, carpeta `e2e/`): login y una pantalla por rol (administrador,
+  coordinación, asesor), el rechazo del emprendedor y el formulario público `/postular`. Corre contra un API y una web
+  **ya levantados** y necesita `E2E_BASE_URL`, `E2E_API_URL`, `E2E_ADMIN_EMAIL` y `E2E_ADMIN_PASSWORD` (cuenta de
+  administrador existente; `e2e/global-setup.ts` crea las demás y las guarda en `e2e/.users.json`, que no se versiona). La
+  API debe arrancar con `APPLICATION_TRUST_FORWARDED_FOR=true`, o todas las postulaciones comparten el cupo de la IP de la web.
+- CI: `.github/workflows/web.yml` (lint, tipos, Vitest, build) en cada cambio y `.github/workflows/e2e.yml` (manual) para
+  Playwright y las pruebas de integración del móvil.
+- `shadcn` es una dependencia de **desarrollo** (CLI y CSS de compilación): `pnpm audit --prod` no debe reportar nada.

@@ -14,6 +14,8 @@ import 'package:app_emprendeu/features/auth/domain/usecases/register_usecase.dar
 import 'package:app_emprendeu/features/auth/domain/usecases/restore_session_usecase.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'backend_url.dart';
+
 /// Memoria en lugar del almacén seguro del sistema.
 class _MemoryStorage implements TokenStorage {
   String? token;
@@ -33,7 +35,7 @@ class _MemoryStorage implements TokenStorage {
 /// Opcional: `STAFF_EMAIL` y `STAFF_PASSWORD` (cuenta de personal) para probar
 /// el rechazo de cuentas del panel web.
 void main() {
-  final baseUrl = Platform.environment['API_BASE_URL'];
+  final baseUrl = backendUrl();
   final skip = baseUrl == null ? 'Define API_BASE_URL para correrla' : null;
 
   late _MemoryStorage storage;

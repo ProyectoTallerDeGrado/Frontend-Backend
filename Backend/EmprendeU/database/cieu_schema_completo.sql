@@ -460,6 +460,8 @@ CREATE INDEX ix_conversaciones_ia_emprendimientoid ON Conversaciones_ia (Emprend
 CREATE INDEX ix_documentos_usuarioid ON Documentos (UsuarioID);
 CREATE INDEX ix_documentos_emprendimientoid ON Documentos (EmprendimientoID);
 CREATE INDEX ix_emprendedor_usuarioid ON Emprendedor (UsuarioID);
+-- El documento de identidad no se repite entre emprendedores (sin distinguir mayusculas)
+CREATE UNIQUE INDEX uq_emprendedor_documento_identidad ON Emprendedor (lower(Documento_identidad)) WHERE Documento_identidad IS NOT NULL AND Documento_identidad <> '';
 CREATE INDEX ix_emprendedor_insignias_insigniasid ON Emprendedor_insignias (InsigniasID);
 CREATE INDEX ix_emprendedor_insignias_emprendedorid ON Emprendedor_insignias (EmprendedorID);
 CREATE INDEX ix_emprendimiento_emprendedores_emprendedorid ON Emprendimiento_emprendedores (EmprendedorID);

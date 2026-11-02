@@ -27,6 +27,16 @@ class Emprendedor(Base):
     __table_args__ = (
         UniqueConstraint("usuarioid", name="uq_emprendedor_usuarioid"),
         Index("ix_emprendedor_usuarioid", "usuarioid"),
+        # Un documento de identidad no se repite entre emprendedores (sin distinguir
+        # mayusculas); los vacios no cuentan. Lo valida tambien el servicio.
+        Index(
+            "uq_emprendedor_documento_identidad",
+            func.lower(text("documento_identidad")),
+            unique=True,
+            postgresql_where=text(
+                "documento_identidad IS NOT NULL AND documento_identidad <> ''"
+            ),
+        ),
     )
 
     documento_identidad: Mapped[str | None] = mapped_column(String(50))

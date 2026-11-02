@@ -19,6 +19,7 @@ Cada fase se cierra con lint y tests en verde.
 
 | Fase | Contenido | Estado |
 |---|---|---|
+| F7 | Calidad y entrega: Vitest y Playwright en la web, integración del móvil contra la API real, un flujo de punta a punta por rol (`test_roles_flow_api.py`), documento de identidad único en la base, verificación final del esquema (`verify_schema.py`, sin diferencias), CI de web y móvil, `.env.example` completo, auditoría final (`doc/AUDITORIA_FINAL.md`) y tablero de los 31 casos en `AGENTS.md` §8 | ✅ (verificado el 2026-11-02) |
 | F6 | Admisión y casos restantes: postulaciones con formulario público, admisión en una sola transacción y decisión definitiva (CU26), capacitaciones publicadas con participantes y asistencia (CU27 a CU29), documentos para coordinación, asesor asignado y emprendedor (CU30), necesidades y dificultades (CU24) y tareas pendientes (CU22), en backend, web y móvil | ✅ |
 | F5 | Asistente IA con RAG: base de conocimiento con estado de procesamiento y subida de archivos txt/md/pdf/docx (CU31), coach con fuentes, mensaje de información insuficiente, error claro sin guardar nada si Ollama cae y sentimiento anonimizado (CU11), con servicio `ollama-pull` en el compose, en backend, web y móvil | ✅ |
 | F4 | Emprendimientos, progreso e hitos: registrar emprendedor con documento único (CU04), emprendimiento propio con campos reservados a la coordinación (CU05), progreso gamificado visible al personal (CU06), cumplir retos (CU07), XP e insignias en el Perfil (CU08) y hitos con evidencia en `documentos.hitoid` (CU20), en backend, web y móvil | ✅ |

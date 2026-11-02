@@ -1,7 +1,9 @@
 """Fase 4: alta de emprendedores, emprendimientos propios, progreso y evidencia de hitos."""
 
+import pytest
 from httpx import AsyncClient
 
+from emprendeu.modules.entrepreneurs.repository import EntrepreneurRepository
 from tests.conftest import MakeUser
 
 API = "/api/v1"
@@ -352,3 +354,49 @@ async def test_cu20_hito_con_evidencia(
         assert (
             await client.delete(f"{API}/documents/{doc['documento_id']}", headers=emp)
         ).status_code == 204
+
+
+async def test_la_base_impide_documentos_repetidos_aunque_el_servicio_no_lo_vea(
+    client: AsyncClient, make_user: MakeUser, login, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Dos altas simultaneas pasan la comprobacion del servicio: el indice unico las frena."""
+    coord, _ = await _staff(make_user, login)
+    base = {
+        "nombre_completo": "Ana Uno",
+        "email": "uno@test.com",
+        "documento_identidad": "ABC-123",
+    }
+    assert (
+        await client.post(f"{API}/entrepreneurs", json=base, headers=coord)
+    ).status_code == 201
+
+    async def never(*args, **kwargs):
+        return False
+
+    # el servicio "no ve" el duplicado, como en una carrera entre dos peticiones
+    monkeypatch.setattr(EntrepreneurRepository, "document_in_use", never)
+    dup = await client.post(
+        f"{API}/entrepreneurs",
+        json={
+            **base,
+            "nombre_completo": "Ana Dos",
+            "email": "dos@test.com",
+            "documento_identidad": "abc-123",
+        },
+        headers=coord,
+    )
+    assert (
+        dup.status_code == 409
+        and dup.json()["error"]["code"] == "document_already_registered"
+    )
+    monkeypatch.undo()
+    # y no quedo nada a medias: ni usuario ni perfil de la segunda
+    assert (
+        await client.get(f"{API}/entrepreneurs?q=dos@test.com", headers=coord)
+    ).json()["total"] == 0
+    # los emprendedores sin documento no chocan entre si
+    await make_user(email="sin1@test.com")
+    await make_user(email="sin2@test.com")
+    assert (
+        await client.get(f"{API}/entrepreneurs?page_size=50", headers=coord)
+    ).json()["total"] >= 3

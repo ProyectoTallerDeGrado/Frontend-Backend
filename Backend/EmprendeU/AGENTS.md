@@ -55,7 +55,7 @@ y [dialecto Psycopg de SQLAlchemy](https://docs.sqlalchemy.org/en/20/dialects/po
 > Estado real hoy: **backend completo** (fases 0 a 9 de [`ROADMAP.md`](ROADMAP.md)).
 > Los 11 módulos tienen persistencia, servicio, repositorio, esquemas y router; hay
 > infraestructura transversal (`security`, `pagination`, `logging`, `ratelimit`,
-> errores 401/403/429/413/500), 91 tests contra PostgreSQL real, Dockerfile,
+> errores 401/403/429/413/500), 97 tests contra PostgreSQL real, Dockerfile,
 > `docker-compose.yml` y CI. Lo único externo que falta para operar es Ollama
 > (opcional: sin él el coach responde 503 y el resto funciona).
 
@@ -162,8 +162,9 @@ que el esquema generado coincida con el de referencia:
   Dentro de la columna se queda en `column.constraints`, que Alembic no lee, y la
   migracion sale sin el CHECK.
 - **Maximo 63 caracteres** por identificador: PostgreSQL los trunca en silencio y
-  SQLAlchemy lanza `IdentifierError`. Hay un nombre ya truncado en el esquema:
-  `uq_fragmentos_documento_documentos_conocimientoid_numero_fragme`.
+  SQLAlchemy lanza `IdentifierError`. Una restricción de `fragmentos_documento` quedó
+  truncada en el esquema original; la migración `a6d9c1e3f527` la renombró a
+  `uq_fragmentos_docconoc_numero`, como en el esquema de referencia.
 - **FK entre modulos por string** (`ForeignKey("emprendimiento.emprendimientoid", ...)`),
   nunca importando el modelo del otro modulo. `MetaData(schema="cieu")` resuelve el
   prefijo del schema.
@@ -232,8 +233,12 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
 - Detección de alertas: `uv run python -m emprendeu.modules.alerts.jobs`, o `POST /alerts/evaluate`
   (solo `config:administrativo`). En Docker corre el servicio `alerts-job` del `docker-compose.yml`
   (una pasada cada `ALERTS_INTERVAL_SECONDS`, 86400 por defecto); fuera de Docker, un cron diario.
-- Limitador de login en memoria: válido para **un** proceso; con varias réplicas hay que
-  moverlo a un almacén compartido (la interfaz no cambia).
+- Limitadores de intentos (login y formulario público de postulación) en memoria: válidos para **un** proceso;
+  con varias réplicas hay que moverlos a un almacén compartido (la interfaz no cambia). Decisión vigente: una sola
+  réplica. Descartan solas las claves vencidas (barrida cada 256 intentos), así que rotar IP o correo no hace crecer la memoria.
+- Comprobación del esquema: `uv run python database/verify_schema.py --admin-url postgresql://USUARIO:CLAVE@localhost:5432/postgres`
+  crea dos bases temporales (una desde `cieu_schema_completo.sql`, otra con `alembic upgrade head`) y compara columnas
+  (tipo, nulabilidad, default, identidad), restricciones e índices. Corre en el CI del backend.
 
 ### Decisiones de diseño tomadas durante la construcción
 
@@ -296,8 +301,10 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
 - **Emprendedores y emprendimientos (fase 4):** `POST /entrepreneurs` (coordinación) crea la cuenta, el perfil y el
   documento en **una transacción** (`UserService.register_entrepreneur`, porque `users` depende de `entrepreneurs`
   y no al revés); devuelve la clave temporal una sola vez. El documento de identidad es único sin distinguir
-  mayúsculas ni espacios (409 `document_already_registered`), también al editar el perfil propio. **Esa unicidad
-  se valida en el servicio: el esquema de referencia no define un índice único sobre `emprendedor.documento_identidad`.**
+  mayúsculas ni espacios (409 `document_already_registered`), también al editar el perfil propio. **La unicidad
+  la garantiza la base** con un índice único funcional (`lower(documento_identidad)`, parcial sobre valores no vacíos, migración `f4b8d2e6a913`,
+  también en `cieu_schema_completo.sql`) y el servicio traduce el `IntegrityError` a ese 409, así que ni dos peticiones
+  simultáneas la saltan.
   El personal con `emprendedores:registro` crea un emprendimiento **de un emprendedor concreto** (`emprendedor_id`,
   422 `entrepreneur_required` si falta); un emprendedor solo crea los suyos. Un emprendedor edita el suyo pero el
   `estado` es campo reservado (403 `reserved_fields`, `details.campos`). El camino de un emprendimiento

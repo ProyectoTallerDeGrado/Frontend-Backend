@@ -170,7 +170,7 @@ class FragmentoDocumento(Base):
             "numero_fragmento",
             # PostgreSQL trunca los identificadores a 63 caracteres: este es el
             # nombre real que quedo en la base al cargar el SQL de referencia.
-            name="uq_fragmentos_documento_documentos_conocimientoid_numero_fragme",
+            name="uq_fragmentos_docconoc_numero",
         ),
         Index(
             "ix_fragmentos_documento_documentos_conocimientoid",

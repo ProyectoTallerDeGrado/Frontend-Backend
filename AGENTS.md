@@ -31,11 +31,11 @@ EmprendeU/
 | Web | `Frontend/emprendeu` | Next.js 16.3.8, React 19.2.8, TypeScript 5, Tailwind v4, shadcn (`base-rhea` sobre `@base-ui/react`), lucide, zustand, pnpm 12 | **Feature-based** | `Frontend/emprendeu/AGENTS.md` |
 | Móvil | `Frontend/app_emprendeu` | Flutter, Dart `^3.13.5`, flutter_lints | **Feature-first por capas** | `Frontend/app_emprendeu/AGENTS.md` |
 
-## 3. Estado real del código (verificado el 2026-10-20)
+## 3. Estado real del código (verificado el 2026-11-02)
 
 El backend está completo. La web tiene el panel de administración conectado de punta
-a punta; el móvil tiene las pantallas del emprendedor conectadas. Con la fase 6 están
-construidos todos los casos de uso del plan; queda la fase 7 (calidad y entrega).
+a punta; el móvil tiene las pantallas del emprendedor conectadas. Con la fase 7 (calidad y entrega)
+el plan está cerrado: los 31 casos de uso están construidos y el tablero de §8 recoge la prueba de cada uno.
 
 - **Backend**: todas las dependencias (ejecución y `dev`) están instaladas y
   bloqueadas en `uv.lock`. Existe la app ASGI (`emprendeu.main:create_app`), la
@@ -45,7 +45,7 @@ construidos todos los casos de uso del plan; queda la fase 7 (calidad y entrega)
   esquema parte de `Backend/EmprendeU/database/EmprendeU_postgresql.sql`, hoy reemplazado por la referencia
   `database/cieu_schema_completo.sql`, y evoluciona solo con migraciones de Alembic (ver `AGENTS.md` del backend).
   **Backend completo** (fases 0 a 9): los 11 módulos exponen HTTP bajo `/api/v1`, con
-  auditoría, 91 tests contra PostgreSQL real, Docker y CI. Detalle en
+  auditoría, 97 tests contra PostgreSQL real, Docker y CI. Detalle en
   `Backend/EmprendeU/AGENTS.md` §4 y `ROADMAP.md`.
 - **Web**: tokens de marca, fuentes, auth conectada (cookie `httpOnly`, `proxy.ts`) y el
   **panel de administración completo** (Resumen, Usuarios, Roles y permisos, Parámetros,
@@ -128,7 +128,10 @@ uv sync --locked                          # instala ejecución + dev
 cp .env.example .env                      # y ajustar DATABASE_URL y JWT_SECRET (>= 32 caracteres)
 uv run alembic upgrade head               # crea el schema cieu y todas las tablas
 uv run uvicorn emprendeu.main:app --reload --port 8000
-uv run pytest                             # 91 tests (necesita PostgreSQL con pgvector)
+uv run pytest                             # 97 tests (necesita PostgreSQL con pgvector)
+uv run alembic check                      # el modelo y las migraciones coinciden
+uv run python database/verify_schema.py --admin-url postgresql://USUARIO:CLAVE@localhost:5432/postgres
+                                          # columnas, restricciones e índices: SQL de referencia vs migraciones
 uv run ruff check . && uv run ruff format --check .
 uv run python -m emprendeu.modules.users.cli create-admin --email ... --nombre "..."
 
@@ -138,13 +141,21 @@ cp .env.example .env.local          # API_URL del backend
 pnpm dev
 pnpm build
 pnpm lint
+pnpm test                           # Vitest: esquemas zod y lib/ (32 tests)
+E2E_BASE_URL=... E2E_API_URL=... E2E_ADMIN_EMAIL=... E2E_ADMIN_PASSWORD=... pnpm e2e
+                                    # Playwright (9): login y una pantalla por rol; necesita API y web en marcha
+                                    # y la API con APPLICATION_TRUST_FORWARDED_FOR=true
 
 # Móvil  (cwd: Frontend/app_emprendeu)
 flutter pub get
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
 dart run build_runner build          # tras tocar DTO freezed/json
 flutter analyze
-flutter test
+flutter test                          # 110 tests de unidad y de pantalla
+flutter test --tags integration test/integration \
+  --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1 \
+  --dart-define=E2E_ADMIN_EMAIL=... --dart-define=E2E_ADMIN_PASSWORD=...
+                                      # contra el backend real (10.0.2.2 en Android, 127.0.0.1 en iOS)
 ```
 
 > El backend necesita un PostgreSQL 15+ accesible en `DATABASE_URL`; el
@@ -161,3 +172,57 @@ flutter test
 - [ ] Lint y tests del proyecto tocado pasan, y lo reportas con su salida real.
 - [ ] Si introdujiste una feature/módulo, lo añadiste a la tabla de features del
       `AGENTS.md` correspondiente.
+
+## 8. Regla de alcance y tablero de casos de uso
+
+**Regla de alcance.** Un caso de uso (CU) solo cuenta como completo si cumple los **cuatro criterios**:
+(1) endpoint con una prueba que pasa, (2) pantalla en el cliente correcto (la **web** es para todos los
+actores salvo el emprendedor; la **app móvil**, solo para el emprendedor), (3) datos verificados contra el
+esquema y las migraciones (`verify_schema.py` sin diferencias) y (4) flujo de punta a punta probado. Ningún
+CU se marca sin la salida real de sus pruebas. Lo que no está en el tablero no se construye sin que el
+usuario lo apruebe y se registre aquí. **Una sola réplica del backend:** los limitadores de intentos
+(login y formulario público) viven en memoria; con más réplicas hay que moverlos a un almacén compartido.
+
+Prueba de cada criterio: **B** = test de la API (`Backend/EmprendeU/tests/`), **W** = pantalla web,
+**M** = pantalla móvil, **E** = flujo de punta a punta (`test_roles_flow_api.py` por rol; `e2e/roles.spec.ts`
+con Playwright en la web; `test/integration/*` en el móvil contra la API real).
+
+| CU | Caso de uso | Cliente | B (backend) | Pantalla | E (extremo a extremo) |
+|---|---|---|---|---|---|
+| 01 | Iniciar sesión | web y móvil | `test_auth_api` | web `/login`; móvil `auth` | Playwright (login) y `auth_backend_test` |
+| 02 | Gestionar usuarios | web | `test_users_admin_api` | web `/users` | flujo administrador |
+| 03 | Roles y permisos | web | `test_users_admin_api` | web `/roles` | flujo administrador |
+| 04 | Registrar emprendedor | web | `test_entrepreneurs_api` (incluye documento único en la base) | web `/entrepreneurs` | flujo coordinador |
+| 05 | Gestionar emprendimiento | web y móvil | `test_audit_ventures_api`, `test_entrepreneurs_api` | web `/ventures`; móvil `ventures` | flujo coordinador y emprendedor |
+| 06 | Progreso gamificado | web y móvil | `test_gamification_api` | web `/ventures/[id]/progress`; móvil Camino | flujo emprendedor |
+| 07 | Cumplir un reto | móvil | `test_gamification_api` | móvil Camino | `home_backend_test` |
+| 08 | XP e insignias | móvil | `test_gamification_api` | móvil Perfil | `home_backend_test` |
+| 09 | Asignar asesor | web | `test_mentoring_api` | web `/mentoring/assignments` | flujo coordinador |
+| 10 | Agendar mentoría | móvil | `test_mentoring_api` | móvil `/mentoring/book` | flujo emprendedor |
+| 11 | Asistente virtual | móvil | `test_ai_api` | móvil Coach | flujo emprendedor (IA simulada) |
+| 12 | Gestionar etapa | web | `test_audit_ventures_api` | web `/ventures` | flujo coordinador |
+| 13 | Gestionar alertas | web | `test_alerts_indicators_api` | web `/alerts` | flujo asesor |
+| 14 | Dashboard ejecutivo | web | `test_dashboard_reports_api` | web `/dashboard` | flujo coordinador |
+| 15 | Disponibilidad del mentor | web | `test_mentoring_api` | web `/mentoring/availability` | flujo asesor |
+| 16 | Registrar sesión | web | `test_mentoring_api` | web `/mentoring/sessions` | flujo asesor |
+| 17 | Recomendaciones | web | `test_mentoring_api` | web `/mentoring/sessions` | flujo asesor |
+| 18 | Compromisos | web | `test_mentoring_api` | web `/mentoring/sessions` | flujo asesor |
+| 19 | Historial del emprendimiento | web y móvil | `test_mentoring_api` | web `/ventures/[id]/history`; móvil `/mentoring/history` | flujo emprendedor |
+| 20 | Avances e hitos | móvil | `test_audit_ventures_api`, `test_mentoring_api` | móvil hitos y evidencia | `home_backend_test` |
+| 21 | Generar reportes | web | `test_dashboard_reports_api` | web `/reports` | flujo coordinador |
+| 22 | Tareas pendientes | móvil | `test_phase6_api` | móvil Inicio | `admission_backend_test` |
+| 23 | Mentorías programadas | web y móvil | `test_mentoring_api` | web `/mentoring/sessions`; móvil Mentorías | flujo asesor y emprendedor |
+| 24 | Necesidades y dificultades | móvil | `test_phase6_api` | móvil `/venture/needs` | `admission_backend_test` |
+| 25 | Parámetros de seguimiento | web | `test_alerts_indicators_api` | web `/settings/tracking` | flujo administrador |
+| 26 | Gestionar admisión | web | `test_admissions_api` | web `/admissions` y `/postular` | Playwright (postulación) y `admission_backend_test` |
+| 27 | Gestionar capacitaciones | web | `test_training_documents_api`, `test_phase6_api` | web `/training` | flujo coordinador |
+| 28 | Participantes y asistencia | web | `test_phase6_api` | web `/training/[id]/participants` | flujo coordinador |
+| 29 | Consultar capacitaciones | móvil | `test_phase6_api` | móvil `/training` | flujo emprendedor |
+| 30 | Gestionar documentos | web y móvil | `test_training_documents_api`, `test_phase6_api` | web `/documents`; móvil `/documents` | flujo emprendedor |
+| 31 | Base de conocimiento | web | `test_ai_knowledge_api` | web `/knowledge` | flujo coordinador |
+
+> La columna de pantalla usa los nombres de ruta de cada app; ante la duda, manda el `AGENTS.md` del cliente.
+> Resultado de la verificación final (2026-11-02): backend 97 pruebas, web 32 (Vitest) + 9 (Playwright),
+> móvil 110 de unidad y 4 de integración contra la API real (1 opcional omitida); `verify_schema.py` sin
+> diferencias (263 columnas, 142 restricciones, 121 índices). La auditoría completa está en
+> [`doc/AUDITORIA_FINAL.md`](doc/AUDITORIA_FINAL.md).

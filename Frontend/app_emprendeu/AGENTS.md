@@ -213,8 +213,12 @@ test/                         # espejo exacto de lib/
   el servidor) y la sesión sigue. «Contraseña actual incorrecta» es un 400 (`FieldFailure`), no
   cierra la sesión. El router solo reevalúa `redirect` cuando se abre o cierra la sesión, no con
   cada cambio del estado de auth (si no, reabría la ruta tras el `pop`).
-- **Prueba contra el backend real** (opt-in):
-  `API_BASE_URL=http://localhost:8000/api/v1 flutter test --tags integration test/integration`.
+- **Pruebas contra el backend real** (opt-in, `test/integration/`; se omiten solas sin `API_BASE_URL`):
+  `flutter test --tags integration test/integration --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1`
+  (en iOS, `127.0.0.1`). Con `--dart-define=E2E_ADMIN_EMAIL=... --dart-define=E2E_ADMIN_PASSWORD=...` también corre
+  `admission_backend_test` (postulación → admisión → primer día del emprendedor en la app), y con `STAFF_EMAIL` y
+  `STAFF_PASSWORD` en el entorno, el rechazo de una cuenta de personal. `backend_url.dart` lee la URL del `--dart-define`
+  o, si no, de la variable de entorno. CI: `.github/workflows/mobile.yml` (analyze + test) y `e2e.yml` (manual).
 
 ## 5. Reglas de la app móvil
 

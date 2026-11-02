@@ -44,6 +44,10 @@ jobs:
         run: |
           uv run alembic upgrade head
           uv run alembic check
+      - name: Migraciones iguales al SQL de referencia (cieu_schema_completo.sql)
+        # Crea dos bases temporales, aplica el SQL en una y las migraciones en otra, y compara
+        # columnas, restricciones, indices y valores por defecto.
+        run: uv run python database/verify_schema.py --admin-url postgresql://${{ env.PG_USER }}:${{ env.PG_PASSWORD }}@localhost:5432/postgres
       - run: uv run pytest -q
 
   docker:
