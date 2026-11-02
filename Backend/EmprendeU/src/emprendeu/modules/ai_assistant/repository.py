@@ -23,6 +23,9 @@ class AssistantRepository:
     async def commit(self) -> None:
         await self._session.commit()
 
+    async def rollback(self) -> None:
+        await self._session.rollback()
+
     async def add(self, obj: object) -> None:
         self._session.add(obj)
         await self._session.flush()

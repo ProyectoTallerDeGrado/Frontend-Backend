@@ -44,8 +44,8 @@ consumidos desde componentes cliente.
 > (`/settings/tracking`), Catálogos y XP (`/catalogs`) y Auditoría (`/audit`, con
 > exportación CSV), **Mi cuenta** (`/account`: datos de la sesión y cambio de contraseña,
 > visible para todo el personal), **Mentorías** (`/mentoring/assignments`,
-> `/mentoring/availability` y `/mentoring/sessions`) y login/registro. Nueve features (`auth`, `users`, `audit`,
-> `alerts`, `gamification`, `ventures`, `indicators`, `mentoring`, `entrepreneurs`), el shell en `components/layout/`
+> `/mentoring/availability` y `/mentoring/sessions`) y login/registro. Diez features (`auth`, `users`, `audit`,
+> `alerts`, `gamification`, `ventures`, `indicators`, `mentoring`, `entrepreneurs`, `ai_assistant`), el shell en `components/layout/`
 > y los componentes shadcn `button, input, label, switch, checkbox, slider, sheet, badge`.
 
 ### Cómo está armado el panel
@@ -85,6 +85,13 @@ consumidos desde componentes cliente.
   (nombre, sector, descripción y estado, solo `emprendedores:modificacion`) y los enlaces «Progreso» e «Historial».
   El **progreso** (`JourneyScreen` en `features/gamification`, `/ventures/[id]/progress`) muestra XP, nivel, etapas
   completadas/actual/pendientes y los retos del emprendimiento; es de solo lectura.
+- **Base de conocimiento** (fase 5): `features/ai_assistant` (`KnowledgeScreen`, `/knowledge`, permiso `config:consulta`;
+  subir y desactivar con `config:modificacion`, es decir coordinación y administración). Muestra si Ollama responde,
+  los documentos activos y la tabla con el **estado de procesamiento** (Procesando, Activo, Error, Inactivo) y los
+  fragmentos de cada uno. «Subir documento» acepta .txt, .md, .pdf y .docx de hasta 10 MB y llama a
+  `POST /ai/knowledge/upload` desde una server action con `FormData` (`lib/api-client.ts` admite `FormData` y un plazo
+  mayor, 120 s, porque calcular embeddings tarda; `next.config.ts` sube el límite de las server actions a 11 MB). Si el
+  servicio de IA no responde, el intento queda visible en estado «Error».
 - **Cambio de contraseña** (`features/auth`: `changePasswordAction`, `ChangePasswordForm`,
   `AccountView`): el backend invalida los tokens anteriores y devuelve uno nuevo, que la acción
   guarda en la cookie para que la sesión actual siga; las demás sesiones se cierran. «Contraseña
@@ -147,7 +154,7 @@ proxy.ts                   ✅ # (Next 16) antiguo middleware: protege rutas pri
 
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
-`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅ (todas conectadas al backend); pendientes `ai_assistant`, `training`, `documents` — los
+`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅, `ai_assistant` ✅ (todas conectadas al backend); pendientes `training`, `documents` — los
 mismos nombres que los módulos del backend (regla global §4.6). Registra aquí cada feature nueva.
 
 ## 4. Reglas de la web

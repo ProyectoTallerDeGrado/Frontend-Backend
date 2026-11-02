@@ -11,6 +11,7 @@ const NAV: (NavItem & { permission?: string; hideForRole?: string })[] = [
   { href: "/roles", label: "Roles y permisos", icon: "roles", permission: "usuarios:consulta" },
   { href: "/settings/tracking", label: "Parámetros", icon: "tracking", permission: "config:consulta" },
   { href: "/catalogs", label: "Catálogos y XP", icon: "catalogs", permission: "config:consulta" },
+  { href: "/knowledge", label: "Base de conocimiento", icon: "knowledge", permission: "config:consulta", hideForRole: "emprendedor" },
   { href: "/audit", label: "Auditoría", icon: "audit", permission: "config:consulta" },
   { href: "/entrepreneurs", label: "Emprendedores", icon: "entrepreneurs", permission: "emprendedores:consulta", hideForRole: "emprendedor" },
   { href: "/ventures", label: "Emprendimientos", icon: "ventures", permission: "emprendedores:consulta", hideForRole: "emprendedor" },

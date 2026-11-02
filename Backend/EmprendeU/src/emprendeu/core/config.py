@@ -47,7 +47,9 @@ class Settings(BaseSettings):
     ollama_embed_model: str = "nomic-embed-text"
     ollama_chat_model: str = "llama3.2"
     ollama_timeout_seconds: float = 60.0
-    ai_min_similarity: float = 0.55
+    # Calibrado con nomic-embed-text: lo relevante sale entre 0.69 y 0.79 y lo que no
+    # tiene relacion llega a 0.60; con 0.55 se colaban fuentes falsas. Ajustable por entorno.
+    ai_min_similarity: float = 0.65
     ai_top_k: int = 4
 
     # Carga de archivos (modulo documents).

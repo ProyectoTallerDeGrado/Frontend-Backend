@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/ai_assistant/index.dart';
 import '../features/auth/index.dart';
 import '../features/gamification/index.dart';
 import '../features/home/index.dart';
@@ -47,6 +48,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: homeRoutes),
           StatefulShellBranch(routes: gamificationRoutes),
           StatefulShellBranch(routes: mentoringRoutes),
+          StatefulShellBranch(routes: assistantRoutes),
           StatefulShellBranch(routes: accountRoutes),
         ],
       ),

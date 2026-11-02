@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
 
+import '../features/ai_assistant/index.dart';
 import '../features/auth/index.dart';
 import '../features/documents/index.dart';
 import '../features/gamification/index.dart';
@@ -13,4 +14,5 @@ final List<Override> appOverrides = [
   ...documentsDataOverrides,
   ...gamificationDataOverrides,
   ...mentoringDataOverrides,
+  ...assistantDataOverrides,
 ];

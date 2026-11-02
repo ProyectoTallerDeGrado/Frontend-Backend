@@ -12,14 +12,18 @@ class FakeLLM:
     def __init__(self) -> None:
         self.down = False
         self.last_system = ""
+        self.chat_calls = 0
+        self.embed_calls = 0
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        self.embed_calls += 1
         if self.down:
             raise AIUnavailable
         pad = [0.0] * (EMBEDDING_DIM - len(KEYWORDS))
         return [[float(t.lower().count(k)) for k in KEYWORDS] + pad for t in texts]
 
     async def chat(self, system: str, question: str) -> str:
+        self.chat_calls += 1
         if self.down:
             raise AIUnavailable
         self.last_system = system

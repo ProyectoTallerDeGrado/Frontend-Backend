@@ -74,7 +74,7 @@ uv run pytest                 # requiere el PostgreSQL de desarrollo (usa <db>_t
 
 ## Estado actual
 
-Backend **completo**: 11 módulos con su HTTP, auditoría transversal, 71 tests contra
+Backend **completo**: 11 módulos con su HTTP, auditoría transversal, 78 tests contra
 PostgreSQL real, Dockerfile, `docker-compose.yml` y CI (`.github/workflows/backend.yml`).
 El detalle de endpoints está en [AGENTS.md](AGENTS.md) §4 y en `/docs` (solo fuera de producción).
 
@@ -93,7 +93,7 @@ uv run uvicorn emprendeu.main:app --reload --port 8000
 cp .env.example .env                   # y ajusta POSTGRES_*, JWT_SECRET (>= 32 caracteres) y CORS_ORIGINS
 docker compose up --build              # PostgreSQL (pgvector) + migraciones + API
 docker compose run --rm migrate        # solo aplicar migraciones
-docker compose --profile ai up --build # + Ollama (luego: ollama pull nomic-embed-text llama3.2)
+docker compose --profile ai up --build # + Ollama; el servicio `ollama-pull` descarga nomic-embed-text (768 dim.) y llama3.2
 ```
 
 ### Variables de entorno

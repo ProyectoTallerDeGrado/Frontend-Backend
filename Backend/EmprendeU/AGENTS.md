@@ -55,7 +55,7 @@ y [dialecto Psycopg de SQLAlchemy](https://docs.sqlalchemy.org/en/20/dialects/po
 > Estado real hoy: **backend completo** (fases 0 a 9 de [`ROADMAP.md`](ROADMAP.md)).
 > Los 11 módulos tienen persistencia, servicio, repositorio, esquemas y router; hay
 > infraestructura transversal (`security`, `pagination`, `logging`, `ratelimit`,
-> errores 401/403/429/413/500), 71 tests contra PostgreSQL real, Dockerfile,
+> errores 401/403/429/413/500), 78 tests contra PostgreSQL real, Dockerfile,
 > `docker-compose.yml` y CI. Lo único externo que falta para operar es Ollama
 > (opcional: sin él el coach responde 503 y el resto funciona).
 
@@ -184,7 +184,7 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 | `mentoring` ✅ | `/mentoring/mentors` (+ `PUT {id}/enabled`, perfil, `slots`, horarios: `GET/PUT/POST {id}/availability`, `PATCH/DELETE /availability/{id}`), `booking-status`, `sessions` (agendar, `me` y lista con filtros `estado/desde/hasta`, `register`, completar, cancelar), `commitments` (`POST`, `me`), `recommendations` (`POST`, `me`), `progress`, `POST /mentoring/sync`, `assignments`, historial `GET /mentoring/ventures/{id}/history` y `/ventures/me/history` |
 | `alerts` ✅ | `GET/PUT /alerts/settings`, `GET /alerts`, `PATCH /alerts/{id}` (`revisada`, `atendida`, `descartada`), `POST /alerts/evaluate`; tarea `alerts/jobs.py` |
 | `indicators` ✅ | `GET /indicators/overview` (resumen del panel), `GET /indicators/dashboard` (filtros `desde`, `hasta`, `etapa_id`), `GET /indicators/reports/{kind}` y `/export` (CSV) con `kind` ∈ `resumen`, `sesiones`, `alertas`, `indicadores`; tipos y valores por emprendimiento |
-| `ai_assistant` ✅ | `POST /ai/chat`, conversaciones, `/ai/knowledge` (RAG), `/ai/status`, `/ai/sentiment/{id}` |
+| `ai_assistant` ✅ | `POST /ai/chat`, `GET /ai/conversations/me` y `/{id}/messages`, `GET/POST /ai/knowledge` (texto), `POST /ai/knowledge/upload` (archivo txt/md/pdf/docx), `DELETE /ai/knowledge/{id}` (desactivar), `GET /ai/status`, `GET /ai/sentiment/{emprendedor_id}` |
 | `training` ✅ | `/training` (CRUD, `me`, inscripción, participantes, asistencia) |
 | `documents` ✅ | `POST /documents` (multipart, `emprendimiento_id` y `hito_id` opcionales), listado (filtros `emprendimiento_id`, `hito_id`), `download`, `DELETE` |
 
@@ -304,6 +304,17 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
   (`GET /journey?emprendimiento_id=`) lo ve cualquier personal con `seguimiento:consulta`; cumplir retos es solo del
   emprendedor miembro. La evidencia de un hito se sube con `POST /documents` + `hito_id`: el hito debe ser del mismo
   emprendimiento (422 `milestone_mismatch`).
+- **Coach IA y base de conocimiento (fase 5):** un documento pasa por `procesando` → `activo`, o `error` si el
+  modelo de embeddings no responde (queda registrado, sin fragmentos, y la petición responde 503); `inactivo` lo retira.
+  **Solo los `activo` alimentan al coach.** El procesamiento es síncrono dentro de la petición (el documento se confirma
+  como `procesando` antes de calcular los embeddings). Administrar la base exige `config:modificacion` (coordinación y
+  administración). El archivo se lee con `extraction.py` (`pypdf`, `python-docx`); formato no permitido 415, archivo
+  ilegible o sin texto 422, más de `MAX_UPLOAD_MB` 413. El coach busca con distancia coseno (`<=>`, índice HNSW), pasa al
+  modelo solo los fragmentos con similitud >= `AI_MIN_SIMILARITY` (0.65, calibrado con una muestra pequeña de preguntas y documentos reales: ajústalo si cambias de modelo o de corpus) y, si no hay ninguno, responde el mensaje de
+  información insuficiente **sin consultar al modelo** y sugiere un mentor (`derivar_mentor`). Si Ollama cae durante un
+  chat se hace `rollback` de todo (conversación nueva, pregunta y sentimiento): nada queda a medias (503
+  `ai_unavailable`). **RF07:** `analisis_sentimiento` guarda solo el índice numérico, la fecha y el emprendedor, sin texto y
+  **sin enlace al mensaje** (`mensajes_iaid` queda nulo); el personal ve únicamente la serie semanal agregada.
 - La matriz por defecto da a `administrador` solo `asesorias:consulta`: quien registra sesiones y
   gestiona asignaciones es coordinación (`consulta/registro`) y el asesor (`consulta/registro/modificacion`).
 - `fragmentos_documento.embedding` es `vector(768)` (pgvector, `EMBEDDING_DIM`); la búsqueda usa

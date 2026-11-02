@@ -65,6 +65,15 @@ final class SlotUnavailableFailure extends Failure {
     : super('Ese horario ya no está disponible. Elige otro.');
 }
 
+/// El servicio de IA no responde (el backend responde `ai_unavailable`, 503). No se guardó nada.
+final class AssistantUnavailableFailure extends Failure {
+  const AssistantUnavailableFailure()
+    : super(
+        'El coach no está disponible en este momento. Tu mensaje no se envió; '
+        'inténtalo de nuevo en unos minutos.',
+      );
+}
+
 /// El usuario aún no registró su emprendimiento (el backend responde `no_venture`).
 final class NoVentureFailure extends Failure {
   const NoVentureFailure() : super('Primero registra tu emprendimiento.');

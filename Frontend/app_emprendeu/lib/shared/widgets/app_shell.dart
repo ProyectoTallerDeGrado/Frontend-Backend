@@ -9,6 +9,7 @@ const _items = [
   BottomNavItem(label: 'Inicio', icon: Icons.home_outlined),
   BottomNavItem(label: 'Camino', icon: Icons.flag_outlined),
   BottomNavItem(label: 'Mentorías', icon: Icons.event_outlined),
+  BottomNavItem(label: 'Coach', icon: Icons.smart_toy_outlined),
   BottomNavItem(label: 'Perfil', icon: Icons.person_outline),
 ];
 

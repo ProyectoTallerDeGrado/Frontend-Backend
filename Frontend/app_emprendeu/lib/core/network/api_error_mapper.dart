@@ -30,6 +30,8 @@ Failure mapDioException(DioException e) {
       return const UnauthorizedFailure();
     case 'slot_unavailable':
       return const SlotUnavailableFailure();
+    case 'ai_unavailable':
+      return const AssistantUnavailableFailure();
     case 'wrong_password':
       // 400 (no 401): una clave actual equivocada no debe cerrar la sesión.
       return const FieldFailure(

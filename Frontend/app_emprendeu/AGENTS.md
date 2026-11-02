@@ -101,8 +101,8 @@ test/                         # espejo exacto de lib/
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
 `auth` ✅, `ventures` ✅ (editar, hitos), `gamification` ✅ (Camino, XP e insignias), `mentoring` ✅ (compromisos y avances, agendar y ver sesiones, historial),
-`documents` ✅ (evidencia de hitos), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
-(regla global §4.6). Pendiente: `ai_assistant` (Coach).
+`documents` ✅ (evidencia de hitos), `ai_assistant` ✅ (Coach IA), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
+(regla global §4.6).
 
 > **`home` es una excepción documentada a la regla 6:** no tiene módulo en el backend porque
 > es una pantalla de **composición** (Inicio). No tiene `data` ni `domain`: solo `presentation`,
@@ -115,7 +115,7 @@ test/                         # espejo exacto de lib/
 3. Hecho: `app/app.dart`, `app/router.dart`, `app/theme/`, `app/providers.dart`.
 4. Hecho: `auth` completa; es la **plantilla de las demás** (ver «Cómo se conecta una feature»).
 5. Hecho: `ventures`, `gamification`, `mentoring` (con cola offline) y `home`.
-6. Siguiente: `ai_assistant` (Coach IA) y Perfil completo; al sumar cada pestaña, se añade a `AppShell`.
+6. Hecho: `ai_assistant` (Coach IA) y Perfil completo; al sumar cada pestaña, se añade a `AppShell`.
 
 ### Cómo se conecta una feature (patrón de `auth`)
 
@@ -135,9 +135,9 @@ test/                         # espejo exacto de lib/
 ### Navegación y estructura de pantallas
 
 - `app/router.dart` monta `StatefulShellRoute.indexedStack` con la barra inferior
-  (`shared/widgets/app_shell.dart`, `app_bottom_nav.dart`): **Inicio · Camino · Mentorías · Perfil**. Cada
+  (`shared/widgets/app_shell.dart`, `app_bottom_nav.dart`): **Inicio · Camino · Mentorías · Coach · Perfil**. Cada
   feature exporta su lista de rutas (`homeRoutes`, `gamificationRoutes`, `mentoringRoutes`, `accountRoutes`).
-  La pestaña Coach IA se añadirá cuando exista su pantalla.
+  La pestaña **Coach** (`assistantRoutes`) va entre Mentorías y Perfil.
 - Tras iniciar sesión se va a `/home`; sin sesión, a `/login`. El `redirect` reacciona a
   `authControllerProvider`.
 - **Riverpod no reintenta solo:** `ProviderScope(retry: (_, _) => null)`. Los errores se
@@ -184,6 +184,13 @@ test/                         # espejo exacto de lib/
 - **Historial del emprendimiento** (CU19, requiere conexión): botón «Ver historial del emprendimiento» en
   Mentorías → `/mentoring/history`, que llama a `GET /mentoring/ventures/me/history?orden=` (`GetHistoryUseCase`,
   `HistoryEvent`) y deja alternar entre «Más reciente primero» y «Cronológico».
+- **Coach IA** (CU11, requiere conexión): la pestaña «Coach» (`/coach`) abre la conversación más reciente
+  (`GET /ai/conversations/me` y sus mensajes) o una invitación con preguntas sugeridas. `AskCoachUseCase` valida el texto
+  (no vacío, máximo 2000) y `POST /ai/chat` lleva **plazo propio de 90 s** (el modelo local tarda más que una consulta
+  normal). Cada respuesta muestra sus **fuentes** y, si el coach no tenía información suficiente o el tema es
+  legal/financiero, un botón «Agendar una mentoría» que lleva a la pestaña Mentorías. Si el servicio de IA no responde
+  (`ai_unavailable` → `AssistantUnavailableFailure`) **nada quedó guardado**: se quita la burbuja, se avisa con un
+  mensaje claro y el texto vuelve al campo para reenviarlo. «Nueva conversación» abre otra sin borrar la anterior.
 - **Perfil completo** (CU05, CU08, CU20; requiere conexión): la pestaña Perfil compone `MyVentureCard` (datos del
   emprendimiento y accesos), `XpBadgesSection` (XP, nivel, barra hacia el siguiente nivel, insignias obtenidas y
   últimos movimientos, de `GET /gamification/me`) y los botones de cuenta. «Editar emprendimiento»

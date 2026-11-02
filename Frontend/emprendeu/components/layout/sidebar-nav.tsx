@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Award,
   Bell,
+  BookOpen,
   CalendarClock,
   ChartColumn,
   FileSpreadsheet,
@@ -31,6 +32,7 @@ const ICONS: Record<string, LucideIcon> = {
   catalogs: Award,
   audit: ClipboardList,
   account: UserRound,
+  knowledge: BookOpen,
   entrepreneurs: UserPlus,
   ventures: Rocket,
   alerts: Bell,
