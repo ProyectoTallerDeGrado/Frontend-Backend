@@ -31,6 +31,9 @@ Cada fase se cierra con lint y tests en verde.
 - Refresh tokens y recuperación de contraseña (requiere servicio de correo).
 - Limitador de login compartido (Redis) si se despliega con varias réplicas.
 - Almacén de objetos para `documents` si el volumen crece.
-- Habilitar/medir `pgvector` y paginar `EntrepreneurService.list` sin consulta por fila.
-- Invalidar tokens al cambiar contraseña o deshabilitar (hoy la cuenta deshabilitada se
-  rechaza por petición, pero un cambio de contraseña no invalida tokens ya emitidos).
+- Habilitar/medir `pgvector`.
+
+**Hecho:** `EntrepreneurService.list` resuelve nombre y correo en una sola consulta
+(`identities`), y un cambio de contraseña invalida los tokens anteriores
+(`usuario.clave_cambiada_en`, comparada con el `iat` del JWT; la cuenta deshabilitada ya se
+rechazaba por petición). Tras cambiar la contraseña el cliente debe volver a iniciar sesión.

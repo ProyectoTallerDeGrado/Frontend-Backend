@@ -54,6 +54,21 @@ class EntrepreneurRepository:
         row = (await self._session.execute(stmt)).first()
         return (row[0], row[1], row[2]) if row else None
 
+    async def identities(
+        self, usuario_ids: list[int]
+    ) -> dict[int, tuple[str, str, str]]:
+        """Nombre, apellido y correo de varios usuarios en una sola consulta."""
+        if not usuario_ids:
+            return {}
+        stmt = select(
+            _usuario.c.usuarioid,
+            _usuario.c.nombre,
+            _usuario.c.apellido,
+            _usuario.c.email,
+        ).where(_usuario.c.usuarioid.in_(usuario_ids))
+        rows = (await self._session.execute(stmt)).all()
+        return {r[0]: (r[1], r[2], r[3]) for r in rows}
+
     async def list(
         self, *, q: str | None, offset: int, limit: int
     ) -> tuple[list[Emprendedor], int]:

@@ -37,16 +37,16 @@ def create_access_token(subject: int) -> tuple[str, int]:
     return token, int(lifetime.total_seconds())
 
 
-def decode_access_token(token: str) -> int:
-    """Devuelve el id de usuario del token o lanza `Unauthorized`."""
+def decode_access_token(token: str) -> tuple[int, datetime]:
+    """Devuelve `(usuario_id, emitido_en)` del token o lanza `Unauthorized`."""
     settings = get_settings()
     try:
         payload = jwt.decode(
             token,
             settings.jwt_secret,
             algorithms=[settings.jwt_algorithm],
-            options={"require": ["sub", "exp"]},
+            options={"require": ["sub", "exp", "iat"]},
         )
-        return int(payload["sub"])
+        return int(payload["sub"]), datetime.fromtimestamp(payload["iat"], UTC)
     except (jwt.PyJWTError, ValueError) as exc:
         raise Unauthorized("Token invalido o expirado") from exc

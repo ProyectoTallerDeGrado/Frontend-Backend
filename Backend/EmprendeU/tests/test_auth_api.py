@@ -1,5 +1,7 @@
 """Flujos de autenticacion: registro, login, /me y cuentas deshabilitadas."""
 
+import asyncio
+
 from httpx import AsyncClient
 
 from tests.conftest import PASSWORD, MakeUser
@@ -127,3 +129,28 @@ async def test_token_de_cuenta_deshabilitada_despues_del_login(
     )
     assert off.status_code == 200
     assert (await client.get(f"{API}/auth/me", headers=victim_h)).status_code == 403
+
+
+async def test_cambiar_clave_invalida_tokens_anteriores(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    await make_user(email="u@test.com")
+    old_h = await login("u@test.com")
+    # `iat` va en segundos: el cambio debe caer en un segundo posterior al login.
+    await asyncio.sleep(1.1)
+
+    changed = await client.post(
+        f"{API}/auth/change-password",
+        json={"password_actual": PASSWORD, "password_nueva": "otra-clave-larga"},
+        headers=old_h,
+    )
+    assert changed.status_code == 204
+    assert (await client.get(f"{API}/auth/me", headers=old_h)).status_code == 401
+
+    new = await client.post(
+        f"{API}/auth/login",
+        json={"email": "u@test.com", "password": "otra-clave-larga"},
+    )
+    assert new.status_code == 200
+    headers = {"Authorization": f"Bearer {new.json()['access_token']}"}
+    assert (await client.get(f"{API}/auth/me", headers=headers)).status_code == 200

@@ -154,9 +154,13 @@ class UserService:
         return user
 
     async def authenticate(self, token: str) -> CurrentUser:
-        usuario_id = decode_access_token(token)
+        usuario_id, issued_at = decode_access_token(token)
         user = await self._repo.get_user(usuario_id)
         if user is None:
+            raise Unauthorized("Token invalido o expirado")
+        # `iat` va en segundos: se compara contra el cambio truncado al segundo.
+        changed = user.clave_cambiada_en
+        if changed is not None and issued_at < changed.replace(microsecond=0):
             raise Unauthorized("Token invalido o expirado")
         if user.estado == DISABLED:
             raise AccountDisabled

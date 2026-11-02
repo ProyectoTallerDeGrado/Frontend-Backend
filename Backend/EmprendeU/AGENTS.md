@@ -245,7 +245,7 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
   defecto). `JWT_SECRET` es obligatorio y sin valor por defecto.
 - El esquema **ya no coincide** con `database/EmprendeU_postgresql.sql`. Cambios
   posteriores (todos por migración): `usuario.ultimo_acceso`, CHECK `ck_usuario_estado`
-  y default de `usuario.estado`; `retos.orden`; `seguimientos.referencia_cliente` (+ único
+  y default de `usuario.estado`; `usuario.clave_cambiada_en` (invalida tokens al cambiar la clave); `retos.orden`; `seguimientos.referencia_cliente` (+ único
   por usuario); tablas nuevas `perfil_mentor` y `disponibilidad_mentor` (mentoring) y
   `parametros_seguimiento` (alerts, fila única id = 1); y la semilla de roles, permisos,
   etapas, retos, insignias, tipos y parámetros por defecto.

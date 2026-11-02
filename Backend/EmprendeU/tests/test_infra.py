@@ -39,7 +39,7 @@ def test_hash_y_verificacion_de_contrasena() -> None:
 def test_token_ida_y_vuelta() -> None:
     token, expires_in = create_access_token(42)
     assert expires_in > 0
-    assert decode_access_token(token) == 42
+    assert decode_access_token(token)[0] == 42
 
 
 def test_token_invalido_lanza_unauthorized() -> None:
