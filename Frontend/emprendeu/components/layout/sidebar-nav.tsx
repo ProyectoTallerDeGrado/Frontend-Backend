@@ -4,10 +4,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Award,
+  Bell,
+  BookOpen,
+  CalendarClock,
+  ChartColumn,
+  FileSpreadsheet,
+  CalendarDays,
   ClipboardList,
   LayoutDashboard,
+  Rocket,
   ShieldCheck,
   SlidersHorizontal,
+  UserCheck,
+  UserPlus,
+  UserRound,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -21,6 +31,16 @@ const ICONS: Record<string, LucideIcon> = {
   tracking: SlidersHorizontal,
   catalogs: Award,
   audit: ClipboardList,
+  account: UserRound,
+  knowledge: BookOpen,
+  entrepreneurs: UserPlus,
+  ventures: Rocket,
+  alerts: Bell,
+  dashboard2: ChartColumn,
+  reports: FileSpreadsheet,
+  assignments: UserCheck,
+  availability: CalendarClock,
+  sessions: CalendarDays,
 };
 
 export function SidebarNav({ items }: { items: NavItem[] }) {

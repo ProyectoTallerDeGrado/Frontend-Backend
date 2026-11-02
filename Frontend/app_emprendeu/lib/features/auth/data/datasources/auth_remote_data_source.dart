@@ -28,6 +28,17 @@ class AuthRemoteDataSource {
     );
   }
 
+  Future<LoginResponseDto> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/change-password',
+      data: {'password_actual': currentPassword, 'password_nueva': newPassword},
+    );
+    return LoginResponseDto.fromJson(response.data!);
+  }
+
   Future<AuthUserDto> me(String token) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/auth/me',

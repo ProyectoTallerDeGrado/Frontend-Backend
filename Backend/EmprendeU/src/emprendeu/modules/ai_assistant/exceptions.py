@@ -38,3 +38,21 @@ class EmptyKnowledge(DomainError):
 
     def __init__(self) -> None:
         super().__init__("El documento no contiene texto util.")
+
+
+class KnowledgeFileNotAllowed(DomainError):
+    code = "file_type_not_allowed"
+    status_code = 415
+
+    def __init__(self, allowed: list[str]) -> None:
+        super().__init__(
+            "Tipo de archivo no permitido.", details={"permitidos": allowed}
+        )
+
+
+class KnowledgeFileUnreadable(DomainError):
+    code = "file_unreadable"
+    status_code = 422
+
+    def __init__(self) -> None:
+        super().__init__("No se pudo leer el texto del archivo.")

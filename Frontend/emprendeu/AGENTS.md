@@ -42,8 +42,10 @@ consumidos desde componentes cliente.
 > Estado real hoy: **panel de administración completo y conectado al backend**:
 > Resumen (`/`), Usuarios (`/users`), Roles y permisos (`/roles`), Parámetros
 > (`/settings/tracking`), Catálogos y XP (`/catalogs`) y Auditoría (`/audit`, con
-> exportación CSV), más login/registro. Seis features (`auth`, `users`, `audit`,
-> `alerts`, `gamification`, `ventures`, `indicators`), el shell en `components/layout/`
+> exportación CSV), **Mi cuenta** (`/account`: datos de la sesión y cambio de contraseña,
+> visible para todo el personal), **Mentorías** (`/mentoring/assignments`,
+> `/mentoring/availability` y `/mentoring/sessions`) y login/registro. Diez features (`auth`, `users`, `audit`,
+> `alerts`, `gamification`, `ventures`, `indicators`, `mentoring`, `entrepreneurs`, `ai_assistant`), el shell en `components/layout/`
 > y los componentes shadcn `button, input, label, switch, checkbox, slider, sheet, badge`.
 
 ### Cómo está armado el panel
@@ -62,6 +64,38 @@ consumidos desde componentes cliente.
 - **Avisos** con un store de zustand (`components/layout/toast-store.ts`) y `<Toaster />`.
 - **Interruptor del diseño:** `components/ui/toggle-switch.tsx` (44×26, área de clic de 44 px).
 - **Fechas** en hora de Bolivia (`lib/format.ts`: «Hoy, 08:12», «Hace 3 días»).
+- **Mentorías** (`features/mentoring`): `AssignmentsScreen` (coordinación habilita asesores y los asigna a
+  emprendimientos; el rol `asesor` no ve el ítem), `AvailabilityScreen` (el asesor agrega, bloquea o
+  elimina horarios; un solapamiento se rechaza con el motivo) y `SessionsScreen` (el asesor ve las suyas
+  con `GET /sessions/me`, el resto la lista paginada `GET /sessions`; filtros de estado y periodo en la URL;
+  acciones «Registrar sesión», «Realizada», «Recomendar» y «Compromiso» en hojas laterales). Las pantallas
+  que cargan datos viven en `features/mentoring/components/screens.tsx` y las páginas de `app/` son de una
+  línea. La lista de emprendimientos para los selectores llega por el barrel de `ventures`
+  (`listVentureOptions`). Horas en Bolivia (UTC−4 fijo, `lib/format.ts: toBoIso`).
+- **Seguimiento** (fase 3): `features/ventures` (`VenturesScreen`: lista y «Avanzar etapa», que solo ofrece
+  la siguiente etapa), `features/alerts` (`AlertsScreen`: revisada/atendida/descartada, quién la atendió; el
+  plazo de compromisos está en Parámetros), `features/indicators` (`DashboardScreen` y `ReportsScreen`:
+  filtros de periodo y etapa en la URL, vista previa de 50 filas y CSV por `app/(app)/reports/export/route.ts`)
+  y el **historial** (`HistoryScreen` en `features/mentoring`, página `/ventures/[id]/history`, con `?orden=desc`).
+  Los componentes de formulario compartidos viven en `components/forms/form-bits.tsx`.
+- **Emprendedores y emprendimientos** (fase 4): `features/entrepreneurs` (`EntrepreneursScreen`, `/entrepreneurs`:
+  lista con búsqueda por nombre, correo o documento; «Nuevo emprendedor» —solo con `emprendedores:registro`— crea
+  usuario y perfil juntos y muestra la clave temporal una vez). `features/ventures` suma «Nuevo emprendimiento»
+  (se elige el emprendedor; lista de `listEntrepreneurOptions` por el barrel de `entrepreneurs`), «Editar»
+  (nombre, sector, descripción y estado, solo `emprendedores:modificacion`) y los enlaces «Progreso» e «Historial».
+  El **progreso** (`JourneyScreen` en `features/gamification`, `/ventures/[id]/progress`) muestra XP, nivel, etapas
+  completadas/actual/pendientes y los retos del emprendimiento; es de solo lectura.
+- **Base de conocimiento** (fase 5): `features/ai_assistant` (`KnowledgeScreen`, `/knowledge`, permiso `config:consulta`;
+  subir y desactivar con `config:modificacion`, es decir coordinación y administración). Muestra si Ollama responde,
+  los documentos activos y la tabla con el **estado de procesamiento** (Procesando, Activo, Error, Inactivo) y los
+  fragmentos de cada uno. «Subir documento» acepta .txt, .md, .pdf y .docx de hasta 10 MB y llama a
+  `POST /ai/knowledge/upload` desde una server action con `FormData` (`lib/api-client.ts` admite `FormData` y un plazo
+  mayor, 120 s, porque calcular embeddings tarda; `next.config.ts` sube el límite de las server actions a 11 MB). Si el
+  servicio de IA no responde, el intento queda visible en estado «Error».
+- **Cambio de contraseña** (`features/auth`: `changePasswordAction`, `ChangePasswordForm`,
+  `AccountView`): el backend invalida los tokens anteriores y devuelve uno nuevo, que la acción
+  guarda en la cookie para que la sesión actual siga; las demás sesiones se cierran. «Contraseña
+  actual incorrecta» llega como 400 `wrong_password` y se marca en el campo (no es un 401).
 - Cambiar el rol de un usuario existente (`PATCH /users/{id}/rol`) está en la tabla de
   usuarios: es lo que permite que una cuenta registrada desde la web llegue a usar el panel.
 
@@ -120,7 +154,7 @@ proxy.ts                   ✅ # (Next 16) antiguo middleware: protege rutas pri
 
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
-`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅ (todas conectadas al backend); pendientes `entrepreneurs`, `mentoring`, `ai_assistant`, `training`, `documents` — los
+`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅, `ai_assistant` ✅ (todas conectadas al backend); pendientes `training`, `documents` — los
 mismos nombres que los módulos del backend (regla global §4.6). Registra aquí cada feature nueva.
 
 ## 4. Reglas de la web

@@ -23,6 +23,9 @@ class AssistantRepository:
     async def commit(self) -> None:
         await self._session.commit()
 
+    async def rollback(self) -> None:
+        await self._session.rollback()
+
     async def add(self, obj: object) -> None:
         self._session.add(obj)
         await self._session.flush()
@@ -52,20 +55,29 @@ class AssistantRepository:
         )
         return [(r[0], int(r[1])) for r in (await self._session.execute(stmt)).all()]
 
-    async def active_fragments(self) -> list[tuple[FragmentoDocumento, str]]:
+    async def nearest_fragments(
+        self, vector: list[float], limit: int
+    ) -> list[tuple[str, str, float]]:
+        """Fragmentos de documentos activos mas cercanos: `(texto, titulo, similitud)`.
+
+        La similitud coseno es `1 - distancia`; el indice HNSW acelera el orden.
+        """
+        distance = FragmentoDocumento.embedding.cosine_distance(vector)
         stmt = (
-            select(FragmentoDocumento, DocumentoConocimiento.titulo)
+            select(FragmentoDocumento.contenido, DocumentoConocimiento.titulo, distance)
             .join(
                 DocumentoConocimiento,
                 DocumentoConocimiento.documento_conocimiento_id
                 == FragmentoDocumento.documento_conocimiento_id,
             )
-            .where(
-                DocumentoConocimiento.estado == "activo",
-                FragmentoDocumento.embedding.is_not(None),
-            )
+            .where(DocumentoConocimiento.estado == "activo")
+            .order_by(distance)
+            .limit(limit)
         )
-        return [(r[0], r[1]) for r in (await self._session.execute(stmt)).all()]
+        return [
+            (r[0], r[1], 1.0 - float(r[2]))
+            for r in (await self._session.execute(stmt)).all()
+        ]
 
     async def count_active_documents(self) -> int:
         return (

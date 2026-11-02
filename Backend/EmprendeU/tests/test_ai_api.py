@@ -31,16 +31,45 @@ async def test_conocimiento_exige_permiso_y_se_indexa(
     ).status_code == 403
     created = await client.post(f"{API}/ai/knowledge", json=body, headers=h["admin"])
     assert created.status_code == 201 and created.json()["total_fragmentos"] >= 1
+    assert created.json()["estado"] == "activo"
+    # la coordinacion tambien administra la base (CU31)
+    by_coord = await client.post(
+        f"{API}/ai/knowledge", json={**body, "titulo": "Otra"}, headers=h["coord"]
+    )
+    assert by_coord.status_code == 201
     listing = (await client.get(f"{API}/ai/knowledge", headers=h["admin"])).json()
-    assert listing[0]["titulo"] == "Guia de costos"
+    assert {d["titulo"] for d in listing} == {"Guia de costos", "Otra"}
     status = (await client.get(f"{API}/ai/status", headers=h["admin"])).json()
-    assert status == {"ollama_disponible": True, "documentos_activos": 1}
+    assert status == {"ollama_disponible": True, "documentos_activos": 2}
     empty = await client.post(
         f"{API}/ai/knowledge",
         json={"titulo": "x", "contenido": "   "},
         headers=h["admin"],
     )
     assert empty.status_code == 422
+
+
+async def test_modelo_con_otra_dimension_no_guarda_nada(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    h, _ = await _world(client, make_user, login)
+
+    async def short(texts: list[str]) -> list[list[float]]:
+        return [[1.0, 2.0] for _ in texts]  # la base espera 768 dimensiones
+
+    client._transport.app.state.fake_llm.embed = short  # type: ignore[attr-defined]
+    r = await client.post(
+        f"{API}/ai/knowledge",
+        json={"titulo": "Guia", "contenido": DOC},
+        headers=h["admin"],
+    )
+    assert r.status_code == 503 and r.json()["error"]["code"] == "ai_unavailable"
+    assert "768" in r.json()["error"]["message"]
+    # el intento queda visible como `error`, sin fragmentos y sin servir al coach
+    listing = (await client.get(f"{API}/ai/knowledge", headers=h["admin"])).json()
+    assert [(d["estado"], d["total_fragmentos"]) for d in listing] == [("error", 0)]
+    status = (await client.get(f"{API}/ai/status", headers=h["admin"])).json()
+    assert status["documentos_activos"] == 0
 
 
 async def test_chat_con_fuente_sin_fuente_y_derivacion(
@@ -55,7 +84,7 @@ async def test_chat_con_fuente_sin_fuente_y_derivacion(
     body = first.json()
     assert body["fuente"] is False and body["derivar_mentor"] is True
     assert body["respuesta"]["contenido"].startswith(
-        "No encontre informacion suficiente"
+        "No encontré información suficiente"
     )
 
     await client.post(

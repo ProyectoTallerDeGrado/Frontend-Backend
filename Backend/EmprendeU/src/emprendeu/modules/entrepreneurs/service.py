@@ -7,7 +7,10 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.pagination import PageParams
-from emprendeu.modules.entrepreneurs.exceptions import EntrepreneurNotFound
+from emprendeu.modules.entrepreneurs.exceptions import (
+    DocumentAlreadyRegistered,
+    EntrepreneurNotFound,
+)
 from emprendeu.modules.entrepreneurs.models import Emprendedor
 from emprendeu.modules.entrepreneurs.repository import EntrepreneurRepository
 from emprendeu.modules.entrepreneurs.schemas import EntrepreneurOut, VentureLink
@@ -40,6 +43,28 @@ class EntrepreneurService:
                 Emprendedor(usuario_id=usuario_id, estado="activo")
             )
         return await self._ref(existing)
+
+    async def ref_for_entrepreneur(self, emprendedor_id: int) -> EntrepreneurRef | None:
+        found = await self._repo.get(emprendedor_id)
+        return await self._ref(found) if found else None
+
+    async def set_document(self, usuario_id: int, documento: str | None) -> None:
+        """Guarda el documento de identidad; no puede repetirse entre emprendedores."""
+        found = await self._repo.get_by_user(usuario_id)
+        if found is None:
+            raise EntrepreneurNotFound
+        clean = " ".join((documento or "").split()) or None
+        if clean is not None and await self._repo.document_in_use(clean, usuario_id):
+            raise DocumentAlreadyRegistered
+        found.documento_identidad = clean
+        await self._repo.add(found)
+
+    async def ensure_document_free(self, documento: str) -> None:
+        if await self._repo.document_in_use(" ".join(documento.split())):
+            raise DocumentAlreadyRegistered
+
+    async def out_for_user(self, usuario_id: int) -> EntrepreneurOut:
+        return await self.me(usuario_id)
 
     async def ref_for_user(self, usuario_id: int) -> EntrepreneurRef | None:
         found = await self._repo.get_by_user(usuario_id)
@@ -115,9 +140,5 @@ class EntrepreneurService:
     async def update_me(
         self, usuario_id: int, documento: str | None
     ) -> EntrepreneurOut:
-        found = await self._repo.get_by_user(usuario_id)
-        if found is None:
-            raise EntrepreneurNotFound
-        found.documento_identidad = documento or None
-        await self._repo.add(found)
-        return await self._out(found)
+        await self.set_document(usuario_id, documento)
+        return await self.me(usuario_id)

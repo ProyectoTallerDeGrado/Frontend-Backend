@@ -58,6 +58,29 @@ async def test_parametros_se_validan_y_se_auditan(
     item = next(e for e in audit["items"] if e["accion"] == "config.parametros")
     assert "Inactividad 7" in item["objeto"]
 
+    # CU25: plazo por defecto de los compromisos (1-90 dias), validado y auditado
+    assert current["dias_limite_compromiso"] == 7
+    url = f"{API}/alerts/settings"
+    for bad in (0, 91):
+        rejected = await client.put(
+            url, json={**new, "dias_limite_compromiso": bad}, headers=h["admin"]
+        )
+        assert rejected.status_code == 422
+    changed = await client.put(
+        url, json={**new, "dias_limite_compromiso": 10}, headers=h["coord"]
+    )
+    assert changed.status_code == 200 and changed.json()["dias_limite_compromiso"] == 10
+    # un cliente anterior que no lo envia no lo pisa
+    legacy = {k: v for k, v in new.items() if k != "dias_limite_compromiso"}
+    kept = await client.put(url, json=legacy, headers=h["admin"])
+    assert kept.json()["dias_limite_compromiso"] == 10
+    audit = (
+        await client.get(f"{API}/audit?categoria=config", headers=h["admin"])
+    ).json()
+    last = [e for e in audit["items"] if e["accion"] == "config.parametros"]
+    assert any("plazo de compromisos 10 dias" in e["objeto"] for e in last)
+    assert len(last) >= 3  # cada guardado correcto queda en la bitacora
+
 
 async def test_deteccion_de_inactividad_sin_duplicados(
     client: AsyncClient, make_user: MakeUser, login, session: AsyncSession
@@ -132,7 +155,9 @@ async def test_sentimiento_y_compromisos_vencidos(
     session.add(
         Compromiso(
             sesion_acompanamiento_id=sesion.sesion_acompanamiento_id,
-            usuario_id=emp.usuario_id,
+            emprendimiento_id=vid,
+            registrado_por_usuario_id=mentor.usuario_id,
+            responsable_usuario_id=emp.usuario_id,
             descripcion="Subir fotos",
             estado="pendiente",
             fecha_limite=now - timedelta(days=3),
@@ -169,6 +194,11 @@ async def test_alertas_segun_rol_y_notificaciones(
 
     # el asesor solo ve alertas de emprendimientos que tiene asignados
     assert (await client.get(f"{API}/alerts", headers=h["m"])).json()["total"] == 0
+    await client.put(
+        f"{API}/mentoring/mentors/{mentor.usuario_id}/enabled",
+        json={"habilitado": True},
+        headers=h["coord"],
+    )
     await client.post(
         f"{API}/mentoring/assignments",
         json={"usuario_id": mentor.usuario_id, "emprendimiento_id": vid},
@@ -254,3 +284,69 @@ async def test_indicadores_y_resumen_del_panel(
         names["PostgreSQL"] == "operativo"
         and names["Motor de IA (Ollama + RAG)"] == "operativo"
     )
+
+
+async def test_gestion_de_alertas_revisada_atendida_y_quien_la_atendio(
+    client: AsyncClient, make_user: MakeUser, login, session: AsyncSession
+) -> None:
+    """CU13: coordinacion y asesor (solo de sus emprendimientos) gestionan las alertas."""
+    h, vid, _, mentor, _ = await _world(client, make_user, login)
+    await session.execute(
+        text(
+            "UPDATE cieu.emprendimiento SET fecha_creacion = now() - interval '40 days'"
+        )
+    )
+    await client.post(f"{API}/alerts/evaluate", headers=h["admin"])
+    alert = (await client.get(f"{API}/alerts", headers=h["coord"])).json()["items"][0]
+    url = f"{API}/alerts/{alert['alerta_id']}"
+
+    # el emprendedor (tiene seguimiento:*, pero sobre lo suyo) no ve ni gestiona alertas
+    assert (await client.get(f"{API}/alerts", headers=h["e"])).status_code == 403
+    assert (
+        await client.patch(url, json={"estado": "revisada"}, headers=h["e"])
+    ).status_code == 403
+
+    # un asesor sin ese emprendimiento asignado no puede gestionarla
+    denied = await client.patch(url, json={"estado": "revisada"}, headers=h["m"])
+    assert denied.status_code == 403
+    assert denied.json()["error"]["code"] == "alert_not_assigned"
+
+    await client.put(
+        f"{API}/mentoring/mentors/{mentor.usuario_id}/enabled",
+        json={"habilitado": True},
+        headers=h["coord"],
+    )
+    await client.post(
+        f"{API}/mentoring/assignments",
+        json={"usuario_id": mentor.usuario_id, "emprendimiento_id": vid},
+        headers=h["coord"],
+    )
+
+    # revisada: alguien la vio, pero sigue sin resolver (y no se duplica al evaluar)
+    reviewed = await client.patch(url, json={"estado": "revisada"}, headers=h["m"])
+    assert reviewed.status_code == 200
+    assert reviewed.json()["estado"] == "revisada"
+    assert reviewed.json()["atendida_por"] is None
+    again = (await client.post(f"{API}/alerts/evaluate", headers=h["admin"])).json()
+    assert again["creadas"] == 0
+    assert (
+        await client.get(f"{API}/alerts?estado=revisada", headers=h["coord"])
+    ).json()["total"] == 1
+
+    # atendida: queda quien la atendio
+    done = await client.patch(url, json={"estado": "atendida"}, headers=h["m"])
+    assert done.json()["estado"] == "atendida"
+    assert done.json()["atendida_por_id"] == mentor.usuario_id
+    assert mentor.nombre in done.json()["atendida_por"]
+
+    # una alerta cerrada no se reabre
+    closed = await client.patch(url, json={"estado": "revisada"}, headers=h["coord"])
+    assert closed.status_code == 409
+    assert closed.json()["error"]["code"] == "alert_closed"
+
+    # cada cambio queda en la bitacora
+    audit = (
+        await client.get(f"{API}/audit?categoria=negocio", headers=h["admin"])
+    ).json()
+    managed = [e for e in audit["items"] if e["accion"] == "negocio.alerta"]
+    assert len(managed) == 2

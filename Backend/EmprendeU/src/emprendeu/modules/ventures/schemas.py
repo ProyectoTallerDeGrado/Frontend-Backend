@@ -32,6 +32,8 @@ class VentureCreate(BaseModel):
     nombre: Name
     descripcion: str | None = None
     sector: Annotated[str | None, StringConstraints(max_length=120)] = None
+    # Solo el personal lo indica: de quien es el emprendimiento. Un emprendedor crea el suyo.
+    emprendedor_id: int | None = None
 
 
 class VentureUpdate(BaseModel):

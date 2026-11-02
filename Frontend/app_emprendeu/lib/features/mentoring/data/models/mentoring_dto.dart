@@ -12,7 +12,8 @@ abstract class CommitmentDto with _$CommitmentDto {
 
   const factory CommitmentDto({
     @JsonKey(name: 'compromiso_id') required int compromisoId,
-    @JsonKey(name: 'sesion_id') required int sesionId,
+    // Un compromiso puede registrarse sin sesion (el backend lo admite).
+    @JsonKey(name: 'sesion_id') int? sesionId,
     String? descripcion,
     String? estado,
     @JsonKey(name: 'fecha_limite') DateTime? fechaLimite,

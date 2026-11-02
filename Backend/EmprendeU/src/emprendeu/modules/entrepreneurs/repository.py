@@ -42,6 +42,17 @@ class EntrepreneurRepository:
         )
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
+    async def document_in_use(
+        self, documento: str, excluding_usuario_id: int | None = None
+    ) -> bool:
+        """Hay otro emprendedor con ese documento (sin distinguir mayusculas)."""
+        stmt = select(Emprendedor.emprendedor_id).where(
+            func.lower(Emprendedor.documento_identidad) == documento.lower()
+        )
+        if excluding_usuario_id is not None:
+            stmt = stmt.where(Emprendedor.usuario_id != excluding_usuario_id)
+        return (await self._session.execute(stmt.limit(1))).first() is not None
+
     async def add(self, emprendedor: Emprendedor) -> Emprendedor:
         self._session.add(emprendedor)
         await self._session.flush()
@@ -71,7 +82,9 @@ class EntrepreneurRepository:
                 func.lower(_usuario.c.nombre).like(like),
                 func.lower(_usuario.c.apellido).like(like),
                 func.lower(_usuario.c.email).like(like),
-                func.coalesce(Emprendedor.documento_identidad, "").like(like),
+                func.lower(func.coalesce(Emprendedor.documento_identidad, "")).like(
+                    like
+                ),
             )
             base, count = base.where(cond), count.where(cond)
         total = (await self._session.execute(count)).scalar_one()

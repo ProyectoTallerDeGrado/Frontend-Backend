@@ -3,23 +3,25 @@ seguimientos, recomendaciones y asignaciones de acompanantes."""
 
 from __future__ import annotations
 
-from datetime import datetime, time
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Identity,
     Index,
-    Integer,
     Numeric,
     String,
     Text,
-    Time,
     UniqueConstraint,
+    text,
 )
+from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from emprendeu.db.base import Base
@@ -47,6 +49,13 @@ class Tipo(Base):
 class SesionAcompanamiento(Base):
     __tablename__ = "sesiones_acompanamiento"
     __table_args__ = (
+        # Respaldo de la FK compuesta de `compromisos`: la sesion debe ser del
+        # mismo emprendimiento que el compromiso.
+        UniqueConstraint(
+            "sesiones_acompanamientoid",
+            "emprendimientoid",
+            name="uq_sesiones_id_emprendimiento",
+        ),
         Index("ix_sesiones_acompanamiento_emprendimientoid", "emprendimientoid"),
         Index("ix_sesiones_acompanamiento_tipoid", "tipoid"),
     )
@@ -57,7 +66,6 @@ class SesionAcompanamiento(Base):
     modalidad: Mapped[str | None] = mapped_column(String(40))
     observaciones: Mapped[str | None] = mapped_column(Text)
     tema: Mapped[str | None] = mapped_column(String(250))
-    tipo: Mapped[str | None] = mapped_column(String(60))
     sesion_acompanamiento_id: Mapped[int] = mapped_column(
         "sesiones_acompanamientoid",
         BigInteger,
@@ -87,7 +95,10 @@ class SesionAcompanamiento(Base):
     participantes: Mapped[list[SesionParticipante]] = relationship(
         back_populates="sesion"
     )
-    compromisos: Mapped[list[Compromiso]] = relationship(back_populates="sesion")
+    compromisos: Mapped[list[Compromiso]] = relationship(
+        back_populates="sesion",
+        foreign_keys="Compromiso.sesion_acompanamiento_id",
+    )
     recomendaciones: Mapped[list[Recomendacion]] = relationship(back_populates="sesion")
 
 
@@ -135,7 +146,18 @@ class SesionParticipante(Base):
 class Compromiso(Base):
     __tablename__ = "compromisos"
     __table_args__ = (
-        Index("ix_compromisos_usuarioid", "usuarioid"),
+        ForeignKeyConstraint(
+            ["sesiones_acompanamientoid", "emprendimientoid"],
+            [
+                "sesiones_acompanamiento.sesiones_acompanamientoid",
+                "sesiones_acompanamiento.emprendimientoid",
+            ],
+            ondelete="RESTRICT",
+            name="fk_compromisos_sesion_mismo_emp",
+        ),
+        Index("ix_compromisos_registrado_por", "registrado_por_usuarioid"),
+        Index("ix_compromisos_responsable", "responsable_usuarioid"),
+        Index("ix_compromisos_emprendimientoid", "emprendimientoid"),
         Index("ix_compromisos_sesiones_acompanamientoid", "sesiones_acompanamientoid"),
     )
 
@@ -143,18 +165,36 @@ class Compromiso(Base):
     estado: Mapped[str | None] = mapped_column(String(40))
     fecha_completado: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     fecha_limite: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    responsable_usuario: Mapped[str | None] = mapped_column(String(250))
     compromiso_id: Mapped[int] = mapped_column(
         "compromisosid", BigInteger, Identity(always=False), primary_key=True
     )
-    usuario_id: Mapped[int] = mapped_column(
-        "usuarioid",
+    # Quien dejo registrado el compromiso (el asesor) y quien debe cumplirlo.
+    registrado_por_usuario_id: Mapped[int] = mapped_column(
+        "registrado_por_usuarioid",
         BigInteger,
         ForeignKey(
-            "usuario.usuarioid", ondelete="RESTRICT", name="fk_compromisos_usuarioid"
+            "usuario.usuarioid",
+            ondelete="RESTRICT",
+            name="fk_compromisos_registrado_por",
         ),
     )
-    sesion_acompanamiento_id: Mapped[int] = mapped_column(
+    responsable_usuario_id: Mapped[int] = mapped_column(
+        "responsable_usuarioid",
+        BigInteger,
+        ForeignKey(
+            "usuario.usuarioid", ondelete="RESTRICT", name="fk_compromisos_responsable"
+        ),
+    )
+    emprendimiento_id: Mapped[int] = mapped_column(
+        "emprendimientoid",
+        BigInteger,
+        ForeignKey(
+            "emprendimiento.emprendimientoid",
+            ondelete="RESTRICT",
+            name="fk_compromisos_emprendimientoid",
+        ),
+    )
+    sesion_acompanamiento_id: Mapped[int | None] = mapped_column(
         "sesiones_acompanamientoid",
         BigInteger,
         ForeignKey(
@@ -164,7 +204,10 @@ class Compromiso(Base):
         ),
     )
 
-    sesion: Mapped[SesionAcompanamiento] = relationship(back_populates="compromisos")
+    sesion: Mapped[SesionAcompanamiento | None] = relationship(
+        back_populates="compromisos",
+        foreign_keys=[sesion_acompanamiento_id],
+    )
 
 
 class Seguimiento(Base):
@@ -301,11 +344,21 @@ class PerfilMentor(Base):
     """Datos de mentoria de un usuario con rol asesor (fase 5)."""
 
     __tablename__ = "perfil_mentor"
-    __table_args__ = (UniqueConstraint("usuarioid", name="uq_perfil_mentor_usuarioid"),)
+    __table_args__ = (
+        UniqueConstraint("usuarioid", name="uq_perfil_mentor_usuarioid"),
+        CheckConstraint(
+            "NOT habilitado OR fecha_habilitacion IS NOT NULL",
+            name="ck_perfil_mentor_habilitacion",
+        ),
+    )
 
     especialidad: Mapped[str | None] = mapped_column(String(160))
+    biografia: Mapped[str | None] = mapped_column(Text)
+    # Solo un asesor habilitado puede recibir asignaciones y agendas (CU09, CU10).
+    habilitado: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    fecha_habilitacion: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     perfil_mentor_id: Mapped[int] = mapped_column(
-        "perfil_mentorid", BigInteger, Identity(always=False), primary_key=True
+        "perfilmentorid", BigInteger, Identity(always=False), primary_key=True
     )
     usuario_id: Mapped[int] = mapped_column(
         "usuarioid",
@@ -327,26 +380,33 @@ class PerfilMentor(Base):
 
 
 class DisponibilidadMentor(Base):
-    """Horario semanal recurrente de un mentor (un registro por inicio de turno)."""
+    """Intervalo concreto en que un mentor puede atender (CU15).
+
+    La propia base impide que dos intervalos del mismo mentor se solapen.
+    """
 
     __tablename__ = "disponibilidad_mentor"
     __table_args__ = (
-        CheckConstraint("dia_semana BETWEEN 0 AND 6", name="ck_disponibilidad_dia"),
-        CheckConstraint("duracion_min > 0", name="ck_disponibilidad_duracion"),
-        UniqueConstraint(
-            "usuarioid",
-            "dia_semana",
-            "hora_inicio",
-            name="uq_disponibilidad_mentor_usuarioid_dia_hora",
+        CheckConstraint(
+            "estado IN ('disponible', 'bloqueado', 'reservado')",
+            name="ck_disponibilidad_mentor_estado",
         ),
-        Index("ix_disponibilidad_mentor_usuarioid", "usuarioid"),
+        CheckConstraint(
+            "fecha_fin > fecha_inicio", name="ck_disponibilidad_mentor_fechas"
+        ),
+        ExcludeConstraint(
+            ("usuarioid", "="),
+            (text("tstzrange(fecha_inicio, fecha_fin)"), "&&"),
+            using="gist",
+            name="ex_disponibilidad_mentor_solapamiento",
+        ),
     )
 
-    dia_semana: Mapped[int] = mapped_column(Integer)  # 0 = lunes
-    duracion_min: Mapped[int] = mapped_column(Integer, default=60)
-    hora_inicio: Mapped[time] = mapped_column(Time)
+    fecha_inicio: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    fecha_fin: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    estado: Mapped[str] = mapped_column(String(40), server_default="disponible")
     disponibilidad_mentor_id: Mapped[int] = mapped_column(
-        "disponibilidad_mentorid",
+        "disponibilidadmentorid",
         BigInteger,
         Identity(always=False),
         primary_key=True,

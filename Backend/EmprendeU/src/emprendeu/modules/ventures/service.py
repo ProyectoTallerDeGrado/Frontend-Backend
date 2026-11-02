@@ -14,8 +14,11 @@ from emprendeu.modules.entrepreneurs import EntrepreneurService
 from emprendeu.modules.users import CurrentUser
 from emprendeu.modules.ventures import schemas as s
 from emprendeu.modules.ventures.exceptions import (
+    EntrepreneurRequired,
+    InvalidStageTransition,
     MilestoneNotFound,
     NeedNotFound,
+    ReservedFields,
     StageInactive,
     StageNotFound,
     VentureNotFound,
@@ -38,6 +41,16 @@ class StageRef:
     etapa_id: int
     nombre: str
     orden: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class VentureRef:
+    """Vista publica de un emprendimiento activo para otros modulos."""
+
+    id: int
+    nombre: str
+    sector: str | None
+    stage: StageRef | None
 
 
 def _stage_out(e: Etapa) -> s.StageOut:
@@ -96,6 +109,26 @@ class VentureService:
     async def exists(self, emprendimiento_id: int) -> bool:
         return await self._repo.get(emprendimiento_id) is not None
 
+    async def active_ventures(self, etapa_id: int | None = None) -> list[VentureRef]:
+        """Emprendimientos activos, opcionalmente solo los de una etapa actual."""
+        return [
+            VentureRef(
+                v.emprendimiento_id,
+                v.nombre,
+                v.sector,
+                StageRef(e.etapa_id, e.nombre, e.orden) if e else None,
+            )
+            for v, e in await self._repo.active_ventures_with_stage(etapa_id)
+        ]
+
+    async def stage_distribution(self) -> list[tuple[StageRef, int]]:
+        """Cuantos emprendimientos activos hay en cada etapa (incluidas las vacias)."""
+        counts = await self._repo.stage_counts()
+        return [
+            (StageRef(e.etapa_id, e.nombre, e.orden), counts.get(e.etapa_id, 0))
+            for e in await self._repo.list_stages()
+        ]
+
     # --- acceso ------------------------------------------------------------
 
     async def _require_access(
@@ -144,6 +177,20 @@ class VentureService:
     # --- emprendimientos ---------------------------------------------------
 
     async def create(self, user: CurrentUser, body: s.VentureCreate) -> s.VentureOut:
+        # CU05: el personal crea el emprendimiento de un emprendedor concreto; un
+        # emprendedor solo puede crear el suyo.
+        if user.can_staff("emprendedores:registro"):
+            if body.emprendedor_id is None:
+                raise EntrepreneurRequired
+            owner = await self._entrepreneurs.ref_for_entrepreneur(body.emprendedor_id)
+            if owner is None:
+                raise EntrepreneurRequired
+        else:
+            owner = await self._entrepreneurs.ref_for_user(user.usuario_id)
+            if body.emprendedor_id is not None and (
+                owner is None or owner.emprendedor_id != body.emprendedor_id
+            ):
+                raise Forbidden("Solo puedes crear emprendimientos propios.")
         venture = Emprendimiento(
             nombre=body.nombre,
             descripcion=body.descripcion,
@@ -164,10 +211,9 @@ class VentureService:
                     fecha_inicio=now(),
                 )
             )
-        ref = await self._entrepreneurs.ref_for_user(user.usuario_id)
-        if ref is not None:
+        if owner is not None:
             await self._entrepreneurs.link_venture(
-                ref.emprendedor_id, venture.emprendimiento_id, "fundador"
+                owner.emprendedor_id, venture.emprendimiento_id, "fundador"
             )
         await self._audit.record(
             user.usuario_id,
@@ -211,8 +257,9 @@ class VentureService:
         )
         venture = await self._venture(emprendimiento_id)
         changes = body.model_dump(exclude_unset=True)
-        if "estado" in changes and not user.can_staff("emprendedores:modificacion"):
-            changes.pop("estado")
+        reserved = [k for k in ("estado",) if k in changes]
+        if reserved and not user.can_staff("emprendedores:modificacion"):
+            raise ReservedFields(reserved)
         for key, value in changes.items():
             setattr(venture, key, value)
         venture.fecha_actualizacion = now()
@@ -244,6 +291,17 @@ class VentureService:
         current = await self._repo.active_stage_row(emprendimiento_id)
         if current is not None and current.etapa_id == stage.etapa_id:
             return _venture_out(venture, stage)
+        # CU12: solo se avanza a la etapa activa inmediatamente siguiente (sin saltos
+        # ni retrocesos). Sin etapa, solo se entra a la primera.
+        active = [e for e in await self._repo.list_stages() if e.estado == "activa"]
+        if current is None:
+            expected = active[0] if active else None
+        else:
+            current_stage = await self._repo.get_stage(current.etapa_id)
+            order = (current_stage.orden or 0) if current_stage else 0
+            expected = next((e for e in active if (e.orden or 0) > order), None)
+        if expected is None or expected.etapa_id != stage.etapa_id:
+            raise InvalidStageTransition(expected.nombre if expected else None)
         if current is not None:
             current.estado = "completada"
             current.fecha_fin = now()

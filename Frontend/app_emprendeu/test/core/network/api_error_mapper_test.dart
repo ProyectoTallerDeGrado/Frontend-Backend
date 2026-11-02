@@ -40,6 +40,14 @@ void main() {
       mapDioException(_error(401, code: 'unauthorized')),
       isA<UnauthorizedFailure>(),
     );
+    expect(
+      mapDioException(_error(409, code: 'slot_unavailable')),
+      isA<SlotUnavailableFailure>(),
+    );
+    // 400, no 401: una clave actual equivocada no debe cerrar la sesión
+    final wrong = mapDioException(_error(400, code: 'wrong_password'));
+    expect(wrong, isA<FieldFailure>());
+    expect((wrong as FieldFailure).field, 'currentPassword');
     final taken = mapDioException(_error(409, code: 'email_taken'));
     expect(taken, isA<FieldFailure>());
     expect((taken as FieldFailure).field, 'email');

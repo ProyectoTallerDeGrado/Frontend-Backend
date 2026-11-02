@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../models/milestone_dto.dart';
 import '../models/venture_dto.dart';
 
 class VenturesRemoteDataSource {
@@ -20,5 +21,47 @@ class VenturesRemoteDataSource {
       data: {'nombre': name},
     );
     return VentureDto.fromJson(response.data!);
+  }
+
+  Future<VentureDto> update(
+    int ventureId, {
+    required String name,
+    String? description,
+    String? sector,
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/ventures/$ventureId',
+      data: {'nombre': name, 'descripcion': description, 'sector': sector},
+    );
+    return VentureDto.fromJson(response.data!);
+  }
+
+  Future<List<MilestoneDto>> milestones(int ventureId) async {
+    final response = await _dio.get<List<dynamic>>(
+      '/ventures/$ventureId/milestones',
+    );
+    return response.data!
+        .map((e) => MilestoneDto.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<MilestoneDto> createMilestone(
+    int ventureId, {
+    required String title,
+    String? description,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/ventures/$ventureId/milestones',
+      data: {'titulo': title, 'descripcion': description},
+    );
+    return MilestoneDto.fromJson(response.data!);
+  }
+
+  Future<MilestoneDto> completeMilestone(int milestoneId) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/milestones/$milestoneId',
+      data: {'estado': 'cumplido'},
+    );
+    return MilestoneDto.fromJson(response.data!);
   }
 }

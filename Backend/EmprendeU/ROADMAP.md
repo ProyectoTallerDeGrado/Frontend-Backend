@@ -15,6 +15,17 @@ Cada fase se cierra con lint y tests en verde.
 | 8 | `training` y `documents` | ✅ |
 | 9 | Endurecimiento: límite de login, errores 500 sin fugas, secreto en producción, Docker, CI | ✅ |
 
+## Plan de finalización (`doc/Plan de finalización EmprendeU para el agente.pdf`)
+
+| Fase | Contenido | Estado |
+|---|---|---|
+| F5 | Asistente IA con RAG: base de conocimiento con estado de procesamiento y subida de archivos txt/md/pdf/docx (CU31), coach con fuentes, mensaje de información insuficiente, error claro sin guardar nada si Ollama cae y sentimiento anonimizado (CU11), con servicio `ollama-pull` en el compose, en backend, web y móvil | ✅ |
+| F4 | Emprendimientos, progreso e hitos: registrar emprendedor con documento único (CU04), emprendimiento propio con campos reservados a la coordinación (CU05), progreso gamificado visible al personal (CU06), cumplir retos (CU07), XP e insignias en el Perfil (CU08) y hitos con evidencia en `documentos.hitoid` (CU20), en backend, web y móvil | ✅ |
+| F3 | Seguimiento, alertas y dashboard: avance de etapa solo a la siguiente (CU12), alertas revisada/atendida con `atendida_por_usuarioid` y job periódico (CU13), dashboard con filtros de periodo y etapa (CU14), historial del emprendimiento (CU19), reportes con vista previa y CSV (CU21) y parámetros validados con bitácora (CU25), en backend, web y móvil | ✅ |
+| F2 | Mentorías: asignar asesor habilitado (CU09), disponibilidad por horario (CU15), agendar con asesor asignado (CU10), registrar sesión (CU16), recomendaciones (CU17), compromisos con responsable válido (CU18) y mentorías programadas por estado y periodo (CU23), en backend, web y móvil | ✅ |
+| F1 | Seguridad y cuentas: invalidar tokens al cambiar la contraseña (`password_changed_at`), cambio de contraseña en web y móvil, `JWT_SECRET` validado en todos los entornos, credenciales de compose y CI por variables, CORS por variable | ✅ |
+| F0 | Esquema alineado con `cieu_schema_completo.sql` (pgvector, postulaciones, compromisos, disponibilidad por intervalos, parámetros clave-valor); migraciones fuera del arranque del contenedor | ✅ |
+
 ## Decisiones tomadas (revisables)
 
 - JWT de acceso único, sin refresh; recuperación de contraseña fuera de alcance.
@@ -32,5 +43,3 @@ Cada fase se cierra con lint y tests en verde.
 - Limitador de login compartido (Redis) si se despliega con varias réplicas.
 - Almacén de objetos para `documents` si el volumen crece.
 - Habilitar/medir `pgvector` y paginar `EntrepreneurService.list` sin consulta por fila.
-- Invalidar tokens al cambiar contraseña o deshabilitar (hoy la cuenta deshabilitada se
-  rechaza por petición, pero un cambio de contraseña no invalida tokens ya emitidos).

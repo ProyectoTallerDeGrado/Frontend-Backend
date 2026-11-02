@@ -42,3 +42,21 @@ String relativeTime(DateTime when, {DateTime? now}) {
   if (diff.inDays < 60) return 'Hace ${(diff.inDays / 7).floor()} semanas';
   return 'Hace ${(diff.inDays / 30).floor()} meses';
 }
+
+/// «09:00» (hora local del dispositivo).
+String timeOfDay(DateTime when) {
+  final local = when.toLocal();
+  return '${local.hour.toString().padLeft(2, '0')}:'
+      '${local.minute.toString().padLeft(2, '0')}';
+}
+
+/// «Miércoles 5 de noviembre · 09:00».
+String sessionWhen(DateTime when) =>
+    '${longDate(when.toLocal())} · ${timeOfDay(when)}';
+
+/// «5 nov» para chips de periodo.
+String shortDay(DateTime day) =>
+    '${day.day} ${_months[day.month - 1].substring(0, 3)}';
+
+/// «Lun», «Mar»… para el selector de días.
+String weekdayShort(DateTime day) => _weekdays[day.weekday - 1].substring(0, 3);

@@ -46,6 +46,17 @@ class AuthRepositoryImpl implements AuthRepository {
   );
 
   @override
+  Future<Result<AuthSession>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) => _guard(
+    () async => (await _remote.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    )).toEntity(),
+  );
+
+  @override
   Future<Result<AuthUser>> fetchCurrentUser(String token) =>
       _guard(() async => (await _remote.me(token)).toEntity());
 

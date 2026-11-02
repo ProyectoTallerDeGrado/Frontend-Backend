@@ -1,5 +1,9 @@
 // API pública de la feature `mentoring`.
 export 'data/mentoring_data_providers.dart' show mentoringDataOverrides;
+export 'presentation/controllers/booking_providers.dart'
+    show bookingRepositoryProvider;
+export 'presentation/mentoring_routes.dart'
+    show MentoringRoutes, mentoringRoutes;
 export 'presentation/controllers/mentoring_providers.dart'
     show
         commitmentsProvider,

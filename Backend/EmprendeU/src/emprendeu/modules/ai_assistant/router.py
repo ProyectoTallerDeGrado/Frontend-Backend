@@ -2,9 +2,10 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from emprendeu.core.config import get_settings
 from emprendeu.db.session import get_session
 from emprendeu.modules.ai_assistant import schemas as s
 from emprendeu.modules.ai_assistant.llm import LLMClient, get_llm
@@ -68,9 +69,31 @@ async def list_knowledge(
 async def ingest_knowledge(
     body: s.KnowledgeCreate,
     service: Svc,
-    actor: Annotated[CurrentUser, perm("config:administrativo")],
+    actor: Annotated[CurrentUser, perm("config:modificacion")],
 ) -> s.KnowledgeOut:
+    """Carga un texto pegado (coordinacion o administracion)."""
     return await service.ingest(actor, body)
+
+
+@router.post(
+    "/knowledge/upload",
+    response_model=s.KnowledgeOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_knowledge(
+    service: Svc,
+    actor: Annotated[CurrentUser, perm("config:modificacion")],
+    file: Annotated[UploadFile, File()],
+    titulo: Annotated[str, Form(min_length=1, max_length=240)],
+    descripcion: Annotated[str | None, Form()] = None,
+    fuente: Annotated[str | None, Form(max_length=300)] = None,
+) -> s.KnowledgeOut:
+    """CU31: sube un archivo (txt, md, pdf o docx) y lo indexa."""
+    limit = get_settings().max_upload_mb * 1024 * 1024
+    data = await file.read(limit + 1)  # acota la memoria; el servicio rechaza el exceso
+    return await service.ingest_file(
+        actor, file.filename or "documento", data, titulo.strip(), descripcion, fuente
+    )
 
 
 @router.delete("/knowledge/{doc_id}", response_model=s.KnowledgeOut)

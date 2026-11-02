@@ -9,7 +9,11 @@ from emprendeu.core.pagination import Page, PageParamsDep
 from emprendeu.db.session import get_session
 from emprendeu.modules.alerts import schemas as s
 from emprendeu.modules.alerts.service import AlertService
-from emprendeu.modules.users import CurrentUser, require_permission
+from emprendeu.modules.users import (
+    CurrentUser,
+    require_permission,
+    require_staff_permission,
+)
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
@@ -23,6 +27,11 @@ Svc = Annotated[AlertService, Depends(_svc)]
 
 def perm(name: str) -> object:
     return Depends(require_permission(name))
+
+
+def staff(name: str) -> object:
+    """Permiso del rol Y ser personal: un emprendedor tiene `seguimiento:*` sobre lo suyo."""
+    return Depends(require_staff_permission(name))
 
 
 @router.get("/settings", response_model=s.SettingsOut)
@@ -45,7 +54,7 @@ async def put_settings(
 async def list_alerts(
     params: PageParamsDep,
     service: Svc,
-    user: Annotated[CurrentUser, perm("seguimiento:consulta")],
+    user: Annotated[CurrentUser, staff("seguimiento:consulta")],
     estado: str | None = None,
     tipo: str | None = None,
 ) -> Page[s.AlertOut]:
@@ -58,7 +67,7 @@ async def update_alert(
     alerta_id: int,
     body: s.AlertUpdate,
     service: Svc,
-    actor: Annotated[CurrentUser, perm("seguimiento:modificacion")],
+    actor: Annotated[CurrentUser, staff("seguimiento:registro")],
 ) -> s.AlertOut:
     return await service.update(actor, alerta_id, body)
 

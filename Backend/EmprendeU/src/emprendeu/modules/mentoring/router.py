@@ -1,7 +1,7 @@
 """HTTP de mentoring (prefijo /mentoring)."""
 
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,22 +47,62 @@ async def set_profile(
     return await service.set_profile(user, mentor_id, body)
 
 
-@router.get(
-    "/mentors/{mentor_id}/availability", response_model=list[s.AvailabilityItem]
-)
+@router.put("/mentors/{mentor_id}/enabled", response_model=s.MentorOut)
+async def set_mentor_enabled(
+    mentor_id: int,
+    body: s.MentorEnable,
+    service: Svc,
+    actor: Annotated[CurrentUser, staff("asesorias:registro")],
+) -> s.MentorOut:
+    """Habilita o inhabilita a un asesor (solo los habilitados reciben asignaciones)."""
+    return await service.set_mentor_enabled(actor, mentor_id, body.habilitado)
+
+
+@router.get("/mentors/{mentor_id}/availability", response_model=list[s.AvailabilityOut])
 async def get_availability(
     mentor_id: int, service: Svc, _: CurrentUserDep
-) -> list[s.AvailabilityItem]:
+) -> list[s.AvailabilityOut]:
     return await service.get_availability(mentor_id)
 
 
-@router.put(
-    "/mentors/{mentor_id}/availability", response_model=list[s.AvailabilityItem]
-)
+@router.put("/mentors/{mentor_id}/availability", response_model=list[s.AvailabilityOut])
 async def set_availability(
     mentor_id: int, body: list[s.AvailabilityItem], service: Svc, user: CurrentUserDep
-) -> list[s.AvailabilityItem]:
+) -> list[s.AvailabilityOut]:
+    """Reemplaza todo el horario (todo o nada)."""
     return await service.set_availability(user, mentor_id, body)
+
+
+@router.post(
+    "/mentors/{mentor_id}/availability",
+    response_model=s.AvailabilityOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_availability(
+    mentor_id: int, body: s.AvailabilityItem, service: Svc, user: CurrentUserDep
+) -> s.AvailabilityOut:
+    """Agrega un horario; si se solapa con otro, 409 y no se guarda nada."""
+    return await service.add_availability(user, mentor_id, body)
+
+
+@router.patch("/availability/{disponibilidad_id}", response_model=s.AvailabilityOut)
+async def update_availability(
+    disponibilidad_id: int,
+    body: s.AvailabilityUpdate,
+    service: Svc,
+    user: CurrentUserDep,
+) -> s.AvailabilityOut:
+    return await service.update_availability(user, disponibilidad_id, body)
+
+
+@router.delete(
+    "/availability/{disponibilidad_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_availability(
+    disponibilidad_id: int, service: Svc, user: CurrentUserDep
+) -> Response:
+    await service.delete_availability(user, disponibilidad_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/mentors/{mentor_id}/slots", response_model=list[s.SlotOut])
@@ -98,8 +138,26 @@ async def my_sessions(
     filtro: Annotated[
         str | None, Query(pattern="^(proximas|realizadas|canceladas)$")
     ] = None,
+    estado: Annotated[
+        str | None, Query(pattern="^(programada|realizada|cancelada)$")
+    ] = None,
+    desde: date | None = None,
+    hasta: date | None = None,
 ) -> list[s.SessionOut]:
-    return await service.my_sessions(user, filtro)
+    """Mis sesiones (asesor o emprendedor), filtradas por estado y periodo (CU23)."""
+    return await service.my_sessions(user, filtro, estado, desde, hasta)
+
+
+@router.post(
+    "/sessions/register",
+    response_model=s.SessionOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def register_session(
+    body: s.SessionRegister, service: Svc, user: CurrentUserDep
+) -> s.SessionOut:
+    """Registra una sesion ya realizada que no se agendo en la app (CU16)."""
+    return await service.register_session(user, body)
 
 
 @router.get("/sessions", response_model=Page[s.SessionOut])
@@ -108,8 +166,13 @@ async def list_sessions(
     service: Svc,
     _: Annotated[CurrentUser, staff("asesorias:consulta")],
     estado: str | None = None,
+    desde: date | None = None,
+    hasta: date | None = None,
+    emprendimiento_id: int | None = None,
 ) -> Page[s.SessionOut]:
-    items, total = await service.list_sessions(params.offset, params.page_size, estado)
+    items, total = await service.list_sessions(
+        params.offset, params.page_size, estado, desde, hasta, emprendimiento_id
+    )
     return Page[s.SessionOut].build(items, params, total)
 
 
@@ -148,6 +211,16 @@ async def create_commitment(
     return await service.create_commitment(user, sesion_id, body)
 
 
+@router.post(
+    "/commitments", response_model=s.CommitmentOut, status_code=status.HTTP_201_CREATED
+)
+async def register_commitment(
+    body: s.CommitmentRegister, service: Svc, user: CurrentUserDep
+) -> s.CommitmentOut:
+    """Compromiso de un emprendimiento; el responsable debe pertenecerle (CU18)."""
+    return await service.register_commitment(user, body)
+
+
 @router.get("/commitments/me", response_model=list[s.CommitmentOut])
 async def my_commitments(
     service: Svc,
@@ -175,11 +248,49 @@ async def create_recommendation(
     return await service.create_recommendation(user, sesion_id, body)
 
 
+@router.post(
+    "/recommendations",
+    response_model=s.RecommendationOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def register_recommendation(
+    body: s.RecommendationRegister, service: Svc, user: CurrentUserDep
+) -> s.RecommendationOut:
+    """Recomendacion de un emprendimiento, opcionalmente de una sesion suya (CU17)."""
+    return await service.register_recommendation(user, body)
+
+
 @router.get("/recommendations/me", response_model=list[s.RecommendationOut])
 async def my_recommendations(
     service: Svc, user: CurrentUserDep
 ) -> list[s.RecommendationOut]:
     return await service.my_recommendations(user)
+
+
+# --- historial del emprendimiento (CU19) ----------------------------------------------
+
+
+@router.get("/ventures/me/history", response_model=list[s.HistoryEvent])
+async def my_history(
+    service: Svc,
+    user: CurrentUserDep,
+    orden: Annotated[Literal["asc", "desc"], Query()] = "desc",
+) -> list[s.HistoryEvent]:
+    """Historial del emprendimiento principal del usuario (la app movil)."""
+    return await service.history(user, None, orden)
+
+
+@router.get(
+    "/ventures/{emprendimiento_id}/history", response_model=list[s.HistoryEvent]
+)
+async def venture_history(
+    emprendimiento_id: int,
+    service: Svc,
+    user: CurrentUserDep,
+    orden: Annotated[Literal["asc", "desc"], Query()] = "asc",
+) -> list[s.HistoryEvent]:
+    """Linea de tiempo cronologica (de lo mas antiguo a lo mas reciente por defecto)."""
+    return await service.history(user, emprendimiento_id, orden)
 
 
 # --- avances y sincronizacion ---------------------------------------------------------
@@ -244,6 +355,6 @@ async def my_assignments(service: Svc, user: CurrentUserDep) -> list[s.Assignmen
 async def end_assignment(
     asignacion_id: int,
     service: Svc,
-    _: Annotated[CurrentUser, staff("asesorias:registro")],
+    actor: Annotated[CurrentUser, staff("asesorias:registro")],
 ) -> s.AssignmentOut:
-    return await service.end_assignment(asignacion_id)
+    return await service.end_assignment(actor, asignacion_id)

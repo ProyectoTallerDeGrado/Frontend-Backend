@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
@@ -18,8 +18,13 @@ class MentorOut(BaseModel):
     usuario_id: int
     nombre: str
     especialidad: str | None
+    habilitado: bool = False
     bloqueado: bool
     motivo_bloqueo: str | None
+
+
+class MentorEnable(BaseModel):
+    habilitado: bool
 
 
 class MentorProfileUpdate(BaseModel):
@@ -28,9 +33,29 @@ class MentorProfileUpdate(BaseModel):
 
 
 class AvailabilityItem(BaseModel):
-    dia_semana: Annotated[int, Field(ge=0, le=6)]  # 0 = lunes
-    hora_inicio: time
-    duracion_min: Annotated[int, Field(gt=0, le=480)] = 60
+    """Intervalo concreto en que el mentor atiende (CU15)."""
+
+    fecha_inicio: datetime
+    fecha_fin: datetime
+    estado: Literal["disponible", "bloqueado", "reservado"] = "disponible"
+
+    @model_validator(mode="after")
+    def _fin_despues_de_inicio(self) -> AvailabilityItem:
+        if self.fecha_fin <= self.fecha_inicio:
+            raise ValueError("fecha_fin debe ser posterior a fecha_inicio")
+        return self
+
+
+class AvailabilityOut(AvailabilityItem):
+    disponibilidad_id: int
+
+
+class AvailabilityUpdate(BaseModel):
+    """Cambio parcial de un horario; lo que no se envia se conserva."""
+
+    fecha_inicio: datetime | None = None
+    fecha_fin: datetime | None = None
+    estado: Literal["disponible", "bloqueado", "reservado"] | None = None
 
 
 class SlotOut(BaseModel):
@@ -55,7 +80,27 @@ class SessionCreate(BaseModel):
     emprendimiento_id: int | None = None
 
 
+Modality = Literal["presencial", "virtual", "hibrida"]
+
+
 class SessionComplete(BaseModel):
+    """Datos de la sesion que ya ocurrio (CU16). Todo es opcional: sin fecha, ahora."""
+
+    observaciones: str | None = None
+    fecha_realizada: datetime | None = None
+    tema: Annotated[str | None, StringConstraints(max_length=250)] = None
+    modalidad: Modality | None = None
+
+
+class SessionRegister(BaseModel):
+    """Sesion realizada que no se agendo en la app (CU16)."""
+
+    emprendimiento_id: int
+    fecha_realizada: datetime
+    tema: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=250)
+    ]
+    modalidad: Modality = "presencial"
     observaciones: str | None = None
 
 
@@ -77,6 +122,7 @@ class SessionOut(BaseModel):
     participantes: list[ParticipantOut]
     mentor: str | None
     especialidad: str | None
+    emprendimiento: str | None = None
     total_recomendaciones: int
     total_compromisos: int
 
@@ -97,9 +143,21 @@ class CommitmentUpdate(BaseModel):
     fecha: datetime | None = None  # momento real (registro sin conexion)
 
 
+class CommitmentRegister(BaseModel):
+    """Compromiso de un emprendimiento, con o sin sesion (CU18)."""
+
+    emprendimiento_id: int
+    sesion_id: int | None = None
+    descripcion: Text
+    usuario_id: int  # responsable
+    fecha_limite: datetime | None = None  # sin fecha: hoy + dias_limite_compromiso
+
+
 class CommitmentOut(BaseModel):
     compromiso_id: int
-    sesion_id: int
+    emprendimiento_id: int | None = None
+    responsable_id: int | None = None
+    sesion_id: int | None
     descripcion: str | None
     estado: str | None
     fecha_limite: datetime | None
@@ -107,6 +165,17 @@ class CommitmentOut(BaseModel):
 
 
 class RecommendationCreate(BaseModel):
+    titulo: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=240)
+    ]
+    contenido: Text
+
+
+class RecommendationRegister(BaseModel):
+    """Recomendacion para un emprendimiento, opcionalmente de una sesion (CU17)."""
+
+    emprendimiento_id: int
+    sesion_id: int | None = None
     titulo: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=240)
     ]
@@ -184,3 +253,18 @@ class AssignmentOut(BaseModel):
 
 class DayQuery(BaseModel):
     fecha: date
+
+
+# --- historial del emprendimiento (CU19) ----------------------------------------
+
+
+class HistoryEvent(BaseModel):
+    """Un hecho en la vida del emprendimiento (sesion, avance, hito, etc.)."""
+
+    tipo: Literal["sesion", "avance", "hito", "recomendacion", "compromiso", "etapa"]
+    referencia_id: int
+    fecha: datetime | None  # los hitos sin ninguna fecha quedan al final
+    titulo: str
+    detalle: str | None
+    estado: str | None
+    autor: str | None

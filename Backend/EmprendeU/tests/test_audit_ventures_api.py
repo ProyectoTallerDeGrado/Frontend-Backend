@@ -143,6 +143,25 @@ async def test_cambio_de_etapa_hitos_y_necesidades(
     history = (await client.get(f"{API}/ventures/{vid}/stages", headers=emp)).json()
     assert [h["estado"] for h in history] == ["completada", "activa"]
 
+    # CU12: solo a la etapa siguiente (sin saltos ni retrocesos); el historial se conserva
+    def move(name: str):
+        return client.put(
+            f"{API}/ventures/{vid}/stage",
+            json={"etapa_id": by_name[name]["etapa_id"]},
+            headers=coord,
+        )
+
+    skip = await move("Graduación")
+    assert skip.status_code == 409
+    assert skip.json()["error"]["code"] == "invalid_stage_transition"
+    assert skip.json()["error"]["details"] == {"siguiente": "Crecimiento"}
+    back = await move("Preincubación")
+    assert back.status_code == 409
+    assert (await move("Incubación")).status_code == 200  # misma etapa: sin cambios
+    assert (
+        len((await client.get(f"{API}/ventures/{vid}/stages", headers=emp)).json()) == 2
+    )
+
     # etapa inactiva no se puede asignar
     await client.patch(
         f"{API}/stages/{by_name['Crecimiento']['etapa_id']}",

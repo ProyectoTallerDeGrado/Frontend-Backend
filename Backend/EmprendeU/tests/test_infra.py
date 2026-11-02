@@ -122,3 +122,21 @@ def test_produccion_exige_secreto_fuerte(monkeypatch: pytest.MonkeyPatch) -> Non
         Settings()  # type: ignore[call-arg]
     monkeypatch.setenv("JWT_SECRET", "x" * 40)
     assert Settings().is_production  # type: ignore[call-arg]
+
+
+@pytest.mark.parametrize("environment", ["development", "production"])
+def test_el_secreto_debe_ser_fuerte_en_cualquier_entorno(
+    monkeypatch: pytest.MonkeyPatch, environment: str
+) -> None:
+    """Corto o igual al de `.env.example`: no arranca, tampoco en desarrollo."""
+    from pydantic import ValidationError
+
+    from emprendeu.core.config import Settings
+
+    monkeypatch.setenv("ENVIRONMENT", environment)
+    for weak in ("corto", "cambia-este-secreto-en-tu-entorno", "a" * 31):
+        monkeypatch.setenv("JWT_SECRET", weak)
+        with pytest.raises(ValidationError):
+            Settings()  # type: ignore[call-arg]
+    monkeypatch.setenv("JWT_SECRET", "a-1" * 11)  # 33 caracteres, no es el de ejemplo
+    assert Settings().environment == environment  # type: ignore[call-arg]

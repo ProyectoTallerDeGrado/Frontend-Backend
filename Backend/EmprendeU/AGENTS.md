@@ -13,7 +13,7 @@
 | Gestor / build | **uv** (`uv_build` como build-backend) | instalado |
 | Framework HTTP | **FastAPI** `>=0.142.2` | en uso (`emprendeu.main:create_app`) |
 | Servidor ASGI | **uvicorn[standard]** `>=0.54.0` | instalado |
-| ORM | **SQLAlchemy 2.x async** | en uso: 38 modelos declarativos |
+| ORM | **SQLAlchemy 2.x async** | en uso: 42 modelos declarativos |
 | Driver | **psycopg 3** (`postgresql+psycopg://`) | instalado |
 | Migraciones | **Alembic** (plantilla `async`) | en uso, con migración base |
 | Layout | `src/` layout, paquete `emprendeu` | instalado |
@@ -36,6 +36,7 @@
 | `pytest-asyncio` | Pruebas de operaciones asíncronas | Recomendado | desarrollo |
 | `ruff` | Linter y formateador | Recomendado | desarrollo |
 | `structlog` | Logs estructurados | Recomendado | ejecución |
+| `pgvector` | Tipo `vector` de SQLAlchemy (embeddings del asistente) | Recomendado | ejecución |
 
 Estado actual: **todas** están declaradas en `pyproject.toml`, resueltas en
 `uv.lock` e instaladas (`pytest`, `pytest-asyncio` y `ruff` en el grupo `dev`).
@@ -54,7 +55,7 @@ y [dialecto Psycopg de SQLAlchemy](https://docs.sqlalchemy.org/en/20/dialects/po
 > Estado real hoy: **backend completo** (fases 0 a 9 de [`ROADMAP.md`](ROADMAP.md)).
 > Los 11 módulos tienen persistencia, servicio, repositorio, esquemas y router; hay
 > infraestructura transversal (`security`, `pagination`, `logging`, `ratelimit`,
-> errores 401/403/429/413/500), 52 tests contra PostgreSQL real, Dockerfile,
+> errores 401/403/429/413/500), 78 tests contra PostgreSQL real, Dockerfile,
 > `docker-compose.yml` y CI. Lo único externo que falta para operar es Ollama
 > (opcional: sin él el coach responde 503 y el resto funciona).
 
@@ -73,6 +74,7 @@ Lo marcado con ✅ existe; el resto es la forma que debe tomar el código.
 alembic.ini                  ✅ script_location + logging (la URL NO va aqui)
 .env.example                 ✅ plantilla; el .env real no se versiona
 database/
+├── cieu_schema_completo.sql ✅ esquema de REFERENCIA vigente (42 tablas, pgvector)
 └── EmprendeU_postgresql.sql ✅ modelo exportado de EA: referencia historica
 src/emprendeu/
 ├── __init__.py              ✅
@@ -112,13 +114,13 @@ tests/                       ✅ tests de integracion end-to-end de la API (+ co
 
 ## 3b. Los 11 modulos y sus tablas
 
-Las 38 tablas originales del schema `cieu` (y 3 nuevas, marcadas con `*`) estan repartidas asi. Nombres de modulo en
+Las 38 tablas originales del schema `cieu` (y 4 nuevas, marcadas con `*`) estan repartidas asi. Nombres de modulo en
 ingles; nombres de tabla y columna en espanol, porque los fija la base.
 
 | Modulo | Tablas |
 |---|---|
 | `users` | `usuario`, `rol`, `permiso`, `rol_permiso`, `rol_usuario` |
-| `entrepreneurs` | `emprendedor`, `emprendimiento_emprendedores` |
+| `entrepreneurs` | `emprendedor`, `emprendimiento_emprendedores`, `postulaciones`* |
 | `ventures` | `emprendimiento`, `etapas`, `emprendimiento_etapas`, `hito`, `necesidades`, `emprendimiento_necesidades` |
 | `mentoring` | `tipo`, `sesiones_acompanamiento`, `sesion_participantes`, `compromisos`, `seguimientos`, `recomendaciones`, `asignaciones`, `perfil_mentor`*, `disponibilidad_mentor`* |
 | `training` | `capacitaciones`, `capacitacion_participantes` |
@@ -176,15 +178,15 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 |---|---|
 | `users` ✅ | `POST /auth/login`, `/auth/register`, `/auth/change-password`, `GET /auth/me`; `GET/POST /users`, `PATCH /users/{id}/estado`, `/users/{id}/rol`; `GET /roles`, `GET/PUT /roles/{id}/permissions` |
 | `audit` ✅ | `GET /audit`, `GET /audit/export` (CSV); `AuditService.record(...)` para el resto de módulos |
-| `entrepreneurs` ✅ | `GET /entrepreneurs`, `/entrepreneurs/me` (GET/PATCH), `/entrepreneurs/{id}` |
+| `entrepreneurs` ✅ | `GET/POST /entrepreneurs` (el alta crea usuario + emprendedor), `/entrepreneurs/me` (GET/PATCH), `/entrepreneurs/{id}` |
 | `ventures` ✅ | `/stages`, `/ventures` (CRUD, `/me`, `PUT /{id}/stage`, historial), hitos (`/milestones`), necesidades (`/needs`) |
 | `gamification` ✅ | `/challenges`, `/badges` (catálogo), `GET /journey`, `POST /journey/challenges/{id}/complete`, `GET /gamification/me` |
-| `mentoring` ✅ | `/mentoring/mentors` (+ perfil, disponibilidad, `slots`), `booking-status`, `sessions` (agendar, `me`, completar, cancelar), `commitments`, `recommendations`, `progress`, `POST /mentoring/sync`, `assignments` |
-| `alerts` ✅ | `GET/PUT /alerts/settings`, `GET /alerts`, `PATCH /alerts/{id}`, `POST /alerts/evaluate`; tarea `alerts/jobs.py` |
-| `indicators` ✅ | `GET /indicators/overview` (resumen del panel), tipos y valores por emprendimiento |
-| `ai_assistant` ✅ | `POST /ai/chat`, conversaciones, `/ai/knowledge` (RAG), `/ai/status`, `/ai/sentiment/{id}` |
+| `mentoring` ✅ | `/mentoring/mentors` (+ `PUT {id}/enabled`, perfil, `slots`, horarios: `GET/PUT/POST {id}/availability`, `PATCH/DELETE /availability/{id}`), `booking-status`, `sessions` (agendar, `me` y lista con filtros `estado/desde/hasta`, `register`, completar, cancelar), `commitments` (`POST`, `me`), `recommendations` (`POST`, `me`), `progress`, `POST /mentoring/sync`, `assignments`, historial `GET /mentoring/ventures/{id}/history` y `/ventures/me/history` |
+| `alerts` ✅ | `GET/PUT /alerts/settings`, `GET /alerts`, `PATCH /alerts/{id}` (`revisada`, `atendida`, `descartada`), `POST /alerts/evaluate`; tarea `alerts/jobs.py` |
+| `indicators` ✅ | `GET /indicators/overview` (resumen del panel), `GET /indicators/dashboard` (filtros `desde`, `hasta`, `etapa_id`), `GET /indicators/reports/{kind}` y `/export` (CSV) con `kind` ∈ `resumen`, `sesiones`, `alertas`, `indicadores`; tipos y valores por emprendimiento |
+| `ai_assistant` ✅ | `POST /ai/chat`, `GET /ai/conversations/me` y `/{id}/messages`, `GET/POST /ai/knowledge` (texto), `POST /ai/knowledge/upload` (archivo txt/md/pdf/docx), `DELETE /ai/knowledge/{id}` (desactivar), `GET /ai/status`, `GET /ai/sentiment/{emprendedor_id}` |
 | `training` ✅ | `/training` (CRUD, `me`, inscripción, participantes, asistencia) |
-| `documents` ✅ | `POST /documents` (multipart), listado, `download`, `DELETE` |
+| `documents` ✅ | `POST /documents` (multipart, `emprendimiento_id` y `hito_id` opcionales), listado (filtros `emprendimiento_id`, `hito_id`), `download`, `DELETE` |
 
 ### Convenciones que ya están fijadas en el código
 
@@ -209,7 +211,8 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
   (`tests/fakes.py`) en tests, inyectado con `dependency_overrides[get_llm]`.
 - **Archivos** en disco local (`documents/storage.py`, `UPLOAD_DIR`), con nombre
   generado, lista blanca de extensiones y tope de tamaño.
-- **Producción:** `ENVIRONMENT=production` exige `JWT_SECRET` de 32+ caracteres,
+- **Secreto JWT:** en **todos** los entornos la API no arranca si `JWT_SECRET` tiene menos de
+  32 caracteres o es el de `.env.example` (`core/config.py`). `ENVIRONMENT=production` además
   desactiva `/docs` y `/redoc`. Errores inesperados devuelven `internal_error` sin detalles.
 - **Zona horaria de negocio** `APP_TIMEZONE` (por defecto `America/La_Paz`) solo para
   la agenda de mentorías; todo lo demás se guarda y expone en UTC.
@@ -224,9 +227,11 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
 
 ### Operación
 
+- Migraciones: `uv run alembic upgrade head` (en Docker, `docker compose run --rm migrate`).
 - Primer administrador: `uv run python -m emprendeu.modules.users.cli create-admin ...`.
-- Detección de alertas: `uv run python -m emprendeu.modules.alerts.jobs` (cron diario),
-  o `POST /alerts/evaluate`.
+- Detección de alertas: `uv run python -m emprendeu.modules.alerts.jobs`, o `POST /alerts/evaluate`
+  (solo `config:administrativo`). En Docker corre el servicio `alerts-job` del `docker-compose.yml`
+  (una pasada cada `ALERTS_INTERVAL_SECONDS`, 86400 por defecto); fuera de Docker, un cron diario.
 - Limitador de login en memoria: válido para **un** proceso; con varias réplicas hay que
   moverlo a un almacén compartido (la interfaz no cambia).
 
@@ -243,12 +248,79 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
   una cuenta deshabilitada se rechaza en cada peticion (403 `account_disabled`).
 - **JWT de acceso unico** (sin refresh), vida `ACCESS_TOKEN_EXPIRE_MINUTES` (60 por
   defecto). `JWT_SECRET` es obligatorio y sin valor por defecto.
-- El esquema **ya no coincide** con `database/EmprendeU_postgresql.sql`. Cambios
-  posteriores (todos por migración): `usuario.ultimo_acceso`, CHECK `ck_usuario_estado`
-  y default de `usuario.estado`; `retos.orden`; `seguimientos.referencia_cliente` (+ único
-  por usuario); tablas nuevas `perfil_mentor` y `disponibilidad_mentor` (mentoring) y
-  `parametros_seguimiento` (alerts, fila única id = 1); y la semilla de roles, permisos,
-  etapas, retos, insignias, tipos y parámetros por defecto.
+- **Cambio de contraseña:** `POST /auth/change-password` guarda `usuario.password_changed_at`,
+  devuelve una sesión nueva (`TokenResponse`) y desde ese instante `UserService.authenticate`
+  rechaza (401) todo token emitido antes. El token lleva `iat_us` (microsegundos): `iat` solo
+  tiene segundos y no distingue un token del mismo segundo del cambio. Una contraseña actual
+  equivocada responde **400** `wrong_password` (no 401, que los clientes tratan como sesión vencida).
+- La referencia vigente es `database/cieu_schema_completo.sql` (`EmprendeU_postgresql.sql`
+  es historia). La migración `f33df1970606` alineó el esquema con ella; `alembic check` queda
+  limpio y una comparación de columnas, restricciones e índices contra una base creada desde ese
+  SQL no da diferencias. El SQL incluye además las columnas que el código ya usaba:
+  `usuario.ultimo_acceso`, CHECK `ck_usuario_estado` y default de `usuario.estado`;
+  `retos.orden`; `seguimientos.referencia_cliente` (+ único por usuario) y
+  `perfil_mentor.reto_requeridoid`. La semilla de roles, permisos, etapas, retos, insignias,
+  tipos y parámetros vive en las migraciones, no en el SQL (una base creada solo con el SQL
+  queda sin roles).
+- `perfil_mentor` lleva `habilitado` (solo un asesor habilitado recibe asignaciones y agendas).
+  `disponibilidad_mentor` son **intervalos concretos** sin solapamiento (restricción de exclusión
+  de PostgreSQL); `mentoring/service.py` los reparte en turnos de `SLOT_MINUTES` (60).
+- `parametros_seguimiento` es **clave-valor** (`alerts/repository.py: SETTING_KEYS`). El servicio
+  convierte entre las claves y los campos tipados de `GET/PUT /alerts/settings`, que no cambiaron.
+  La caída de sentimiento se guarda como umbral decimal negativo (`-0.25` = 25 %).
+- `compromisos` guarda quién registra (`registrado_por_usuarioid`), quién responde
+  (`responsable_usuarioid`) y el `emprendimientoid`; la sesión es opcional y, si existe, debe ser
+  del mismo emprendimiento (FK compuesta).
+- **Reglas de mentorías** (`mentoring/service.py`): solo un asesor **habilitado** recibe asignaciones y
+  agendas, y asignar o habilitar es de coordinación (el rol `asesor` tiene `asesorias:registro`, pero
+  recibe 403). No se duplica una asignación activa (409 `assignment_exists`). El emprendedor ve y
+  agenda solo con asesores asignados y habilitados (403 `mentor_not_assigned`). Un asesor registra
+  sesiones, recomendaciones y compromisos solo en emprendimientos que tiene asignados (403
+  `not_assigned`); coordinación no tiene esa restricción. El horario que se solapa da 409
+  `availability_overlap` y no guarda nada (la base lo impide con una restricción de exclusión).
+  La fecha de una sesión realizada no puede ser futura (422 `future_date`); recomendación y
+  compromiso con `sesion_id` exigen que la sesión sea del mismo emprendimiento (422
+  `session_mismatch`); el responsable del compromiso es un emprendedor del emprendimiento o un asesor
+  asignado (422 `responsible_not_member`) y, sin fecha límite, se usa `dias_limite_compromiso`
+  (leído de `parametros_seguimiento` con `sqlalchemy.table`, sin importar el módulo `alerts`). Los
+  filtros de periodo comparan con la **fecha en que ocurrió** (realizada si existe, si no la agendada).
+- **Seguimiento (fase 3):** `PUT /ventures/{id}/stage` solo acepta la **siguiente etapa activa** por
+  `etapas.orden` (la primera si aún no tiene etapa; 409 `invalid_stage_transition`, con `details.siguiente`);
+  repetir la actual no hace nada y el historial conserva las anteriores. Las alertas son `abierta` →
+  `revisada` (sigue pendiente) → `atendida` o `descartada` (cierran, 409 `alert_closed`); `atendida` guarda
+  `alertas.atendida_por_usuarioid` y un asesor solo toca alertas de emprendimientos asignados. Listar y
+  gestionar alertas es solo para personal (`seguimiento:*` y no ser emprendedor). `dias_limite_compromiso`
+  (1–90) es otra clave de `parametros_seguimiento`; cambiar parámetros y generar reportes se audita
+  (`negocio.alerta`, `negocio.reporte`). Periodos: `core/periods.py`; CSV con BOM: `core/csv_export.py`.
+  El historial une sesiones, avances, hitos, recomendaciones, compromisos y etapas (los sin fecha van al final).
+- **Emprendedores y emprendimientos (fase 4):** `POST /entrepreneurs` (coordinación) crea la cuenta, el perfil y el
+  documento en **una transacción** (`UserService.register_entrepreneur`, porque `users` depende de `entrepreneurs`
+  y no al revés); devuelve la clave temporal una sola vez. El documento de identidad es único sin distinguir
+  mayúsculas ni espacios (409 `document_already_registered`), también al editar el perfil propio. **Esa unicidad
+  se valida en el servicio: el esquema de referencia no define un índice único sobre `emprendedor.documento_identidad`.**
+  El personal con `emprendedores:registro` crea un emprendimiento **de un emprendedor concreto** (`emprendedor_id`,
+  422 `entrepreneur_required` si falta); un emprendedor solo crea los suyos. Un emprendedor edita el suyo pero el
+  `estado` es campo reservado (403 `reserved_fields`, `details.campos`). El camino de un emprendimiento
+  (`GET /journey?emprendimiento_id=`) lo ve cualquier personal con `seguimiento:consulta`; cumplir retos es solo del
+  emprendedor miembro. La evidencia de un hito se sube con `POST /documents` + `hito_id`: el hito debe ser del mismo
+  emprendimiento (422 `milestone_mismatch`).
+- **Coach IA y base de conocimiento (fase 5):** un documento pasa por `procesando` → `activo`, o `error` si el
+  modelo de embeddings no responde (queda registrado, sin fragmentos, y la petición responde 503); `inactivo` lo retira.
+  **Solo los `activo` alimentan al coach.** El procesamiento es síncrono dentro de la petición (el documento se confirma
+  como `procesando` antes de calcular los embeddings). Administrar la base exige `config:modificacion` (coordinación y
+  administración). El archivo se lee con `extraction.py` (`pypdf`, `python-docx`); formato no permitido 415, archivo
+  ilegible o sin texto 422, más de `MAX_UPLOAD_MB` 413. El coach busca con distancia coseno (`<=>`, índice HNSW), pasa al
+  modelo solo los fragmentos con similitud >= `AI_MIN_SIMILARITY` (0.65, calibrado con una muestra pequeña de preguntas y documentos reales: ajústalo si cambias de modelo o de corpus) y, si no hay ninguno, responde el mensaje de
+  información insuficiente **sin consultar al modelo** y sugiere un mentor (`derivar_mentor`). Si Ollama cae durante un
+  chat se hace `rollback` de todo (conversación nueva, pregunta y sentimiento): nada queda a medias (503
+  `ai_unavailable`). **RF07:** `analisis_sentimiento` guarda solo el índice numérico, la fecha y el emprendedor, sin texto y
+  **sin enlace al mensaje** (`mensajes_iaid` queda nulo); el personal ve únicamente la serie semanal agregada.
+- La matriz por defecto da a `administrador` solo `asesorias:consulta`: quien registra sesiones y
+  gestiona asignaciones es coordinación (`consulta/registro`) y el asesor (`consulta/registro/modificacion`).
+- `fragmentos_documento.embedding` es `vector(768)` (pgvector, `EMBEDDING_DIM`); la búsqueda usa
+  distancia coseno con índice HNSW. Hay que usar un modelo de 768 dimensiones (nomic-embed-text).
+- Las migraciones **no** se ejecutan al arrancar el contenedor: en Docker las corre el servicio
+  `migrate` del `docker-compose.yml`; la API depende de que termine bien.
 - `Usuario.nombre`/`apellido`: el alta recibe `nombre_completo`; la primera palabra
   es el nombre y el resto el apellido (se exigen al menos dos palabras).
 
@@ -290,7 +362,9 @@ revierte. Requiere el PostgreSQL de desarrollo levantado.
 11. **Alembic es la única vía para cambiar el esquema.** Nunca
     `Base.metadata.create_all()`, nunca DDL a mano, nunca editar
     `database/EmprendeU_postgresql.sql`: ese archivo es la referencia histórica del
-    modelo exportado de Enterprise Architect y ya no se ejecuta.
+    modelo exportado de Enterprise Architect y ya no se ejecuta. La referencia vigente es
+    `database/cieu_schema_completo.sql`: si el código y ese archivo no coinciden, se reporta
+    antes de cambiar cualquiera de los dos. Las migraciones ya aplicadas no se editan.
     El ciclo es: tocar `models.py` → `uv run alembic revision --autogenerate -m "..."`
     → **leer la migración generada** → `uv run alembic upgrade head`. Modelo y
     migración van en el mismo commit.

@@ -7,7 +7,7 @@ import { ApiError, apiFetch } from "@/lib/api-client";
 import type { SessionUser } from "../types";
 import { getSessionToken } from "./session";
 
-type Options = { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; body?: unknown };
+type Options = { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; body?: unknown; timeoutMs?: number };
 
 /** Llama al backend con el token de la sesión. Sin sesión o token vencido manda a /login. */
 export async function authedFetch(path: string, options: Options = {}): Promise<unknown> {

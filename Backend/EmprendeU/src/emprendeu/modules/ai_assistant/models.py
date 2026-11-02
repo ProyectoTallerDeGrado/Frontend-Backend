@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
@@ -20,10 +21,13 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from emprendeu.db.base import Base
+
+# Dimension del modelo de embeddings (nomic-embed-text). Si se cambia de modelo
+# hay que cambiarla aqui y en una migracion nueva.
+EMBEDDING_DIM = 768
 
 
 class ConversacionIa(Base):
@@ -172,10 +176,16 @@ class FragmentoDocumento(Base):
             "ix_fragmentos_documento_documentos_conocimientoid",
             "documentos_conocimientoid",
         ),
+        Index(
+            "ix_fragmentos_documento_embedding",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
     )
 
     contenido: Mapped[str] = mapped_column(Text)
-    embedding: Mapped[dict | None] = mapped_column(JSONB)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
     numero_fragmento: Mapped[int | None] = mapped_column(Integer)
     fragmento_documento_id: Mapped[int] = mapped_column(
         "fragmentos_documentoid", BigInteger, Identity(always=False), primary_key=True

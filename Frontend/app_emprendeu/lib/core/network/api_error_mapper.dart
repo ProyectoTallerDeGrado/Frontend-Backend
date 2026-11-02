@@ -28,6 +28,16 @@ Failure mapDioException(DioException e) {
       return const AccountDisabledFailure();
     case 'unauthorized':
       return const UnauthorizedFailure();
+    case 'slot_unavailable':
+      return const SlotUnavailableFailure();
+    case 'ai_unavailable':
+      return const AssistantUnavailableFailure();
+    case 'wrong_password':
+      // 400 (no 401): una clave actual equivocada no debe cerrar la sesión.
+      return const FieldFailure(
+        'currentPassword',
+        'La contraseña actual no es correcta.',
+      );
     case 'email_taken':
       return const FieldFailure(
         'email',

@@ -66,8 +66,10 @@ class UserRepository:
         await self._session.flush()
 
     async def set_password(self, usuario: Usuario, password_hash: str) -> None:
+        moment = datetime.now(UTC)
         usuario.password_hash = password_hash
-        usuario.fecha_actualizacion = datetime.now(UTC)
+        usuario.fecha_actualizacion = moment
+        usuario.password_changed_at = moment
         await self._session.flush()
 
     async def set_user_role(self, usuario: Usuario, rol_id: int) -> None:

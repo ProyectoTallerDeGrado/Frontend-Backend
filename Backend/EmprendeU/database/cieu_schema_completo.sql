@@ -3,6 +3,9 @@
 -- Incluye: modelo del informe + correcciones (Compromisos, Documentos.HitoID),
 -- tablas de CU15/CU25/CU26 (Perfil_mentor, Disponibilidad_mentor, Parametros_seguimiento,
 -- Postulaciones) y RAG con pgvector.
+-- Columnas que el codigo ya usaba y que se conservan sobre el esquema original:
+-- Alertas.Atendida_por_usuarioID, Usuario.Ultimo_acceso, Usuario.Password_changed_at, Usuario.Estado (default + CHECK), Retos.Orden,
+-- Seguimientos.Referencia_cliente (+ unico por usuario) y Perfil_mentor.Reto_requeridoID.
 -- Los nombres sin comillas se normalizan a minusculas en PostgreSQL.
 -- Hipotesis de cardinalidad documentadas en README_AUDITORIA.md.
 BEGIN;

@@ -47,7 +47,9 @@ class Settings(BaseSettings):
     ollama_embed_model: str = "nomic-embed-text"
     ollama_chat_model: str = "llama3.2"
     ollama_timeout_seconds: float = 60.0
-    ai_min_similarity: float = 0.55
+    # Calibrado con nomic-embed-text: lo relevante sale entre 0.69 y 0.79 y lo que no
+    # tiene relacion llega a 0.60; con 0.55 se colaban fuentes falsas. Ajustable por entorno.
+    ai_min_similarity: float = 0.65
     ai_top_k: int = 4
 
     # Carga de archivos (modulo documents).
@@ -59,13 +61,12 @@ class Settings(BaseSettings):
         return self.environment.lower() == "production"
 
     @model_validator(mode="after")
-    def _check_production_secrets(self) -> "Settings":
-        """En produccion no se arranca con un secreto debil o de ejemplo."""
-        if self.is_production and (
-            len(self.jwt_secret) < 32 or self.jwt_secret.startswith("cambia-este")
-        ):
+    def _check_secrets(self) -> "Settings":
+        """No se arranca con un secreto debil o de ejemplo, en ningun entorno."""
+        if len(self.jwt_secret) < 32 or self.jwt_secret.startswith("cambia-este"):
             raise ValueError(
-                "JWT_SECRET debe tener al menos 32 caracteres y no ser el de ejemplo."
+                "JWT_SECRET debe tener al menos 32 caracteres y no ser el de ejemplo. "
+                'Genera uno: python -c "import secrets; print(secrets.token_urlsafe(48))"'
             )
         return self
 

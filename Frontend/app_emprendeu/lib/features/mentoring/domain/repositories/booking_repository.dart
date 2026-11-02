@@ -1,0 +1,33 @@
+import '../../../../core/error/result.dart';
+import '../entities/booking_status.dart';
+import '../entities/history_event.dart';
+import '../entities/mentor.dart';
+import '../entities/mentoring_session.dart';
+import '../entities/time_slot.dart';
+
+/// Agendar mentorías y consultar las sesiones propias (requiere conexión).
+abstract interface class BookingRepository {
+  Future<Result<BookingStatus>> getBookingStatus();
+
+  /// Asesores asignados al emprendimiento del usuario (y habilitados).
+  Future<Result<List<Mentor>>> getMentors();
+
+  /// Turnos del asesor en [day] (día de la agenda).
+  Future<Result<List<TimeSlot>>> getSlots(int mentorId, DateTime day);
+
+  Future<Result<MentoringSession>> book({
+    required int mentorId,
+    required DateTime start,
+    String? topic,
+  });
+
+  /// Línea de tiempo del emprendimiento del usuario; [newestFirst] invierte el orden.
+  Future<Result<List<HistoryEvent>>> getHistory({bool newestFirst = true});
+
+  /// Sesiones del usuario; [from] y [to] son días inclusive.
+  Future<Result<List<MentoringSession>>> getMySessions(
+    SessionFilter filter, {
+    DateTime? from,
+    DateTime? to,
+  });
+}

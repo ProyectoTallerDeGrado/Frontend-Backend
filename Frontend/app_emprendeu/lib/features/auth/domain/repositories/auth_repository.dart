@@ -14,6 +14,13 @@ abstract interface class AuthRepository {
     required String password,
   });
 
+  /// Cambia la contraseña. El servidor invalida los tokens anteriores y devuelve
+  /// una sesión nueva; no guarda nada (lo hace el caso de uso).
+  Future<Result<AuthSession>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
   /// Usuario dueño del token (`GET /auth/me`).
   Future<Result<AuthUser>> fetchCurrentUser(String token);
 

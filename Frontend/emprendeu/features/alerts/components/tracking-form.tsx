@@ -153,6 +153,35 @@ export function TrackingForm({ initial, canEdit, canEvaluate }: Props) {
             </div>
           ))}
         </section>
+        <section className={card}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="mb-1 font-heading text-lg font-semibold">Plazo de los compromisos</h2>
+              <p className="max-w-[460px] text-sm leading-normal text-muted-foreground">
+                Cuando un asesor deja un compromiso sin fecha límite, vence después de este plazo.
+              </p>
+            </div>
+            <div className="font-heading text-[34px] font-bold tracking-[-.02em] whitespace-nowrap text-primary">
+              {draft.dias_limite_compromiso}
+              <span className="text-[15px] font-semibold text-muted-foreground"> días</span>
+            </div>
+          </div>
+          <div className="mt-3 flex h-11 items-center">
+            <Slider
+              min={1}
+              max={30}
+              step={1}
+              value={[draft.dias_limite_compromiso]}
+              disabled={!canEdit}
+              thumbLabel="Plazo de los compromisos"
+              onValueChange={(v) => set("dias_limite_compromiso", Array.isArray(v) ? v[0] : v)}
+            />
+          </div>
+          <div className="flex justify-between text-[13px] text-muted-foreground">
+            <span>1 día</span>
+            <span>30 días</span>
+          </div>
+        </section>
       </div>
 
       <aside className="flex min-w-[280px] flex-[0_1_340px] animate-[fade-up_.5s_.1s_ease_both] flex-col gap-[18px] rounded-2xl bg-navy-900 p-6 text-white">
@@ -167,6 +196,7 @@ export function TrackingForm({ initial, canEdit, canEvaluate }: Props) {
             ["Inactividad", `${draft.inactividad_dias} días`],
             ["Caída de sentimiento", `≥ ${draft.caida_sentimiento_pct} %`],
             ["Periodos consecutivos", String(draft.periodos_consecutivos)],
+            ["Plazo de compromisos", `${draft.dias_limite_compromiso} días`],
             [
               "Alertas activas",
               `${[draft.notificar_coordinador, draft.notificar_asesor, draft.alertar_incumplimiento].filter(Boolean).length} de 3`,

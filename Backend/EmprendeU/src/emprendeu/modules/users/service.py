@@ -12,8 +12,9 @@ from emprendeu.core.pagination import PageParams
 from emprendeu.core.ratelimit import SlidingWindowLimiter
 from emprendeu.core.security import (
     create_access_token,
-    decode_access_token,
+    decode_token_claims,
     hash_password,
+    to_microseconds,
     verify_password,
 )
 from emprendeu.modules.audit import AuditService
@@ -154,12 +155,15 @@ class UserService:
         return user
 
     async def authenticate(self, token: str) -> CurrentUser:
-        usuario_id = decode_access_token(token)
-        user = await self._repo.get_user(usuario_id)
+        claims = decode_token_claims(token)
+        user = await self._repo.get_user(claims.usuario_id)
         if user is None:
             raise Unauthorized("Token invalido o expirado")
         if user.estado == DISABLED:
             raise AccountDisabled
+        changed = user.password_changed_at
+        if changed is not None and claims.issued_us < to_microseconds(changed):
+            raise Unauthorized("La contrasena cambio: inicia sesion de nuevo.")
         return await self.current_user(user)
 
     async def get_user(self, usuario_id: int) -> Usuario:
@@ -214,6 +218,35 @@ class UserService:
         await self._repo.commit()
         return user, temporary
 
+    async def register_entrepreneur(
+        self,
+        actor: CurrentUser,
+        nombre_completo: str,
+        email: str,
+        documento_identidad: str,
+        password: str | None,
+    ) -> tuple[Usuario, str | None]:
+        """CU04: cuenta + perfil de emprendedor + documento, todo o nada.
+
+        El documento se comprueba antes de crear nada; el commit es uno solo.
+        """
+        await self._entrepreneurs.ensure_document_free(documento_identidad)
+        temporary = None if password else secrets.token_urlsafe(9)
+        user = await self._create_account(
+            nombre_completo, email, password or temporary or "", DEFAULT_ROLE
+        )
+        await self._entrepreneurs.set_document(user.usuario_id, documento_identidad)
+        await self._audit.record(
+            actor.usuario_id,
+            "usuarios.crear",
+            f"{user.nombre} {user.apellido}",
+            tabla="usuario",
+            id_registro=user.usuario_id,
+            despues={"rol": DEFAULT_ROLE, "origen": "registro de emprendedor"},
+        )
+        await self._repo.commit()
+        return user, temporary
+
     async def change_role(
         self, actor: CurrentUser, usuario_id: int, rol: str
     ) -> Usuario:
@@ -239,7 +272,13 @@ class UserService:
         await self._repo.commit()
         return await self.get_user(usuario_id)
 
-    async def change_password(self, usuario_id: int, current: str, new: str) -> None:
+    async def change_password(
+        self, usuario_id: int, current: str, new: str
+    ) -> tuple[Usuario, str, int]:
+        """Cambia la clave e invalida todos los tokens anteriores.
+
+        Devuelve un token nuevo para que el cliente que la cambio siga con sesion.
+        """
         user = await self.get_user(usuario_id)
         if not verify_password(current, user.password_hash):
             raise WrongCurrentPassword
@@ -248,6 +287,8 @@ class UserService:
             usuario_id, "usuarios.cambiar_clave", f"{user.nombre} {user.apellido}"
         )
         await self._repo.commit()
+        token, expires_in = create_access_token(user.usuario_id)
+        return user, token, expires_in
 
     async def mentors(self) -> list[Usuario]:
         """Usuarios con rol asesor y cuenta habilitada (para el modulo mentoring)."""

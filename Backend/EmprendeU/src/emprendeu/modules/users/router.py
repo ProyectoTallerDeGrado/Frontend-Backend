@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Request, status
 
 from emprendeu.core.pagination import Page, PageParamsDep
 from emprendeu.modules.users.dependencies import (
@@ -72,14 +72,19 @@ async def me(current: CurrentUserDep, service: UserServiceDep) -> CurrentUserOut
     return _current_out(user, current)
 
 
-@auth_router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+@auth_router.post("/change-password", response_model=TokenResponse)
 async def change_password(
     body: PasswordChange, current: CurrentUserDep, service: UserServiceDep
-) -> Response:
-    await service.change_password(
+) -> TokenResponse:
+    """Cambia la clave. Los tokens anteriores dejan de valer; se devuelve uno nuevo."""
+    user, token, expires_in = await service.change_password(
         current.usuario_id, body.password_actual, body.password_nueva
     )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return TokenResponse(
+        access_token=token,
+        expires_in=expires_in,
+        user=_current_out(user, await service.current_user(user)),
+    )
 
 
 @users_router.get("", response_model=Page[UserOut])

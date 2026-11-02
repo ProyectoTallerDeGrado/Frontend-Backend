@@ -23,6 +23,7 @@ class Documento(Base):
     __table_args__ = (
         Index("ix_documentos_usuarioid", "usuarioid"),
         Index("ix_documentos_emprendimientoid", "emprendimientoid"),
+        Index("ix_documentos_hitoid", "hitoid"),
     )
 
     fecha_subida: Mapped[datetime | None] = mapped_column(
@@ -49,4 +50,10 @@ class Documento(Base):
             ondelete="RESTRICT",
             name="fk_documentos_emprendimientoid",
         ),
+    )
+    # Evidencia de un hito (CU20); el modulo ventures es dueno de la tabla `hito`.
+    hito_id: Mapped[int | None] = mapped_column(
+        "hitoid",
+        BigInteger,
+        ForeignKey("hito.hitoid", ondelete="RESTRICT", name="fk_documentos_hitoid"),
     )

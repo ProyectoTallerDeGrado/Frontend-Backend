@@ -30,6 +30,18 @@ abstract final class AuthValidators {
     return null;
   }
 
+  /// La contraseña nueva no puede repetir la actual.
+  static String? Function(String?) differentFrom(String Function() current) {
+    return (value) {
+      final base = newPassword(value);
+      if (base != null) return base;
+      if (value == current()) {
+        return 'La contraseña nueva debe ser distinta de la actual.';
+      }
+      return null;
+    };
+  }
+
   /// Devuelve un validador que compara con la contraseña original.
   static String? Function(String?) confirmPassword(String Function() original) {
     return (value) {

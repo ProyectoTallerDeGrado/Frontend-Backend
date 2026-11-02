@@ -286,7 +286,7 @@ as String,
 /// @nodoc
 mixin _$VentureDto {
 
-@JsonKey(name: 'emprendimiento_id') int get emprendimientoId; String get nombre;@JsonKey(name: 'etapa_actual') StageDto? get etapaActual;
+@JsonKey(name: 'emprendimiento_id') int get emprendimientoId; String get nombre;@JsonKey(name: 'etapa_actual') StageDto? get etapaActual; String? get descripcion; String? get sector; String? get estado;
 /// Create a copy of VentureDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -300,20 +300,20 @@ $VentureDtoCopyWith<VentureDto> get copyWith => _$VentureDtoCopyWithImpl<Venture
 @override
 bool operator ==(Object other) {
   final _this = this as VentureDto;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is VentureDto&&(identical(other.emprendimientoId, _this.emprendimientoId) || other.emprendimientoId == _this.emprendimientoId)&&(identical(other.nombre, _this.nombre) || other.nombre == _this.nombre)&&(identical(other.etapaActual, _this.etapaActual) || other.etapaActual == _this.etapaActual));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is VentureDto&&(identical(other.emprendimientoId, _this.emprendimientoId) || other.emprendimientoId == _this.emprendimientoId)&&(identical(other.nombre, _this.nombre) || other.nombre == _this.nombre)&&(identical(other.etapaActual, _this.etapaActual) || other.etapaActual == _this.etapaActual)&&(identical(other.descripcion, _this.descripcion) || other.descripcion == _this.descripcion)&&(identical(other.sector, _this.sector) || other.sector == _this.sector)&&(identical(other.estado, _this.estado) || other.estado == _this.estado));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as VentureDto;
-  return Object.hash(runtimeType,_this.emprendimientoId,_this.nombre,_this.etapaActual);
+  return Object.hash(runtimeType,_this.emprendimientoId,_this.nombre,_this.etapaActual,_this.descripcion,_this.sector,_this.estado);
 }
 
 @override
 String toString() {
   final _this = this as VentureDto;
-  return 'VentureDto(emprendimientoId: ${_this.emprendimientoId}, nombre: ${_this.nombre}, etapaActual: ${_this.etapaActual})';
+  return 'VentureDto(emprendimientoId: ${_this.emprendimientoId}, nombre: ${_this.nombre}, etapaActual: ${_this.etapaActual}, descripcion: ${_this.descripcion}, sector: ${_this.sector}, estado: ${_this.estado})';
 }
 
 
@@ -324,7 +324,7 @@ abstract mixin class $VentureDtoCopyWith<$Res>  {
   factory $VentureDtoCopyWith(VentureDto value, $Res Function(VentureDto) _then) = _$VentureDtoCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'emprendimiento_id') int emprendimientoId, String nombre,@JsonKey(name: 'etapa_actual') StageDto? etapaActual
+@JsonKey(name: 'emprendimiento_id') int emprendimientoId, String nombre,@JsonKey(name: 'etapa_actual') StageDto? etapaActual, String? descripcion, String? sector, String? estado
 });
 
 
@@ -341,12 +341,15 @@ class _$VentureDtoCopyWithImpl<$Res>
 
 /// Create a copy of VentureDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? emprendimientoId = null,Object? nombre = null,Object? etapaActual = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? emprendimientoId = null,Object? nombre = null,Object? etapaActual = freezed,Object? descripcion = freezed,Object? sector = freezed,Object? estado = freezed,}) {
   return _then(VentureDto(
 emprendimientoId: null == emprendimientoId ? _self.emprendimientoId : emprendimientoId // ignore: cast_nullable_to_non_nullable
 as int,nombre: null == nombre ? _self.nombre : nombre // ignore: cast_nullable_to_non_nullable
 as String,etapaActual: freezed == etapaActual ? _self.etapaActual : etapaActual // ignore: cast_nullable_to_non_nullable
-as StageDto?,
+as StageDto?,descripcion: freezed == descripcion ? _self.descripcion : descripcion // ignore: cast_nullable_to_non_nullable
+as String?,sector: freezed == sector ? _self.sector : sector // ignore: cast_nullable_to_non_nullable
+as String?,estado: freezed == estado ? _self.estado : estado // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 /// Create a copy of VentureDto
@@ -443,10 +446,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'emprendimiento_id')  int emprendimientoId,  String nombre, @JsonKey(name: 'etapa_actual')  StageDto? etapaActual)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'emprendimiento_id')  int emprendimientoId,  String nombre, @JsonKey(name: 'etapa_actual')  StageDto? etapaActual,  String? descripcion,  String? sector,  String? estado)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _VentureDto() when $default != null:
-return $default(_that.emprendimientoId,_that.nombre,_that.etapaActual);case _:
+return $default(_that.emprendimientoId,_that.nombre,_that.etapaActual,_that.descripcion,_that.sector,_that.estado);case _:
   return orElse();
 
 }
@@ -464,10 +467,10 @@ return $default(_that.emprendimientoId,_that.nombre,_that.etapaActual);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'emprendimiento_id')  int emprendimientoId,  String nombre, @JsonKey(name: 'etapa_actual')  StageDto? etapaActual)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'emprendimiento_id')  int emprendimientoId,  String nombre, @JsonKey(name: 'etapa_actual')  StageDto? etapaActual,  String? descripcion,  String? sector,  String? estado)  $default,) {final _that = this;
 switch (_that) {
 case _VentureDto():
-return $default(_that.emprendimientoId,_that.nombre,_that.etapaActual);case _:
+return $default(_that.emprendimientoId,_that.nombre,_that.etapaActual,_that.descripcion,_that.sector,_that.estado);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -484,10 +487,10 @@ return $default(_that.emprendimientoId,_that.nombre,_that.etapaActual);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'emprendimiento_id')  int emprendimientoId,  String nombre, @JsonKey(name: 'etapa_actual')  StageDto? etapaActual)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'emprendimiento_id')  int emprendimientoId,  String nombre, @JsonKey(name: 'etapa_actual')  StageDto? etapaActual,  String? descripcion,  String? sector,  String? estado)?  $default,) {final _that = this;
 switch (_that) {
 case _VentureDto() when $default != null:
-return $default(_that.emprendimientoId,_that.nombre,_that.etapaActual);case _:
+return $default(_that.emprendimientoId,_that.nombre,_that.etapaActual,_that.descripcion,_that.sector,_that.estado);case _:
   return null;
 
 }
@@ -499,12 +502,15 @@ return $default(_that.emprendimientoId,_that.nombre,_that.etapaActual);case _:
 @JsonSerializable()
 
 class _VentureDto extends VentureDto {
-  const _VentureDto({@JsonKey(name: 'emprendimiento_id') required this.emprendimientoId, required this.nombre, @JsonKey(name: 'etapa_actual') this.etapaActual}): super._();
+  const _VentureDto({@JsonKey(name: 'emprendimiento_id') required this.emprendimientoId, required this.nombre, @JsonKey(name: 'etapa_actual') this.etapaActual, this.descripcion, this.sector, this.estado}): super._();
   factory _VentureDto.fromJson(Map<String, dynamic> json) => _$VentureDtoFromJson(json);
 
 @override@JsonKey(name: 'emprendimiento_id') final  int emprendimientoId;
 @override final  String nombre;
 @override@JsonKey(name: 'etapa_actual') final  StageDto? etapaActual;
+@override final  String? descripcion;
+@override final  String? sector;
+@override final  String? estado;
 
 /// Create a copy of VentureDto
 /// with the given fields replaced by the non-null parameter values.
@@ -519,18 +525,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _VentureDto&&(identical(other.emprendimientoId, emprendimientoId) || other.emprendimientoId == emprendimientoId)&&(identical(other.nombre, nombre) || other.nombre == nombre)&&(identical(other.etapaActual, etapaActual) || other.etapaActual == etapaActual));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _VentureDto&&(identical(other.emprendimientoId, emprendimientoId) || other.emprendimientoId == emprendimientoId)&&(identical(other.nombre, nombre) || other.nombre == nombre)&&(identical(other.etapaActual, etapaActual) || other.etapaActual == etapaActual)&&(identical(other.descripcion, descripcion) || other.descripcion == descripcion)&&(identical(other.sector, sector) || other.sector == sector)&&(identical(other.estado, estado) || other.estado == estado));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,emprendimientoId,nombre,etapaActual);
+    return Object.hash(runtimeType,emprendimientoId,nombre,etapaActual,descripcion,sector,estado);
 }
 
 @override
 String toString() {
-    return 'VentureDto(emprendimientoId: $emprendimientoId, nombre: $nombre, etapaActual: $etapaActual)';
+    return 'VentureDto(emprendimientoId: $emprendimientoId, nombre: $nombre, etapaActual: $etapaActual, descripcion: $descripcion, sector: $sector, estado: $estado)';
 }
 
 
@@ -541,7 +547,7 @@ abstract mixin class _$VentureDtoCopyWith<$Res> implements $VentureDtoCopyWith<$
   factory _$VentureDtoCopyWith(_VentureDto value, $Res Function(_VentureDto) _then) = __$VentureDtoCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'emprendimiento_id') int emprendimientoId, String nombre,@JsonKey(name: 'etapa_actual') StageDto? etapaActual
+@JsonKey(name: 'emprendimiento_id') int emprendimientoId, String nombre,@JsonKey(name: 'etapa_actual') StageDto? etapaActual, String? descripcion, String? sector, String? estado
 });
 
 
@@ -558,12 +564,15 @@ class __$VentureDtoCopyWithImpl<$Res>
 
 /// Create a copy of VentureDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? emprendimientoId = null,Object? nombre = null,Object? etapaActual = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? emprendimientoId = null,Object? nombre = null,Object? etapaActual = freezed,Object? descripcion = freezed,Object? sector = freezed,Object? estado = freezed,}) {
   return _then(_VentureDto(
 emprendimientoId: null == emprendimientoId ? _self.emprendimientoId : emprendimientoId // ignore: cast_nullable_to_non_nullable
 as int,nombre: null == nombre ? _self.nombre : nombre // ignore: cast_nullable_to_non_nullable
 as String,etapaActual: freezed == etapaActual ? _self.etapaActual : etapaActual // ignore: cast_nullable_to_non_nullable
-as StageDto?,
+as StageDto?,descripcion: freezed == descripcion ? _self.descripcion : descripcion // ignore: cast_nullable_to_non_nullable
+as String?,sector: freezed == sector ? _self.sector : sector // ignore: cast_nullable_to_non_nullable
+as String?,estado: freezed == estado ? _self.estado : estado // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

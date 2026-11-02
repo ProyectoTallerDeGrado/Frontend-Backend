@@ -11,7 +11,7 @@ from emprendeu.modules.ventures.models import (
     Hito,
     Necesidad,
 )
-from emprendeu.modules.ventures.service import StageRef, VentureService
+from emprendeu.modules.ventures.service import StageRef, VentureRef, VentureService
 
 __all__ = [
     "Emprendimiento",
@@ -21,5 +21,6 @@ __all__ = [
     "Hito",
     "Necesidad",
     "StageRef",
+    "VentureRef",
     "VentureService",
 ]

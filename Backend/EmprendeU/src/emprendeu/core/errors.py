@@ -4,6 +4,7 @@ from typing import Any
 
 import structlog
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -90,7 +91,11 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=422,
             content=_payload(
-                "validation_error", "Datos de entrada invalidos", exc.errors()
+                "validation_error",
+                "Datos de entrada invalidos",
+                # `ctx` puede traer la excepcion original (un ValueError de un
+                # validador): se pasa a texto para que sea serializable.
+                jsonable_encoder(exc.errors(), custom_encoder={Exception: str}),
             ),
         )
 

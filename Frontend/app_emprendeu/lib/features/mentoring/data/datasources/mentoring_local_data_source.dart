@@ -88,7 +88,7 @@ class MentoringLocalDataSource {
         for (final e in (jsonDecode(raw) as List).cast<Map<String, dynamic>>())
           Commitment(
             id: e['id'] as int,
-            sessionId: e['session'] as int,
+            sessionId: e['session'] as int?,
             description: e['text'] as String,
             done: e['done'] as bool,
             dueDate: DateTime.tryParse(e['due'] as String? ?? '')?.toLocal(),
