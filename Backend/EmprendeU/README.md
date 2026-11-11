@@ -85,7 +85,7 @@ uv run alembic upgrade head
 uv run python -m emprendeu.modules.users.cli create-admin \
     --email admin@uagrm.edu.bo --nombre "Nombre Apellido"      # pide la contraseña
 uv run uvicorn emprendeu.main:app --reload --port 8000
-```
+```http://localhost:3000
 
 ### Con Docker
 
