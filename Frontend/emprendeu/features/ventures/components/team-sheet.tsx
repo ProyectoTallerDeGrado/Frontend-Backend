@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { addVentureMemberAction, removeVentureMemberAction } from "../server/actions";
 import { MEMBER_ROLES, type MemberRole } from "../schemas/ventures-schemas";
 import type { Venture, VentureMember } from "../types";
-import { ROLE_LABELS, roleLabel, type Option } from "./team-picker";
+import { ROLE_LABELS, roleLabel } from "../roles";
+import type { Option } from "./team-picker";
 
 function fullName(m: VentureMember): string {
   return `${m.nombre ?? ""} ${m.apellido ?? ""}`.trim() || m.email || `Emprendedor ${m.emprendedor_id}`;

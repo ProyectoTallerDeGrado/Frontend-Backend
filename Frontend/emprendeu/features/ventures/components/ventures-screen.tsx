@@ -9,7 +9,7 @@ import { listEntrepreneurOptions } from "@/features/entrepreneurs";
 import { VENTURES_PAGE_SIZE, listStages, listVentures } from "../server/queries";
 import type { Stage } from "../types";
 import { AdvanceStageSheet } from "./advance-stage-sheet";
-import { roleLabel } from "./team-picker";
+import { roleLabel } from "../roles";
 import { TeamSheet } from "./team-sheet";
 import { EditVentureSheet, NewVentureSheet } from "./venture-form-sheet";
 

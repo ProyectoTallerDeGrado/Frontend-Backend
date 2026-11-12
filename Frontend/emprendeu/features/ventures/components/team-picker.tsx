@@ -6,19 +6,10 @@ import { inputClass } from "@/components/forms/form-bits";
 import { Button } from "@/components/ui/button";
 
 import { MEMBER_ROLES, type MemberRole } from "../schemas/ventures-schemas";
+import { ROLE_LABELS } from "../roles";
 
 export type Option = { id: number; name: string };
 export type TeamRow = { entrepreneurId: number | null; role: MemberRole };
-
-export const ROLE_LABELS: Record<MemberRole, string> = {
-  fundador: "Fundador",
-  cofundador: "Cofundador",
-  miembro: "Miembro",
-};
-
-export function roleLabel(role: string | null): string {
-  return role && role in ROLE_LABELS ? ROLE_LABELS[role as MemberRole] : (role ?? "Integrante");
-}
 
 /** Filas «emprendedor + rol» del equipo inicial. Un emprendedor no se repite entre filas. */
 export function TeamPicker({

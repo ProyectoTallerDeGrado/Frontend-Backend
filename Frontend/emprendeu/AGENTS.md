@@ -174,7 +174,11 @@ mismos nombres que los módulos del backend (regla global §4.6). Registra aquí
 5. **Frontera servidor/cliente explícita.** Server Component por defecto.
    `'use client'` solo en la hoja del árbol que realmente necesita interactividad,
    nunca en un layout o página completa "por comodidad". Los archivos de
-   `features/<f>/server/` llevan `import 'server-only'`.
+   `features/<f>/server/` llevan `import 'server-only'`. Las funciones o constantes que
+   usan a la vez Server y Client Components (etiquetas, formateadores, como
+   `features/users/roles.ts` o `features/ventures/roles.ts`) van en un módulo **sin**
+   `'use client'`: un Server Component no puede llamar a una función exportada desde un
+   archivo de cliente (da `Attempted to call X() from the server`).
 6. **Acceso a datos**: desde Server Components y server actions en
    `features/<f>/server/`, usando el cliente de `lib/api-client.ts`. Un componente
    cliente no hace `fetch` directo al backend; recibe props o llama a una server action.
