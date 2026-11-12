@@ -179,7 +179,7 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 | `users` ✅ | `POST /auth/login`, `/auth/register`, `/auth/change-password`, `GET /auth/me`; `GET/POST /users`, `PATCH /users/{id}/estado`, `/users/{id}/rol`; `GET/POST /roles`, `PATCH/DELETE /roles/{id}` (solo roles personalizados), `GET/PUT /roles/{id}/permissions` |
 | `audit` ✅ | `GET /audit`, `GET /audit/export` (CSV); `AuditService.record(...)` para el resto de módulos |
 | `entrepreneurs` ✅ | `GET/POST /entrepreneurs` (el alta crea usuario + emprendedor), `/entrepreneurs/me` (GET/PATCH), `/entrepreneurs/{id}` |
-| `ventures` ✅ | `/stages`, `/ventures` (CRUD, `/me`, `PUT /{id}/stage`, historial), hitos (`/milestones`), necesidades (`/needs`) |
+| `ventures` ✅ | `/stages`, `/ventures` (CRUD, `/me`, `PUT /{id}/stage`, historial), equipo (`GET/POST /ventures/{id}/members`, `DELETE /ventures/{id}/members/{emprendedor_id}`), hitos (`/milestones`), necesidades (`/needs`) |
 | `gamification` ✅ | `/challenges`, `/badges` (catálogo), `GET /journey`, `POST /journey/challenges/{id}/complete`, `GET /gamification/me` |
 | `mentoring` ✅ | `/mentoring/mentors` (+ `PUT {id}/enabled`, perfil, `slots`, horarios: `GET/PUT/POST {id}/availability`, `PATCH/DELETE /availability/{id}`), `booking-status`, `sessions` (agendar, `me` y lista con filtros `estado/desde/hasta`, `register`, completar, cancelar), `commitments` (`POST`, `me`), `recommendations` (`POST`, `me`), `progress`, `POST /mentoring/sync`, `assignments`, historial `GET /mentoring/ventures/{id}/history` y `/ventures/me/history` |
 | `alerts` ✅ | `GET/PUT /alerts/settings`, `GET /alerts`, `PATCH /alerts/{id}` (`revisada`, `atendida`, `descartada`), `POST /alerts/evaluate`; tarea `alerts/jobs.py` |
@@ -298,8 +298,13 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
   y no al revés); devuelve la clave temporal una sola vez. El documento de identidad es único sin distinguir
   mayúsculas ni espacios (409 `document_already_registered`), también al editar el perfil propio. **Esa unicidad
   se valida en el servicio: el esquema de referencia no define un índice único sobre `emprendedor.documento_identidad`.**
-  El personal con `emprendedores:registro` crea un emprendimiento **de un emprendedor concreto** (`emprendedor_id`,
-  422 `entrepreneur_required` si falta); un emprendedor solo crea los suyos. Un emprendedor edita el suyo pero el
+  El personal con `emprendedores:registro` crea un emprendimiento **con su equipo**: `integrantes` (1 a 20, rol
+  `fundador`/`cofundador`/`miembro`; `emprendedor_id` es el atajo de uno solo, como fundador; 422 `entrepreneur_required`
+  si no hay ninguno, `duplicate_member`, `entrepreneur_not_found`); un emprendedor solo crea los suyos y queda como
+  fundador. El equipo lo gestiona solo el personal con `emprendedores:modificacion` (409 `already_member`, 404
+  `member_not_found`, 409 `last_member`: nunca queda vacío) y cada `VentureOut` trae `integrantes`. **Un emprendedor
+  puede estar en varios emprendimientos**: sus endpoints aceptan `emprendimiento_id` (también `POST /ai/chat` para una
+  conversación nueva) y, sin indicarlo, usan el primero (`EntrepreneurRef.primary_venture_id`). Un emprendedor edita el suyo pero el
   `estado` es campo reservado (403 `reserved_fields`, `details.campos`). El camino de un emprendimiento
   (`GET /journey?emprendimiento_id=`) lo ve cualquier personal con `seguimiento:consulta`; cumplir retos es solo del
   emprendedor miembro. La evidencia de un hito se sube con `POST /documents` + `hito_id`: el hito debe ser del mismo

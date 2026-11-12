@@ -53,11 +53,16 @@ class FakeBookingRepository implements BookingRepository {
   int bookCalls = 0;
   String? lastTopic;
 
-  @override
-  Future<Result<BookingStatus>> getBookingStatus() async => Result.ok(status);
+  /// Último emprendimiento con el que se agendó.
+  int? lastVentureId;
 
   @override
-  Future<Result<List<Mentor>>> getMentors() async => Result.ok(mentors);
+  Future<Result<BookingStatus>> getBookingStatus({int? ventureId}) async =>
+      Result.ok(status);
+
+  @override
+  Future<Result<List<Mentor>>> getMentors({int? ventureId}) async =>
+      Result.ok(mentors);
 
   @override
   Future<Result<List<TimeSlot>>> getSlots(int mentorId, DateTime day) async {
@@ -82,9 +87,11 @@ class FakeBookingRepository implements BookingRepository {
     required int mentorId,
     required DateTime start,
     String? topic,
+    int? ventureId,
   }) async {
     bookCalls++;
     lastTopic = topic;
+    lastVentureId = ventureId;
     if (_taken.contains(start)) {
       return const Result.err(SlotUnavailableFailure());
     }
@@ -120,6 +127,7 @@ class FakeBookingRepository implements BookingRepository {
   @override
   Future<Result<List<HistoryEvent>>> getHistory({
     bool newestFirst = true,
+    int? ventureId,
   }) async {
     lastNewestFirst = newestFirst;
     return Result.ok(history);

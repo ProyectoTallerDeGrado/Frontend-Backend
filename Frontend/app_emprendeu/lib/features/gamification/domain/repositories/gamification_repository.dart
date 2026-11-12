@@ -4,9 +4,13 @@ import '../entities/gamification_profile.dart';
 import '../entities/journey.dart';
 
 abstract interface class GamificationRepository {
-  Future<Result<Journey>> getJourney();
+  /// Camino de [ventureId]; sin indicarlo, el del primer emprendimiento.
+  Future<Result<Journey>> getJourney({int? ventureId});
 
-  Future<Result<CompletionResult>> completeChallenge(int challengeId);
+  Future<Result<CompletionResult>> completeChallenge(
+    int challengeId, {
+    int? ventureId,
+  });
 
   Future<Result<GamificationProfile>> getProfile();
 }

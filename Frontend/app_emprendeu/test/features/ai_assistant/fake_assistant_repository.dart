@@ -24,16 +24,22 @@ class FakeAssistantRepository implements AssistantRepository {
   int askCalls = 0;
   String? lastMessage;
   int? lastConversationId;
+  int? lastVentureId;
 
   @override
   Future<Result<CoachConversation?>> getLatestConversation() async =>
       Result.ok(conversation);
 
   @override
-  Future<Result<CoachReply>> ask(String message, {int? conversationId}) async {
+  Future<Result<CoachReply>> ask(
+    String message, {
+    int? conversationId,
+    int? ventureId,
+  }) async {
     askCalls++;
     lastMessage = message;
     lastConversationId = conversationId;
+    lastVentureId = ventureId;
     if (failure != null) return Result.err(failure!);
     final id = conversationId ?? 77;
     return Result.ok(

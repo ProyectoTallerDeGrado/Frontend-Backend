@@ -91,31 +91,37 @@ class MentoringRepositoryImpl implements MentoringRepository {
 
   // --- avances -----------------------------------------------------------------
 
-  List<ProgressLog> _pendingLogs(List<PendingOp> ops) => [
+  List<ProgressLog> _pendingLogs(List<PendingOp> ops, int? ventureId) => [
     for (final op in ops.whereType<PendingProgressOp>().toList().reversed)
-      ProgressLog(
-        clientRef: op.clientRef,
-        text: op.text,
-        createdAt: op.at,
-        pendingSync: true,
-      ),
+      if (op.ventureId == null ||
+          ventureId == null ||
+          op.ventureId == ventureId)
+        ProgressLog(
+          clientRef: op.clientRef,
+          text: op.text,
+          createdAt: op.at,
+          pendingSync: true,
+        ),
   ];
 
   @override
-  Future<Result<List<ProgressLog>>> getProgressLogs() async {
+  Future<Result<List<ProgressLog>>> getProgressLogs({int? ventureId}) async {
     final ops = await _local.readOps();
     final remote = await _guard(
-      () async => (await _remote.progress()).map((d) => d.toEntity()).toList(),
+      () async =>
+          (await _remote.progress(ventureId: ventureId))
+              .map((d) => d.toEntity())
+              .toList(),
     );
     switch (remote) {
       case Ok(:final value):
         await _local.saveProgress(value);
-        return Result.ok([..._pendingLogs(ops), ...value]);
+        return Result.ok([..._pendingLogs(ops, ventureId), ...value]);
       case Err(:final failure):
         if (failure is NetworkFailure) {
           final cached = await _local.readProgress();
           if (cached != null) {
-            return Result.ok([..._pendingLogs(ops), ...cached]);
+            return Result.ok([..._pendingLogs(ops, ventureId), ...cached]);
           }
         }
         return Result.err(failure);
@@ -123,16 +129,20 @@ class MentoringRepositoryImpl implements MentoringRepository {
   }
 
   @override
-  Future<Result<ProgressLog>> logProgress(String text) async {
+  Future<Result<ProgressLog>> logProgress(String text, {int? ventureId}) async {
     final ref = generateClientRef();
-    final result = await _guard(() => _remote.logProgress(text, ref));
+    final result = await _guard(
+      () => _remote.logProgress(text, ref, ventureId: ventureId),
+    );
     switch (result) {
       case Ok(:final value):
         return Result.ok(value.toEntity());
       case Err(:final failure):
         if (failure is NetworkFailure) {
           final now = DateTime.now();
-          await _local.enqueue(PendingProgressOp(ref, text, now));
+          await _local.enqueue(
+            PendingProgressOp(ref, text, now, ventureId: ventureId),
+          );
           return Result.ok(
             ProgressLog(
               clientRef: ref,

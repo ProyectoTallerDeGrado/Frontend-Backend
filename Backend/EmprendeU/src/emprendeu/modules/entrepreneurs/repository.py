@@ -175,3 +175,35 @@ class EntrepreneurRepository:
             EmprendimientoEmprendedor.emprendedor_id == emprendedor_id
         )
         return list((await self._session.execute(stmt)).scalars().all())
+
+    async def members_of_ventures(
+        self, emprendimiento_ids: list[int]
+    ) -> list[tuple[EmprendimientoEmprendedor, Emprendedor]]:
+        """Integrantes (vinculo + perfil) de varios emprendimientos, por antiguedad."""
+        if not emprendimiento_ids:
+            return []
+        stmt = (
+            select(EmprendimientoEmprendedor, Emprendedor)
+            .join(
+                Emprendedor,
+                Emprendedor.emprendedor_id == EmprendimientoEmprendedor.emprendedor_id,
+            )
+            .where(EmprendimientoEmprendedor.emprendimiento_id.in_(emprendimiento_ids))
+            .order_by(
+                EmprendimientoEmprendedor.emprendimiento_id,
+                EmprendimientoEmprendedor.emprendimiento_emprendedor_id,
+            )
+        )
+        return [(r[0], r[1]) for r in (await self._session.execute(stmt)).all()]
+
+    async def unlink(self, emprendedor_id: int, emprendimiento_id: int) -> bool:
+        stmt = select(EmprendimientoEmprendedor).where(
+            EmprendimientoEmprendedor.emprendedor_id == emprendedor_id,
+            EmprendimientoEmprendedor.emprendimiento_id == emprendimiento_id,
+        )
+        found = (await self._session.execute(stmt)).scalar_one_or_none()
+        if found is None:
+            return False
+        await self._session.delete(found)
+        await self._session.flush()
+        return True

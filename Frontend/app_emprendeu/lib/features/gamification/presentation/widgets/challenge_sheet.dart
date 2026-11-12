@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/result.dart';
+import '../../../ventures/index.dart';
 import '../../domain/entities/completion_result.dart';
 import '../../domain/entities/journey.dart';
 import '../controllers/gamification_providers.dart';
@@ -43,8 +44,10 @@ class _ChallengeSheetState extends ConsumerState<_ChallengeSheet> {
       _saving = true;
       _error = null;
     });
+    final ventureId = await ref.read(currentVentureIdProvider.future);
     final result = await ref.read(completeChallengeUseCaseProvider)(
       widget.challenge.id,
+      ventureId: ventureId,
     );
     if (!mounted) return;
     switch (result) {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +28,20 @@ class EntrepreneurRef:
     @property
     def primary_venture_id(self) -> int | None:
         return self.emprendimiento_ids[0] if self.emprendimiento_ids else None
+
+
+@dataclass(frozen=True, slots=True)
+class MemberRef:
+    """Un integrante de un emprendimiento, con su rol dentro del equipo."""
+
+    emprendimiento_id: int
+    emprendedor_id: int
+    usuario_id: int
+    nombre: str | None
+    apellido: str | None
+    email: str | None
+    rol_en_emprendimiento: str | None
+    fecha_ingreso: datetime | None
 
 
 class EntrepreneurService:
@@ -72,8 +87,36 @@ class EntrepreneurService:
 
     async def link_venture(
         self, emprendedor_id: int, emprendimiento_id: int, rol: str | None = "fundador"
-    ) -> None:
-        await self._repo.link(emprendedor_id, emprendimiento_id, rol)
+    ) -> bool:
+        """Vincula al emprendedor. Falso si ya era integrante (no duplica)."""
+        return await self._repo.link(emprendedor_id, emprendimiento_id, rol)
+
+    async def unlink_venture(self, emprendedor_id: int, emprendimiento_id: int) -> bool:
+        """Quita al emprendedor del emprendimiento. Falso si no era integrante."""
+        return await self._repo.unlink(emprendedor_id, emprendimiento_id)
+
+    async def members_of_ventures(
+        self, emprendimiento_ids: list[int]
+    ) -> dict[int, list[MemberRef]]:
+        """Integrantes de cada emprendimiento, en orden de ingreso."""
+        rows = await self._repo.members_of_ventures(emprendimiento_ids)
+        identities = await self._repo.identities(list({e.usuario_id for _, e in rows}))
+        out: dict[int, list[MemberRef]] = {i: [] for i in emprendimiento_ids}
+        for link, e in rows:
+            nombre, apellido, email = identities.get(e.usuario_id, (None, None, None))
+            out.setdefault(link.emprendimiento_id, []).append(
+                MemberRef(
+                    emprendimiento_id=link.emprendimiento_id,
+                    emprendedor_id=e.emprendedor_id,
+                    usuario_id=e.usuario_id,
+                    nombre=nombre,
+                    apellido=apellido,
+                    email=email,
+                    rol_en_emprendimiento=link.rol_en_emprendimiento,
+                    fecha_ingreso=link.fecha_ingreso,
+                )
+            )
+        return out
 
     async def is_member(self, usuario_id: int, emprendimiento_id: int) -> bool:
         return emprendimiento_id in await self._repo.venture_ids_of_user(usuario_id)

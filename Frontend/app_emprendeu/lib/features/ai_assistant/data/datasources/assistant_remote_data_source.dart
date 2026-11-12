@@ -27,10 +27,18 @@ class AssistantRemoteDataSource {
         .toList();
   }
 
-  Future<ChatReplyDto> chat(String message, {int? conversationId}) async {
+  Future<ChatReplyDto> chat(
+    String message, {
+    int? conversationId,
+    int? ventureId,
+  }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/ai/chat',
-      data: {'mensaje': message, 'conversacion_id': ?conversationId},
+      data: {
+        'mensaje': message,
+        'conversacion_id': ?conversationId,
+        'emprendimiento_id': ?ventureId,
+      },
       options: Options(receiveTimeout: _chatTimeout, sendTimeout: _chatTimeout),
     );
     return ChatReplyDto.fromJson(response.data!);

@@ -191,6 +191,12 @@ test/                         # espejo exacto de lib/
   legal/financiero, un botón «Agendar una mentoría» que lleva a la pestaña Mentorías. Si el servicio de IA no responde
   (`ai_unavailable` → `AssistantUnavailableFailure`) **nada quedó guardado**: se quita la burbuja, se avisa con un
   mensaje claro y el texto vuelve al campo para reenviarlo. «Nueva conversación» abre otra sin borrar la anterior.
+- **Varios emprendimientos** (CU05): la coordinación puede poner a un emprendedor en más de un equipo.
+  `myVenturesProvider` trae la lista, `selectedVentureIdProvider` guarda el elegido (en memoria: al reabrir la app vuelve
+  al primero) y `myVentureProvider` es el elegido o el primero. `VentureSwitcher` aparece en Inicio y en «Mi
+  emprendimiento» solo con dos o más. Las features que dependen del emprendimiento (Camino, Mentorías, avances sin
+  conexión, Coach) leen `currentVentureIdProvider` por el barrel de `ventures` y envían `emprendimiento_id`; para
+  recargar los emprendimientos se invalida `myVenturesProvider`. «Mi emprendimiento» lista el equipo en solo lectura.
 - **Perfil completo** (CU05, CU08, CU20; requiere conexión): la pestaña Perfil compone `MyVentureCard` (datos del
   emprendimiento y accesos), `XpBadgesSection` (XP, nivel, barra hacia el siguiente nivel, insignias obtenidas y
   últimos movimientos, de `GET /gamification/me`) y los botones de cuenta. «Editar emprendimiento»

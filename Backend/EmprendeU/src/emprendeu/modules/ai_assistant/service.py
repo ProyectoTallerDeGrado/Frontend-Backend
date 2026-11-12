@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.config import get_settings
-from emprendeu.core.errors import PayloadTooLarge
+from emprendeu.core.errors import Forbidden, PayloadTooLarge
 from emprendeu.modules.ai_assistant import schemas as s
 from emprendeu.modules.ai_assistant.chunking import chunk_text
 from emprendeu.modules.ai_assistant.exceptions import (
@@ -275,9 +275,12 @@ class AssistantService:
         if ref is None:
             raise NotEntrepreneur
         if body.conversacion_id is None:
+            venture_id = body.emprendimiento_id or ref.primary_venture_id
+            if venture_id is not None and venture_id not in ref.emprendimiento_ids:
+                raise Forbidden("No tienes acceso a este emprendimiento.")
             conversation = ConversacionIa(
                 emprendedor_id=ref.emprendedor_id,
-                emprendimiento_id=ref.primary_venture_id,
+                emprendimiento_id=venture_id,
                 fecha_inicio=now(),
             )
             await self._repo.add(conversation)

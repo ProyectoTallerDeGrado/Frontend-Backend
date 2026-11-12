@@ -60,7 +60,7 @@ void main() {
       final gamification = GamificationRepositoryImpl(
         GamificationRemoteDataSource(dio),
       );
-      expect((await ventures.getMine()).valueOrNull, isNull);
+      expect((await ventures.getMine()).valueOrNull, isEmpty);
       expect(
         (await gamification.getJourney()).failureOrNull,
         isA<NoVentureFailure>(),

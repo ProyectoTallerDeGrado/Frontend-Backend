@@ -24,14 +24,15 @@ class GetProgressLogsUseCase {
   const GetProgressLogsUseCase(this._repository);
   final MentoringRepository _repository;
 
-  Future<Result<List<ProgressLog>>> call() => _repository.getProgressLogs();
+  Future<Result<List<ProgressLog>>> call({int? ventureId}) =>
+      _repository.getProgressLogs(ventureId: ventureId);
 }
 
 class LogProgressUseCase {
   const LogProgressUseCase(this._repository);
   final MentoringRepository _repository;
 
-  Future<Result<ProgressLog>> call(String text) {
+  Future<Result<ProgressLog>> call(String text, {int? ventureId}) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
       return Future.value(
@@ -40,7 +41,7 @@ class LogProgressUseCase {
         ),
       );
     }
-    return _repository.logProgress(trimmed);
+    return _repository.logProgress(trimmed, ventureId: ventureId);
   }
 }
 

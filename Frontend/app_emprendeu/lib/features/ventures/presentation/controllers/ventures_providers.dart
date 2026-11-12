@@ -7,7 +7,7 @@ import '../../domain/entities/milestone.dart';
 import '../../domain/entities/venture.dart';
 import '../../domain/repositories/ventures_repository.dart';
 import '../../domain/usecases/create_venture_usecase.dart';
-import '../../domain/usecases/get_my_venture_usecase.dart';
+import '../../domain/usecases/get_my_ventures_usecase.dart';
 import '../../domain/usecases/milestones_usecases.dart';
 import '../../domain/usecases/update_venture_usecase.dart';
 
@@ -17,8 +17,8 @@ final venturesRepositoryProvider = Provider<VenturesRepository>(
       throw UnimplementedError('venturesRepositoryProvider sin implementación'),
 );
 
-final getMyVentureUseCaseProvider = Provider(
-  (ref) => GetMyVentureUseCase(ref.watch(venturesRepositoryProvider)),
+final getMyVenturesUseCaseProvider = Provider(
+  (ref) => GetMyVenturesUseCase(ref.watch(venturesRepositoryProvider)),
 );
 
 final createVentureUseCaseProvider = Provider(
@@ -41,10 +41,39 @@ final completeMilestoneUseCaseProvider = Provider(
   (ref) => CompleteMilestoneUseCase(ref.watch(venturesRepositoryProvider)),
 );
 
-/// Emprendimiento del usuario (`null` = todavía no registró ninguno).
-final myVentureProvider = FutureProvider<Venture?>(
-  (ref) async => (await ref.watch(getMyVentureUseCaseProvider)()).getOrThrow(),
+/// Emprendimientos del usuario: la coordinación puede sumarlo a varios equipos.
+/// Para recargar los datos se invalida este provider (no `myVentureProvider`).
+final myVenturesProvider = FutureProvider<List<Venture>>(
+  (ref) async => (await ref.watch(getMyVenturesUseCaseProvider)()).getOrThrow(),
 );
+
+/// Emprendimiento elegido por el usuario cuando tiene varios (`null` = el primero).
+class SelectedVentureController extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  void select(int ventureId) => state = ventureId;
+}
+
+final selectedVentureIdProvider =
+    NotifierProvider<SelectedVentureController, int?>(
+      SelectedVentureController.new,
+    );
+
+/// Emprendimiento con el que trabaja la app (`null` = todavía no tiene ninguno).
+///
+/// Es el elegido en [selectedVentureIdProvider] o, si no eligió (o ya no es parte
+/// de él), el primero. Inicio, Camino, Mentorías y Coach lo usan para saber a qué
+/// emprendimiento se refieren sus llamadas.
+final myVentureProvider = FutureProvider<Venture?>((ref) async {
+  final ventures = await ref.watch(myVenturesProvider.future);
+  if (ventures.isEmpty) return null;
+  final selected = ref.watch(selectedVentureIdProvider);
+  return ventures.firstWhere(
+    (v) => v.id == selected,
+    orElse: () => ventures.first,
+  );
+});
 
 /// Hitos de un emprendimiento.
 final milestonesProvider = FutureProvider.autoDispose
@@ -124,3 +153,14 @@ class MilestonesController extends Notifier<void> {
 
 final milestonesControllerProvider =
     NotifierProvider<MilestonesController, void>(MilestonesController.new);
+
+/// Id del emprendimiento activo para las llamadas de otras features (Camino,
+/// Mentorías, Coach). `null` si no tiene o no se pudo cargar: el backend usa
+/// entonces el primero del usuario.
+final currentVentureIdProvider = FutureProvider<int?>((ref) async {
+  try {
+    return (await ref.watch(myVentureProvider.future))?.id;
+  } on Object {
+    return null;
+  }
+});

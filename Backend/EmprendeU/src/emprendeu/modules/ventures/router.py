@@ -99,6 +99,43 @@ async def update_venture(
     return await service.update(user, emprendimiento_id, body)
 
 
+# --- integrantes (CU05) ---------------------------------------------------
+
+
+@router.get("/ventures/{emprendimiento_id}/members", response_model=list[s.MemberOut])
+async def list_members(
+    emprendimiento_id: int, service: Svc, user: CurrentUserDep
+) -> list[s.MemberOut]:
+    return await service.list_members(user, emprendimiento_id)
+
+
+@router.post(
+    "/ventures/{emprendimiento_id}/members",
+    response_model=list[s.MemberOut],
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_member(
+    emprendimiento_id: int,
+    body: s.MemberIn,
+    service: Svc,
+    user: Annotated[CurrentUser, staff("emprendedores:modificacion")],
+) -> list[s.MemberOut]:
+    return await service.add_member(user, emprendimiento_id, body)
+
+
+@router.delete(
+    "/ventures/{emprendimiento_id}/members/{emprendedor_id}",
+    response_model=list[s.MemberOut],
+)
+async def remove_member(
+    emprendimiento_id: int,
+    emprendedor_id: int,
+    service: Svc,
+    user: Annotated[CurrentUser, staff("emprendedores:modificacion")],
+) -> list[s.MemberOut]:
+    return await service.remove_member(user, emprendimiento_id, emprendedor_id)
+
+
 @router.put("/ventures/{emprendimiento_id}/stage", response_model=s.VentureOut)
 async def change_stage(
     emprendimiento_id: int,

@@ -5,6 +5,7 @@ import '../../../../core/error/result.dart';
 import '../../domain/entities/chat_message.dart';
 import '../../domain/repositories/assistant_repository.dart';
 import '../../domain/usecases/assistant_usecases.dart';
+import '../../../ventures/index.dart';
 
 /// Contrato del repositorio; la implementación se inyecta en `app/providers.dart`.
 final assistantRepositoryProvider = Provider<AssistantRepository>(
@@ -62,9 +63,14 @@ class CoachChatController extends AsyncNotifier<ChatState> {
     state = AsyncData(
       current.copyWith(messages: [...current.messages, pending], sending: true),
     );
+    // Solo cuenta al abrir una conversación nueva: queda en el emprendimiento activo.
+    final ventureId = current.conversationId == null
+        ? await ref.read(currentVentureIdProvider.future)
+        : null;
     final result = await ref.read(askCoachUseCaseProvider)(
       text,
       conversationId: current.conversationId,
+      ventureId: ventureId,
     );
     switch (result) {
       case Ok(:final value):

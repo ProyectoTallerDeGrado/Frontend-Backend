@@ -8,15 +8,14 @@ import { Field, FormError, FormSheet, SheetFooter, inputClass, textareaClass, us
 import { createVentureAction, updateVentureAction } from "../server/actions";
 import { VENTURE_STATES } from "../schemas/ventures-schemas";
 import type { Venture } from "../types";
-
-type Option = { id: number; name: string };
+import { TeamPicker, type Option, type TeamRow } from "./team-picker";
 
 function Form({ venture, entrepreneurs, onDone }: { venture?: Venture; entrepreneurs: Option[]; onDone: () => void }) {
   const [name, setName] = useState(venture?.nombre ?? "");
   const [description, setDescription] = useState(venture?.descripcion ?? "");
   const [sector, setSector] = useState(venture?.sector ?? "");
   const [estado, setEstado] = useState(venture?.estado ?? "activo");
-  const [entrepreneurId, setEntrepreneurId] = useState<number | null>(null);
+  const [team, setTeam] = useState<TeamRow[]>([{ entrepreneurId: null, role: "fundador" }]);
   const { pending, error, run } = useRunner(onDone);
   const states = venture?.estado && !(VENTURE_STATES as readonly string[]).includes(venture.estado)
     ? [venture.estado, ...VENTURE_STATES]
@@ -28,30 +27,20 @@ function Form({ venture, entrepreneurs, onDone }: { venture?: Venture; entrepren
       className="flex min-h-0 flex-1 flex-col"
       onSubmit={(e) => {
         e.preventDefault();
-        const input = { name, description, sector, entrepreneurId, estado };
-        run(() => (venture ? updateVentureAction(venture.emprendimiento_id, input) : createVentureAction(input)));
+        const input = { name, description, sector, estado };
+        run(() => {
+          if (venture) return updateVentureAction(venture.emprendimiento_id, input);
+          if (team.some((m) => m.entrepreneurId === null)) {
+            return Promise.resolve({ ok: false, message: "Elige un emprendedor en cada fila del equipo, o quita la fila." });
+          }
+          return createVentureAction(
+            input,
+            team.map((m) => ({ entrepreneurId: m.entrepreneurId as number, role: m.role })),
+          );
+        });
       }}
     >
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-7 py-6">
-        {!venture && (
-          <Field label="Emprendedor" hint="Quién es el responsable del emprendimiento. Se registra como fundador.">
-            {(id) => (
-              <select
-                id={id}
-                value={entrepreneurId ?? ""}
-                onChange={(e) => setEntrepreneurId(e.target.value ? Number(e.target.value) : null)}
-                className={inputClass}
-              >
-                <option value="">Elige un emprendedor</option>
-                {entrepreneurs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </Field>
-        )}
         <Field label="Nombre del emprendimiento">
           {(id) => <input id={id} value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />}
         </Field>
@@ -61,6 +50,7 @@ function Form({ venture, entrepreneurs, onDone }: { venture?: Venture; entrepren
         <Field label="Descripción" hint="Opcional.">
           {(id) => <textarea id={id} value={description} onChange={(e) => setDescription(e.target.value)} className={textareaClass} />}
         </Field>
+        {!venture && <TeamPicker entrepreneurs={entrepreneurs} team={team} onChange={setTeam} />}
         {venture && (
           <Field label="Estado" hint="Solo la coordinación cambia el estado.">
             {(id) => (

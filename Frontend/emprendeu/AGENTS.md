@@ -81,7 +81,9 @@ consumidos desde componentes cliente.
 - **Emprendedores y emprendimientos** (fase 4): `features/entrepreneurs` (`EntrepreneursScreen`, `/entrepreneurs`:
   lista con búsqueda por nombre, correo o documento; «Nuevo emprendedor» —solo con `emprendedores:registro`— crea
   usuario y perfil juntos y muestra la clave temporal una vez). `features/ventures` suma «Nuevo emprendimiento»
-  (se elige el emprendedor; lista de `listEntrepreneurOptions` por el barrel de `entrepreneurs`), «Editar»
+  (se arma el **equipo**: uno o más emprendedores con rol, `team-picker.tsx`; lista de `listEntrepreneurOptions` por el
+  barrel de `entrepreneurs`), la columna y el botón **Equipo** (`team-sheet.tsx`: ver, agregar y quitar integrantes;
+  nunca deja el emprendimiento vacío), «Editar»
   (nombre, sector, descripción y estado, solo `emprendedores:modificacion`) y los enlaces «Progreso» e «Historial».
   El **progreso** (`JourneyScreen` en `features/gamification`, `/ventures/[id]/progress`) muestra XP, nivel, etapas
   completadas/actual/pendientes y los retos del emprendimiento; es de solo lectura.

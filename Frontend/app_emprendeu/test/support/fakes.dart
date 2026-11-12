@@ -61,10 +61,17 @@ class FakeConnectivity implements ConnectivitySource {
 }
 
 class FakeVenturesRepository implements VenturesRepository {
-  FakeVenturesRepository({this.venture, List<Milestone>? milestones})
-    : milestones = milestones ?? [];
+  FakeVenturesRepository({
+    this.venture,
+    this.ventures,
+    List<Milestone>? milestones,
+  }) : milestones = milestones ?? [];
 
+  /// Emprendimiento único (lo que usaban las pruebas antes de CU05).
   Venture? venture;
+
+  /// Varios emprendimientos; si se indica, manda sobre [venture].
+  List<Venture>? ventures;
   int createCalls = 0;
   int updateCalls = 0;
   String? lastUpdatedName;
@@ -131,7 +138,8 @@ class FakeVenturesRepository implements VenturesRepository {
   }
 
   @override
-  Future<Result<Venture?>> getMine() async => Result.ok(venture);
+  Future<Result<List<Venture>>> getMine() async =>
+      Result.ok(ventures ?? [?venture]);
 
   @override
   Future<Result<Venture>> create(String name) async {
@@ -189,9 +197,16 @@ class FakeGamificationRepository implements GamificationRepository {
   int completeCalls = 0;
   Failure? completeFailure;
 
+  /// Último emprendimiento pedido (para verificar el selector).
+  int? lastVentureId;
+
   @override
-  Future<Result<Journey>> getJourney() async =>
-      journeyFailure != null ? Result.err(journeyFailure!) : Result.ok(journey);
+  Future<Result<Journey>> getJourney({int? ventureId}) async {
+    lastVentureId = ventureId;
+    return journeyFailure != null
+        ? Result.err(journeyFailure!)
+        : Result.ok(journey);
+  }
 
   @override
   Future<Result<GamificationProfile>> getProfile() async => Result.ok(
@@ -206,7 +221,10 @@ class FakeGamificationRepository implements GamificationRepository {
   );
 
   @override
-  Future<Result<CompletionResult>> completeChallenge(int challengeId) async {
+  Future<Result<CompletionResult>> completeChallenge(
+    int challengeId, {
+    int? ventureId,
+  }) async {
     completeCalls++;
     if (completeFailure != null) return Result.err(completeFailure!);
     final updated = [
@@ -309,11 +327,11 @@ class FakeMentoringRepository implements MentoringRepository {
   }
 
   @override
-  Future<Result<List<ProgressLog>>> getProgressLogs() async =>
+  Future<Result<List<ProgressLog>>> getProgressLogs({int? ventureId}) async =>
       Result.ok(List.of(logs));
 
   @override
-  Future<Result<ProgressLog>> logProgress(String text) async {
+  Future<Result<ProgressLog>> logProgress(String text, {int? ventureId}) async {
     final log = ProgressLog(
       id: offline ? null : logs.length + 1,
       text: text,

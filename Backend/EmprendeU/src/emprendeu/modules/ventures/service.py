@@ -10,12 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from emprendeu.core.errors import Forbidden
 from emprendeu.core.pagination import PageParams
 from emprendeu.modules.audit import AuditService
-from emprendeu.modules.entrepreneurs import EntrepreneurService
+from emprendeu.modules.entrepreneurs import EntrepreneurService, MemberRef
 from emprendeu.modules.users import CurrentUser
 from emprendeu.modules.ventures import schemas as s
 from emprendeu.modules.ventures.exceptions import (
+    AlreadyMember,
+    DuplicateMember,
+    EntrepreneurNotFoundForVenture,
     EntrepreneurRequired,
     InvalidStageTransition,
+    LastMember,
+    MemberNotFound,
     MilestoneNotFound,
     NeedNotFound,
     ReservedFields,
@@ -64,7 +69,21 @@ def _stage_out(e: Etapa) -> s.StageOut:
     )
 
 
-def _venture_out(v: Emprendimiento, stage: Etapa | None) -> s.VentureOut:
+def _member_out(m: MemberRef) -> s.MemberOut:
+    return s.MemberOut(
+        emprendedor_id=m.emprendedor_id,
+        usuario_id=m.usuario_id,
+        nombre=m.nombre,
+        apellido=m.apellido,
+        email=m.email,
+        rol_en_emprendimiento=m.rol_en_emprendimiento,
+        fecha_ingreso=m.fecha_ingreso,
+    )
+
+
+def _venture_out(
+    v: Emprendimiento, stage: Etapa | None, members: list[MemberRef] | None = None
+) -> s.VentureOut:
     return s.VentureOut(
         emprendimiento_id=v.emprendimiento_id,
         nombre=v.nombre,
@@ -73,6 +92,7 @@ def _venture_out(v: Emprendimiento, stage: Etapa | None) -> s.VentureOut:
         estado=v.estado,
         fecha_creacion=v.fecha_creacion,
         etapa_actual=_stage_out(stage) if stage else None,
+        integrantes=[_member_out(m) for m in members or []],
     )
 
 
@@ -176,21 +196,52 @@ class VentureService:
 
     # --- emprendimientos ---------------------------------------------------
 
+    async def _team_for_staff(self, body: s.VentureCreate) -> list[s.MemberIn]:
+        """Equipo inicial que indica el personal: al menos un emprendedor existente."""
+        team = list(body.integrantes)
+        if body.emprendedor_id is not None and all(
+            m.emprendedor_id != body.emprendedor_id for m in team
+        ):
+            team.insert(
+                0,
+                s.MemberIn(
+                    emprendedor_id=body.emprendedor_id,
+                    rol_en_emprendimiento="fundador",
+                ),
+            )
+        if not team:
+            raise EntrepreneurRequired
+        seen: set[int] = set()
+        for m in team:
+            if m.emprendedor_id in seen:
+                raise DuplicateMember(m.emprendedor_id)
+            seen.add(m.emprendedor_id)
+            if await self._entrepreneurs.ref_for_entrepreneur(m.emprendedor_id) is None:
+                raise EntrepreneurNotFoundForVenture(m.emprendedor_id)
+        return team
+
+    async def _team_for_entrepreneur(
+        self, user: CurrentUser, body: s.VentureCreate
+    ) -> list[s.MemberIn]:
+        """Un emprendedor solo crea emprendimientos propios y queda como fundador."""
+        owner = await self._entrepreneurs.ref_for_user(user.usuario_id)
+        own_id = owner.emprendedor_id if owner else None
+        asked = {m.emprendedor_id for m in body.integrantes}
+        if body.emprendedor_id is not None:
+            asked.add(body.emprendedor_id)
+        if asked - {own_id}:
+            raise Forbidden("Solo puedes crear emprendimientos propios.")
+        if own_id is None:
+            return []
+        return [s.MemberIn(emprendedor_id=own_id, rol_en_emprendimiento="fundador")]
+
     async def create(self, user: CurrentUser, body: s.VentureCreate) -> s.VentureOut:
-        # CU05: el personal crea el emprendimiento de un emprendedor concreto; un
-        # emprendedor solo puede crear el suyo.
+        # CU05: el personal crea el emprendimiento con su equipo (uno o mas
+        # emprendedores); un emprendedor solo crea el suyo.
         if user.can_staff("emprendedores:registro"):
-            if body.emprendedor_id is None:
-                raise EntrepreneurRequired
-            owner = await self._entrepreneurs.ref_for_entrepreneur(body.emprendedor_id)
-            if owner is None:
-                raise EntrepreneurRequired
+            team = await self._team_for_staff(body)
         else:
-            owner = await self._entrepreneurs.ref_for_user(user.usuario_id)
-            if body.emprendedor_id is not None and (
-                owner is None or owner.emprendedor_id != body.emprendedor_id
-            ):
-                raise Forbidden("Solo puedes crear emprendimientos propios.")
+            team = await self._team_for_entrepreneur(user, body)
         venture = Emprendimiento(
             nombre=body.nombre,
             descripcion=body.descripcion,
@@ -211,9 +262,9 @@ class VentureService:
                     fecha_inicio=now(),
                 )
             )
-        if owner is not None:
+        for m in team:
             await self._entrepreneurs.link_venture(
-                owner.emprendedor_id, venture.emprendimiento_id, "fundador"
+                m.emprendedor_id, venture.emprendimiento_id, m.rol_en_emprendimiento
             )
         await self._audit.record(
             user.usuario_id,
@@ -221,10 +272,89 @@ class VentureService:
             venture.nombre,
             tabla="emprendimiento",
             id_registro=venture.emprendimiento_id,
-            despues={"accion": "crear"},
+            despues={
+                "accion": "crear",
+                "integrantes": [m.emprendedor_id for m in team],
+            },
         )
         await self._repo.commit()
-        return _venture_out(venture, first)
+        return await self._out(venture, first)
+
+    async def _out(self, venture: Emprendimiento, stage: Etapa | None) -> s.VentureOut:
+        members = await self._entrepreneurs.members_of_ventures(
+            [venture.emprendimiento_id]
+        )
+        return _venture_out(venture, stage, members.get(venture.emprendimiento_id))
+
+    async def _outs(self, rows: list[Emprendimiento]) -> list[s.VentureOut]:
+        ids = [v.emprendimiento_id for v in rows]
+        stages = await self._repo.active_stages_for(ids)
+        members = await self._entrepreneurs.members_of_ventures(ids)
+        return [
+            _venture_out(
+                v, stages.get(v.emprendimiento_id), members.get(v.emprendimiento_id)
+            )
+            for v in rows
+        ]
+
+    # --- integrantes (CU05) -----------------------------------------------
+
+    async def list_members(
+        self, user: CurrentUser, emprendimiento_id: int
+    ) -> list[s.MemberOut]:
+        await self._require_access(user, emprendimiento_id, "emprendedores:consulta")
+        await self._venture(emprendimiento_id)
+        members = await self._entrepreneurs.members_of_ventures([emprendimiento_id])
+        return [_member_out(m) for m in members.get(emprendimiento_id, [])]
+
+    async def add_member(
+        self, user: CurrentUser, emprendimiento_id: int, body: s.MemberIn
+    ) -> list[s.MemberOut]:
+        venture = await self._venture(emprendimiento_id)
+        if await self._entrepreneurs.ref_for_entrepreneur(body.emprendedor_id) is None:
+            raise EntrepreneurNotFoundForVenture(body.emprendedor_id)
+        if not await self._entrepreneurs.link_venture(
+            body.emprendedor_id, emprendimiento_id, body.rol_en_emprendimiento
+        ):
+            raise AlreadyMember
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.emprendimiento",
+            venture.nombre,
+            tabla="emprendimiento_emprendedores",
+            id_registro=emprendimiento_id,
+            despues={
+                "accion": "agregar_integrante",
+                "emprendedor_id": body.emprendedor_id,
+                "rol": body.rol_en_emprendimiento,
+            },
+        )
+        await self._repo.commit()
+        return await self.list_members(user, emprendimiento_id)
+
+    async def remove_member(
+        self, user: CurrentUser, emprendimiento_id: int, emprendedor_id: int
+    ) -> list[s.MemberOut]:
+        venture = await self._venture(emprendimiento_id)
+        current = await self._entrepreneurs.entrepreneur_ids_of_venture(
+            emprendimiento_id
+        )
+        if emprendedor_id not in current:
+            raise MemberNotFound
+        if len(current) <= 1:
+            raise LastMember
+        await self._entrepreneurs.unlink_venture(emprendedor_id, emprendimiento_id)
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.emprendimiento",
+            venture.nombre,
+            tabla="emprendimiento_emprendedores",
+            id_registro=emprendimiento_id,
+            antes={"emprendedor_id": emprendedor_id},
+            despues={"accion": "quitar_integrante"},
+        )
+        await self._repo.commit()
+        return await self.list_members(user, emprendimiento_id)
 
     async def get(self, user: CurrentUser, emprendimiento_id: int) -> s.VentureOut:
         await self._require_access(user, emprendimiento_id, "emprendedores:consulta")
@@ -232,7 +362,7 @@ class VentureService:
         stage = (await self._repo.active_stages_for([emprendimiento_id])).get(
             emprendimiento_id
         )
-        return _venture_out(venture, stage)
+        return await self._out(venture, stage)
 
     async def list(
         self, params: PageParams, q: str | None, estado: str | None
@@ -240,14 +370,11 @@ class VentureService:
         rows, total = await self._repo.list(
             q=q, estado=estado, offset=params.offset, limit=params.page_size
         )
-        stages = await self._repo.active_stages_for([v.emprendimiento_id for v in rows])
-        return [_venture_out(v, stages.get(v.emprendimiento_id)) for v in rows], total
+        return await self._outs(rows), total
 
     async def mine(self, user: CurrentUser) -> list[s.VentureOut]:
         ids = await self._entrepreneurs.venture_ids_of_user(user.usuario_id)
-        rows = await self._repo.get_many(ids)
-        stages = await self._repo.active_stages_for(ids)
-        return [_venture_out(v, stages.get(v.emprendimiento_id)) for v in rows]
+        return await self._outs(await self._repo.get_many(ids))
 
     async def update(
         self, user: CurrentUser, emprendimiento_id: int, body: s.VentureUpdate
@@ -275,7 +402,7 @@ class VentureService:
         stage = (await self._repo.active_stages_for([emprendimiento_id])).get(
             emprendimiento_id
         )
-        return _venture_out(venture, stage)
+        return await self._out(venture, stage)
 
     # --- etapa del emprendimiento ------------------------------------------
 
@@ -290,7 +417,7 @@ class VentureService:
             raise StageInactive
         current = await self._repo.active_stage_row(emprendimiento_id)
         if current is not None and current.etapa_id == stage.etapa_id:
-            return _venture_out(venture, stage)
+            return await self._out(venture, stage)
         # CU12: solo se avanza a la etapa activa inmediatamente siguiente (sin saltos
         # ni retrocesos). Sin etapa, solo se entra a la primera.
         active = [e for e in await self._repo.list_stages() if e.estado == "activa"]
@@ -323,7 +450,7 @@ class VentureService:
             id_registro=emprendimiento_id,
         )
         await self._repo.commit()
-        return _venture_out(venture, stage)
+        return await self._out(venture, stage)
 
     async def stage_history(
         self, user: CurrentUser, emprendimiento_id: int

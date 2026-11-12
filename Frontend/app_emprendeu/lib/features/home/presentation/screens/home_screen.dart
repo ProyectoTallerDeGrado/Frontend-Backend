@@ -18,7 +18,7 @@ class HomeScreen extends ConsumerWidget {
 
   Future<void> _refresh(WidgetRef ref) async {
     ref
-      ..invalidate(myVentureProvider)
+      ..invalidate(myVenturesProvider)
       ..invalidate(gamificationProfileProvider)
       ..invalidate(journeyProvider)
       ..invalidate(commitmentsProvider)
@@ -85,6 +85,7 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 18),
               const SyncBanner(),
+              const VentureSwitcher(),
               ...venture.when(
                 data: (v) => v == null
                     ? [const SizedBox(height: 4), const CreateVentureCard()]
@@ -108,7 +109,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton(
-                          onPressed: () => ref.invalidate(myVentureProvider),
+                          onPressed: () => ref.invalidate(myVenturesProvider),
                           child: const Text('Reintentar'),
                         ),
                       ],

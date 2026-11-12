@@ -37,7 +37,7 @@ class _CreateVentureCardState extends ConsumerState<CreateVentureCard> {
     if (!mounted) return;
     switch (result) {
       case Ok():
-        ref.invalidate(myVentureProvider);
+        ref.invalidate(myVenturesProvider);
         widget.onCreated?.call();
       case Err(:final failure):
         setState(() {

@@ -21,7 +21,7 @@ Estado revisado el **2026-11-11** contra el código de `main`. Ese día se ejecu
 | [CU02](<CU02 Gestionar Usuarios/README.md>) | Gestionar Usuarios | Alta | Web | ✅ Completado |
 | [CU03](<CU03 Gestionar Roles y Permisos/README.md>) | Gestionar Roles y Permisos | Alta | Web | ✅ Completado |
 | [CU04](<CU04 Registrar Emprendedor/README.md>) | Registrar Emprendedor | Alta | Web | ✅ Completado |
-| [CU05](<CU05 Gestionar Emprendimiento/README.md>) | Gestionar Emprendimiento | Alta | Web y app | ✅ Completado |
+| [CU05](<CU05 Gestionar Emprendimiento/README.md>) | Gestionar Emprendimiento | Alta | Web y app | ✅ Completado (con equipo) |
 | [CU06](<CU06 Visualizar Progreso Gamificado/README.md>) | Visualizar Progreso Gamificado | Alta | Web y app | ✅ Completado |
 | [CU07](<CU07 Registrar Cumplimiento de Reto/README.md>) | Registrar Cumplimiento de Reto | Media | App | ✅ Completado |
 | [CU08](<CU08 Consultar Puntos de Experiencia e Insignias/README.md>) | Consultar Puntos de Experiencia e Insignias | Media | App | ✅ Completado |

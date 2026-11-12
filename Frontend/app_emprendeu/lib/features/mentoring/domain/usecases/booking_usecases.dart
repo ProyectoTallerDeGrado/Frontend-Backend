@@ -11,14 +11,16 @@ class GetBookingStatusUseCase {
   const GetBookingStatusUseCase(this._repository);
   final BookingRepository _repository;
 
-  Future<Result<BookingStatus>> call() => _repository.getBookingStatus();
+  Future<Result<BookingStatus>> call({int? ventureId}) =>
+      _repository.getBookingStatus(ventureId: ventureId);
 }
 
 class GetMentorsUseCase {
   const GetMentorsUseCase(this._repository);
   final BookingRepository _repository;
 
-  Future<Result<List<Mentor>>> call() => _repository.getMentors();
+  Future<Result<List<Mentor>>> call({int? ventureId}) =>
+      _repository.getMentors(ventureId: ventureId);
 }
 
 class GetSlotsUseCase {
@@ -51,6 +53,7 @@ class BookSessionUseCase {
     required DateTime day,
     required TimeSlot slot,
     String? topic,
+    int? ventureId,
   }) async {
     final fresh = await _repository.getSlots(mentorId, day);
     switch (fresh) {
@@ -67,6 +70,7 @@ class BookSessionUseCase {
       mentorId: mentorId,
       start: slot.start,
       topic: (cleaned == null || cleaned.isEmpty) ? null : cleaned,
+      ventureId: ventureId,
     );
   }
 }
@@ -76,6 +80,8 @@ class GetHistoryUseCase {
   const GetHistoryUseCase(this._repository);
   final BookingRepository _repository;
 
-  Future<Result<List<HistoryEvent>>> call({bool newestFirst = true}) =>
-      _repository.getHistory(newestFirst: newestFirst);
+  Future<Result<List<HistoryEvent>>> call({
+    bool newestFirst = true,
+    int? ventureId,
+  }) => _repository.getHistory(newestFirst: newestFirst, ventureId: ventureId);
 }

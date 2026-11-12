@@ -33,12 +33,15 @@ class BookingRepositoryImpl implements BookingRepository {
   }
 
   @override
-  Future<Result<BookingStatus>> getBookingStatus() =>
-      _guard(() async => (await _remote.bookingStatus()).toEntity());
+  Future<Result<BookingStatus>> getBookingStatus({int? ventureId}) => _guard(
+    () async => (await _remote.bookingStatus(ventureId: ventureId)).toEntity(),
+  );
 
   @override
-  Future<Result<List<Mentor>>> getMentors() => _guard(
-    () async => [for (final m in await _remote.mentors()) m.toEntity()],
+  Future<Result<List<Mentor>>> getMentors({int? ventureId}) => _guard(
+    () async => [
+      for (final m in await _remote.mentors(ventureId: ventureId)) m.toEntity(),
+    ],
   );
 
   @override
@@ -53,22 +56,29 @@ class BookingRepositoryImpl implements BookingRepository {
     required int mentorId,
     required DateTime start,
     String? topic,
+    int? ventureId,
   }) => _guard(
     () async => (await _remote.book(
       mentorId: mentorId,
       start: start,
       topic: topic,
+      ventureId: ventureId,
     )).toEntity(),
   );
 
   @override
-  Future<Result<List<HistoryEvent>>> getHistory({bool newestFirst = true}) =>
-      _guard(
-        () async => [
-          for (final e in await _remote.history(newestFirst: newestFirst))
-            e.toEntity(),
-        ],
-      );
+  Future<Result<List<HistoryEvent>>> getHistory({
+    bool newestFirst = true,
+    int? ventureId,
+  }) => _guard(
+    () async => [
+      for (final e in await _remote.history(
+        newestFirst: newestFirst,
+        ventureId: ventureId,
+      ))
+        e.toEntity(),
+    ],
+  );
 
   @override
   Future<Result<List<MentoringSession>>> getMySessions(

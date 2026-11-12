@@ -30,8 +30,11 @@ class MentoringRemoteDataSource {
     return CommitmentDto.fromJson(response.data!);
   }
 
-  Future<List<ProgressDto>> progress() async {
-    final response = await _dio.get<List<dynamic>>('/mentoring/progress');
+  Future<List<ProgressDto>> progress({int? ventureId}) async {
+    final response = await _dio.get<List<dynamic>>(
+      '/mentoring/progress',
+      queryParameters: {'emprendimiento_id': ?ventureId},
+    );
     return response.data!
         .map((e) => ProgressDto.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -41,6 +44,7 @@ class MentoringRemoteDataSource {
     String text,
     String clientRef, {
     DateTime? at,
+    int? ventureId,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/mentoring/progress',
@@ -48,6 +52,7 @@ class MentoringRemoteDataSource {
         'observaciones': text,
         'referencia_cliente': clientRef,
         if (at != null) 'fecha': at.toUtc().toIso8601String(),
+        'emprendimiento_id': ?ventureId,
       },
     );
     return ProgressDto.fromJson(response.data!);
@@ -63,6 +68,7 @@ class MentoringRemoteDataSource {
               'observaciones': op.text,
               'referencia_cliente': op.clientRef,
               'fecha': op.at.toUtc().toIso8601String(),
+              'emprendimiento_id': ?op.ventureId,
             },
         ],
         'compromisos': [

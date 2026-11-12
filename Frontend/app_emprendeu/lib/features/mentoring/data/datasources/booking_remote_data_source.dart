@@ -15,15 +15,19 @@ class BookingRemoteDataSource {
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 
-  Future<BookingStatusDto> bookingStatus() async {
+  Future<BookingStatusDto> bookingStatus({int? ventureId}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/mentoring/booking-status',
+      queryParameters: {'emprendimiento_id': ?ventureId},
     );
     return BookingStatusDto.fromJson(response.data!);
   }
 
-  Future<List<MentorDto>> mentors() async {
-    final response = await _dio.get<List<dynamic>>('/mentoring/mentors');
+  Future<List<MentorDto>> mentors({int? ventureId}) async {
+    final response = await _dio.get<List<dynamic>>(
+      '/mentoring/mentors',
+      queryParameters: {'emprendimiento_id': ?ventureId},
+    );
     return response.data!
         .map((e) => MentorDto.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -43,6 +47,7 @@ class BookingRemoteDataSource {
     required int mentorId,
     required DateTime start,
     String? topic,
+    int? ventureId,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/mentoring/sessions',
@@ -50,14 +55,20 @@ class BookingRemoteDataSource {
         'mentor_id': mentorId,
         'inicio': start.toUtc().toIso8601String(),
         'tema': ?topic,
+        'emprendimiento_id': ?ventureId,
       },
     );
     return MentoringSessionDto.fromJson(response.data!);
   }
 
-  Future<List<HistoryEventDto>> history({required bool newestFirst}) async {
+  Future<List<HistoryEventDto>> history({
+    required bool newestFirst,
+    int? ventureId,
+  }) async {
     final response = await _dio.get<List<dynamic>>(
-      '/mentoring/ventures/me/history',
+      ventureId == null
+          ? '/mentoring/ventures/me/history'
+          : '/mentoring/ventures/$ventureId/history',
       queryParameters: {'orden': newestFirst ? 'desc' : 'asc'},
     );
     return response.data!

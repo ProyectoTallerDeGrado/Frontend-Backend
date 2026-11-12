@@ -26,10 +26,8 @@ class VenturesRepositoryImpl implements VenturesRepository {
   }
 
   @override
-  Future<Result<Venture?>> getMine() => _guard(() async {
-    final list = await _remote.mine();
-    return list.isEmpty ? null : list.first.toEntity();
-  });
+  Future<Result<List<Venture>>> getMine() =>
+      _guard(() async => [for (final v in await _remote.mine()) v.toEntity()]);
 
   @override
   Future<Result<Venture>> create(String name) =>

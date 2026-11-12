@@ -33,12 +33,18 @@ class GamificationRepositoryImpl implements GamificationRepository {
   }
 
   @override
-  Future<Result<Journey>> getJourney() =>
-      _guard(() async => (await _remote.journey()).toEntity());
+  Future<Result<Journey>> getJourney({int? ventureId}) => _guard(
+    () async => (await _remote.journey(ventureId: ventureId)).toEntity(),
+  );
 
   @override
-  Future<Result<CompletionResult>> completeChallenge(int challengeId) =>
-      _guard(() async => (await _remote.complete(challengeId)).toEntity());
+  Future<Result<CompletionResult>> completeChallenge(
+    int challengeId, {
+    int? ventureId,
+  }) => _guard(
+    () async =>
+        (await _remote.complete(challengeId, ventureId: ventureId)).toEntity(),
+  );
 
   @override
   Future<Result<GamificationProfile>> getProfile() =>

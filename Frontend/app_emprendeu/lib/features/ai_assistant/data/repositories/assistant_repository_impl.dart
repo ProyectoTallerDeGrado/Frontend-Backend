@@ -40,11 +40,15 @@ class AssistantRepositoryImpl implements AssistantRepository {
       });
 
   @override
-  Future<Result<CoachReply>> ask(String message, {int? conversationId}) =>
-      _guard(
-        () async => (await _remote.chat(
-          message,
-          conversationId: conversationId,
-        )).toEntity(),
-      );
+  Future<Result<CoachReply>> ask(
+    String message, {
+    int? conversationId,
+    int? ventureId,
+  }) => _guard(
+    () async => (await _remote.chat(
+      message,
+      conversationId: conversationId,
+      ventureId: ventureId,
+    )).toEntity(),
+  );
 }

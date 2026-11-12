@@ -7,6 +7,6 @@ class CompleteChallengeUseCase {
 
   final GamificationRepository _repository;
 
-  Future<Result<CompletionResult>> call(int challengeId) =>
-      _repository.completeChallenge(challengeId);
+  Future<Result<CompletionResult>> call(int challengeId, {int? ventureId}) =>
+      _repository.completeChallenge(challengeId, ventureId: ventureId);
 }
