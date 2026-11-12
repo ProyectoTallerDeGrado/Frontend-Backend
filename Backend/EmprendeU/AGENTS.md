@@ -176,7 +176,7 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 
 | Módulo | Endpoints principales |
 |---|---|
-| `users` ✅ | `POST /auth/login`, `/auth/register`, `/auth/change-password`, `GET /auth/me`; `GET/POST /users`, `PATCH /users/{id}/estado`, `/users/{id}/rol`; `GET /roles`, `GET/PUT /roles/{id}/permissions` |
+| `users` ✅ | `POST /auth/login`, `/auth/register`, `/auth/change-password`, `GET /auth/me`; `GET/POST /users`, `PATCH /users/{id}/estado`, `/users/{id}/rol`; `GET/POST /roles`, `PATCH/DELETE /roles/{id}` (solo roles personalizados), `GET/PUT /roles/{id}/permissions` |
 | `audit` ✅ | `GET /audit`, `GET /audit/export` (CSV); `AuditService.record(...)` para el resto de módulos |
 | `entrepreneurs` ✅ | `GET/POST /entrepreneurs` (el alta crea usuario + emprendedor), `/entrepreneurs/me` (GET/PATCH), `/entrepreneurs/{id}` |
 | `ventures` ✅ | `/stages`, `/ventures` (CRUD, `/me`, `PUT /{id}/stage`, historial), hitos (`/milestones`), necesidades (`/needs`) |

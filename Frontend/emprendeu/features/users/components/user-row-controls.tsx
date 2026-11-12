@@ -5,8 +5,9 @@ import { useTransition } from "react";
 import { toast } from "@/components/layout/toast-store";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 
-import { ROLE_META, roleLabel } from "../roles";
+import { roleLabel, roleMeta } from "../roles";
 import { changeUserRoleAction, setUserStatusAction } from "../server/actions";
+import type { Role } from "../types";
 
 type StatusProps = { userId: number; name: string; enabled: boolean; locked: boolean };
 
@@ -35,12 +36,12 @@ export function UserStatusSwitch({ userId, name, enabled, locked }: StatusProps)
   );
 }
 
-type RoleProps = { userId: number; name: string; role: string | null; editable: boolean };
+type RoleProps = { userId: number; name: string; role: string | null; roles: Role[]; editable: boolean };
 
 /** Rol del usuario: etiqueta de color, o lista para cambiarlo si hay permiso. */
-export function UserRoleControl({ userId, name, role, editable }: RoleProps) {
+export function UserRoleControl({ userId, name, role, roles, editable }: RoleProps) {
   const [pending, startTransition] = useTransition();
-  const meta = role ? ROLE_META[role] : undefined;
+  const meta = roleMeta(role);
 
   if (!editable) {
     return (
@@ -71,9 +72,9 @@ export function UserRoleControl({ userId, name, role, editable }: RoleProps) {
         className="h-10 max-w-full cursor-pointer rounded-full border-0 px-3 text-[13px] font-bold outline-none focus-visible:ring-3 focus-visible:ring-primary/40 disabled:opacity-60"
         style={{ background: meta?.bg ?? "#E7ECF6", color: meta?.fg ?? "#2B3552" }}
       >
-        {Object.entries(ROLE_META).map(([key, m]) => (
-          <option key={key} value={key} style={{ background: "#fff", color: "#0E1730" }}>
-            {m.label}
+        {roles.map((r) => (
+          <option key={r.rol_id} value={r.nombre} style={{ background: "#fff", color: "#0E1730" }}>
+            {roleLabel(r.nombre)}
           </option>
         ))}
       </select>

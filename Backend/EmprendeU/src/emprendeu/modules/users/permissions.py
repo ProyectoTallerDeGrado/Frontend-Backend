@@ -37,8 +37,14 @@ USERS_READ: Final = permission_name("usuarios", "consulta")
 USERS_CREATE: Final = permission_name("usuarios", "registro")
 USERS_UPDATE: Final = permission_name("usuarios", "modificacion")
 USERS_ADMIN: Final = permission_name("usuarios", "administrativo")
+# El administrador debe conservar ambos para seguir gestionando roles.
+ADMIN_REQUIRED: Final[frozenset[str]] = frozenset({USERS_READ, USERS_ADMIN})
 
 ADMIN_ROLE: Final = "administrador"
 DEFAULT_ROLE: Final = "emprendedor"
+# Roles que vienen del esquema: no se renombran ni se eliminan.
+SYSTEM_ROLES: Final[frozenset[str]] = frozenset(
+    {"administrador", "coordinador", "asesor", "emprendedor"}
+)
 ENABLED: Final = "habilitada"
 DISABLED: Final = "deshabilitada"

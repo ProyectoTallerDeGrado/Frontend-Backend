@@ -3,7 +3,7 @@ import type { NavItem } from "@/components/layout/sidebar-nav";
 import { ROLE_LABELS, hasPermission, logoutAction, requireSession } from "@/features/auth";
 
 /** Qué permiso necesita cada sección para aparecer en el menú (sin `permission`: todo el personal). */
-const NAV: (NavItem & { permission?: string; hideForRole?: string })[] = [
+const NAV: (NavItem & { permission?: string; hideForRole?: string; onlyForRole?: string })[] = [
   { href: "/", label: "Resumen", icon: "dashboard", permission: "reportes:consulta" },
   { href: "/dashboard", label: "Dashboard", icon: "dashboard2", permission: "reportes:consulta", hideForRole: "emprendedor" },
   { href: "/reports", label: "Reportes", icon: "reports", permission: "reportes:consulta", hideForRole: "emprendedor" },
@@ -17,7 +17,7 @@ const NAV: (NavItem & { permission?: string; hideForRole?: string })[] = [
   { href: "/ventures", label: "Emprendimientos", icon: "ventures", permission: "emprendedores:consulta", hideForRole: "emprendedor" },
   { href: "/alerts", label: "Alertas", icon: "alerts", permission: "seguimiento:consulta", hideForRole: "emprendedor" },
   { href: "/mentoring/assignments", label: "Asignaciones", icon: "assignments", permission: "asesorias:registro", hideForRole: "asesor" },
-  { href: "/mentoring/availability", label: "Mi disponibilidad", icon: "availability", permission: "asesorias:modificacion" },
+  { href: "/mentoring/availability", label: "Mi disponibilidad", icon: "availability", permission: "asesorias:modificacion", onlyForRole: "asesor" },
   { href: "/mentoring/sessions", label: "Sesiones", icon: "sessions", permission: "asesorias:consulta" },
   { href: "/account", label: "Mi cuenta", icon: "account" },
 ];
@@ -26,7 +26,7 @@ const NAV: (NavItem & { permission?: string; hideForRole?: string })[] = [
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireSession();
   const nav = NAV.filter(
-    (item) => item.hideForRole !== user.rol && (!item.permission || hasPermission(user, item.permission)),
+    (item) => item.hideForRole !== user.rol && (!item.onlyForRole || item.onlyForRole === user.rol) && (!item.permission || hasPermission(user, item.permission)),
   ).map(({ href, label, icon }) => ({
     href,
     label,
@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   }));
   return (
     <AppShell
-      user={{ name: `${user.nombre} ${user.apellido}`, roleLabel: ROLE_LABELS[user.rol ?? ""] ?? "Sin rol" }}
+      user={{ name: `${user.nombre} ${user.apellido}`, roleLabel: ROLE_LABELS[user.rol ?? ""] ?? user.rol ?? "Sin rol" }}
       nav={nav}
       logoutAction={logoutAction}
     >

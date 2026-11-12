@@ -69,7 +69,7 @@ class AdminLockout(ConflictError):
 
     def __init__(self) -> None:
         super().__init__(
-            "El rol administrador no puede perder el permiso usuarios:administrativo."
+            "El rol administrador debe conservar usuarios:consulta y usuarios:administrativo."
         )
 
 
@@ -80,3 +80,24 @@ class WrongCurrentPassword(DomainError):
 
     def __init__(self) -> None:
         super().__init__("La contrasena actual no es correcta.")
+
+
+class RoleNameTaken(ConflictError):
+    code = "role_name_taken"
+
+    def __init__(self) -> None:
+        super().__init__("Ya existe un rol con ese nombre.")
+
+
+class RoleInUse(ConflictError):
+    code = "role_in_use"
+
+    def __init__(self) -> None:
+        super().__init__("El rol tiene usuarios asignados: reasignalos antes.")
+
+
+class SystemRoleProtected(ConflictError):
+    code = "system_role_protected"
+
+    def __init__(self) -> None:
+        super().__init__("Los roles del sistema no se pueden renombrar ni eliminar.")

@@ -240,3 +240,29 @@ class UserRepository:
             for permiso_id in ids:
                 self._session.add(RolPermiso(rol_id=rol_id, permiso_id=permiso_id))
         await self._session.flush()
+
+    async def create_role(self, nombre: str, descripcion: str | None) -> Rol:
+        rol = Rol(nombre=nombre, descripcion=descripcion)
+        self._session.add(rol)
+        await self._session.flush()
+        return rol
+
+    async def update_role(
+        self, rol: Rol, nombre: str | None, descripcion: str | None
+    ) -> None:
+        if nombre is not None:
+            rol.nombre = nombre
+        if descripcion is not None:
+            rol.descripcion = descripcion
+        await self._session.flush()
+
+    async def delete_role(self, rol: Rol) -> None:
+        await self.replace_role_permissions(rol.rol_id, frozenset())
+        await self._session.delete(rol)
+        await self._session.flush()
+
+    async def count_role_users(self, rol_id: int) -> int:
+        stmt = select(func.count(RolUsuario.rol_usuario_id)).where(
+            RolUsuario.rol_id == rol_id
+        )
+        return int((await self._session.execute(stmt)).scalar_one())

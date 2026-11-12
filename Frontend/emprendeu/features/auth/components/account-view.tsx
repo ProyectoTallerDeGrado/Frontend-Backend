@@ -11,7 +11,7 @@ export function AccountView({ user }: { user: SessionUser }) {
   const rows: [string, string][] = [
     ["Nombre", `${user.nombre} ${user.apellido}`],
     ["Correo electrónico", user.email],
-    ["Rol", ROLE_LABELS[user.rol ?? ""] ?? "Sin rol"],
+    ["Rol", ROLE_LABELS[user.rol ?? ""] ?? user.rol ?? "Sin rol"],
     ["Último acceso", formatWhen(user.ultimo_acceso)],
   ];
 
