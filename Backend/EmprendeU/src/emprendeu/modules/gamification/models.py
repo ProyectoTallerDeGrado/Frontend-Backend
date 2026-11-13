@@ -6,6 +6,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -16,6 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -108,6 +110,10 @@ class Reto(Base):
     )
     # Orden global del camino (fase 4). Define el desbloqueo secuencial.
     orden: Mapped[int | None] = mapped_column(Integer)
+    # CU07: si es true, cumplirlo exige evidencia (texto o documento).
+    requiere_evidencia: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false")
+    )
 
     emprendimientos: Mapped[list[EmprendimientoReto]] = relationship(
         back_populates="reto"
@@ -130,6 +136,7 @@ class EmprendimientoReto(Base):
         ),
         Index("ix_emprendimiento_retos_retosid", "retosid"),
         Index("ix_emprendimiento_retos_emprendimientoid", "emprendimientoid"),
+        Index("ix_emprendimiento_retos_documentosid", "documentosid"),
     )
 
     estado: Mapped[str | None] = mapped_column(String(40))
@@ -156,6 +163,18 @@ class EmprendimientoReto(Base):
             "emprendimiento.emprendimientoid",
             ondelete="RESTRICT",
             name="fk_emprendimiento_retos_emprendimientoid",
+        ),
+    )
+
+    # CU07: evidencia entregada al cumplir. El documento es de `documents` (FK por texto).
+    evidencia_texto: Mapped[str | None] = mapped_column(Text)
+    documento_id: Mapped[int | None] = mapped_column(
+        "documentosid",
+        BigInteger,
+        ForeignKey(
+            "documentos.documentosid",
+            ondelete="SET NULL",
+            name="fk_emprendimiento_retos_documentosid",
         ),
     )
 

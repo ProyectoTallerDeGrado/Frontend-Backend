@@ -27,6 +27,8 @@ abstract class JourneyChallengeDto with _$JourneyChallengeDto {
     @JsonKey(name: 'xp_recompensa') required int xpRecompensa,
     required String estado,
     @JsonKey(name: 'fecha_completado') DateTime? fechaCompletado,
+    @JsonKey(name: 'criterio_completado') String? criterioCompletado,
+    @JsonKey(name: 'requiere_evidencia') @Default(false) bool requiereEvidencia,
   }) = _JourneyChallengeDto;
 
   factory JourneyChallengeDto.fromJson(Map<String, dynamic> json) =>
@@ -73,6 +75,8 @@ abstract class JourneyDto with _$JourneyDto {
           stageName: r.etapa,
           xp: r.xpRecompensa,
           completedAt: r.fechaCompletado,
+          criterion: r.criterioCompletado,
+          requiresEvidence: r.requiereEvidencia,
           status: switch (r.estado) {
             'cumplido' => ChallengeStatus.done,
             'en_curso' => ChallengeStatus.current,

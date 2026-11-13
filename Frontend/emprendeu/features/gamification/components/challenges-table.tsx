@@ -5,17 +5,28 @@ import { Minus, Plus } from "lucide-react";
 
 import { toast } from "@/components/layout/toast-store";
 
-import { updateChallengeXpAction } from "../server/actions";
+import { updateChallengeEvidenceAction, updateChallengeXpAction } from "../server/actions";
 import type { Challenge } from "../types";
 
-const COLS = "grid-cols-[minmax(260px,2fr)_170px_190px]";
+const COLS = "grid-cols-[minmax(260px,2fr)_170px_190px_150px]";
 const STEP = 10;
 
 export function ChallengesTable({ challenges, canEdit }: { challenges: Challenge[]; canEdit: boolean }) {
   const [, startTransition] = useTransition();
-  const [rows, setXp] = useOptimistic(challenges, (state, change: { id: number; xp: number }) =>
+  const [xpRows, setXp] = useOptimistic(challenges, (state, change: { id: number; xp: number }) =>
     state.map((c) => (c.reto_id === change.id ? { ...c, xp_recompensa: change.xp } : c)),
   );
+  const [rows, setEvidence] = useOptimistic(xpRows, (state, change: { id: number; value: boolean }) =>
+    state.map((c) => (c.reto_id === change.id ? { ...c, requiere_evidencia: change.value } : c)),
+  );
+
+  const toggleEvidence = (c: Challenge) =>
+    startTransition(async () => {
+      const next = !c.requiere_evidencia;
+      setEvidence({ id: c.reto_id, value: next });
+      const result = await updateChallengeEvidenceAction(c.reto_id, next);
+      if (!result.ok) toast.error(result.message);
+    });
 
   const change = (c: Challenge, delta: number) =>
     startTransition(async () => {
@@ -38,6 +49,7 @@ export function ChallengesTable({ challenges, canEdit }: { challenges: Challenge
             <span>Reto</span>
             <span>Etapa</span>
             <span>Recompensa (XP)</span>
+            <span>Evidencia</span>
           </div>
           {rows.map((c, i) => (
             <div
@@ -74,6 +86,16 @@ export function ChallengesTable({ challenges, canEdit }: { challenges: Challenge
                   <Plus aria-hidden="true" className="size-4" strokeWidth={2.6} />
                 </button>
               </div>
+              <label className="flex items-center gap-2 text-[14px] font-semibold">
+                <input
+                  type="checkbox"
+                  checked={c.requiere_evidencia}
+                  disabled={!canEdit}
+                  onChange={() => toggleEvidence(c)}
+                  className="size-5"
+                />
+                Obligatoria
+              </label>
             </div>
           ))}
         </div>

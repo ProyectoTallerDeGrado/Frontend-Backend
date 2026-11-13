@@ -190,3 +190,68 @@ async def test_camino_ajeno_incluye_insignias_progreso_e_historial(
         "Validador",
     }
     assert len(j["historial"]) >= 3
+
+
+async def test_reto_con_evidencia_obligatoria_verifica_criterios(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    """CU07: un reto que exige evidencia rechaza el cumplimiento sin ella."""
+    admin, emp, vid = await _setup(client, make_user, login)
+    retos = (await client.get(f"{API}/journey", headers=emp)).json()["retos"]
+    rid = retos[0]["reto_id"]
+    done = f"{API}/journey/challenges/{rid}/complete"
+    patch = await client.patch(
+        f"{API}/challenges/{rid}",
+        json={"requiere_evidencia": True, "criterio_completado": "Sube tu canvas"},
+        headers=admin,
+    )
+    assert patch.status_code == 200 and patch.json()["requiere_evidencia"] is True
+    first = (await client.get(f"{API}/journey", headers=emp)).json()["retos"][0]
+    assert (
+        first["requiere_evidencia"] and first["criterio_completado"] == "Sube tu canvas"
+    )
+
+    sin = await client.post(done, headers=emp)
+    assert sin.status_code == 422
+    assert sin.json()["error"]["code"] == "criteria_not_met"
+    corto = await client.post(done, json={"evidencia_texto": "poco"}, headers=emp)
+    assert corto.status_code == 422
+
+    ajeno = await client.post(done, json={"documento_id": 999999}, headers=emp)
+    assert ajeno.status_code == 422
+
+    ok = await client.post(
+        done,
+        json={"evidencia_texto": "Entrevisté a 10 clientes potenciales."},
+        headers=emp,
+    )
+    assert ok.status_code == 200 and ok.json()["xp_otorgado"] > 0
+    again = await client.post(done, json={"evidencia_texto": "x" * 20}, headers=emp)
+    assert again.status_code == 409
+
+
+async def test_reto_con_evidencia_acepta_documento_del_emprendimiento(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    admin, emp, vid = await _setup(client, make_user, login)
+    retos = (await client.get(f"{API}/journey", headers=emp)).json()["retos"]
+    rid = retos[0]["reto_id"]
+    await client.patch(
+        f"{API}/challenges/{rid}", json={"requiere_evidencia": True}, headers=admin
+    )
+    pdf = {"file": ("canvas.pdf", b"%PDF-1.4 test", "application/pdf")}
+    doc = await client.post(
+        f"{API}/documents", files=pdf, data={"emprendimiento_id": str(vid)}, headers=emp
+    )
+    assert doc.status_code == 201
+    ok = await client.post(
+        f"{API}/journey/challenges/{rid}/complete",
+        json={"documento_id": doc.json()["documento_id"]},
+        headers=emp,
+    )
+    assert ok.status_code == 200
+    # El directorio de subidas se comparte entre tests: no dejar el archivo.
+    deleted = await client.delete(
+        f"{API}/documents/{doc.json()['documento_id']}", headers=emp
+    )
+    assert deleted.status_code == 204

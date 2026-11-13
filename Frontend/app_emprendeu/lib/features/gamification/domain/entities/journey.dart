@@ -23,6 +23,8 @@ class JourneyChallenge {
     required this.xp,
     required this.status,
     this.completedAt,
+    this.criterion,
+    this.requiresEvidence = false,
   });
 
   final int id;
@@ -32,6 +34,12 @@ class JourneyChallenge {
   final int xp;
   final ChallengeStatus status;
   final DateTime? completedAt;
+
+  /// Requisitos para darlo por cumplido (texto del catálogo).
+  final String? criterion;
+
+  /// Si es `true`, cumplirlo exige un texto o un archivo de evidencia.
+  final bool requiresEvidence;
 }
 
 /// Camino de retos de un emprendimiento (objeto de negocio puro).

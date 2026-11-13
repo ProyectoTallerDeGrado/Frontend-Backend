@@ -18,6 +18,8 @@ class ChallengeOut(BaseModel):
     orden: int | None
     xp_recompensa: int
     estado: str | None
+    criterio_completado: str | None
+    requiere_evidencia: bool
 
 
 class ChallengeCreate(BaseModel):
@@ -29,6 +31,8 @@ class ChallengeCreate(BaseModel):
     etapa_id: int
     orden: int | None = None
     xp_recompensa: Annotated[int, Field(ge=0)] = 0
+    criterio_completado: str | None = None
+    requiere_evidencia: bool = False
 
 
 class ChallengeUpdate(BaseModel):
@@ -39,6 +43,8 @@ class ChallengeUpdate(BaseModel):
     descripcion: str | None = None
     xp_recompensa: Annotated[int | None, Field(ge=0)] = None
     estado: Literal["activo", "inactivo"] | None = None
+    criterio_completado: str | None = None
+    requiere_evidencia: bool | None = None
 
 
 class BadgeOut(BaseModel):
@@ -64,6 +70,17 @@ class JourneyChallenge(BaseModel):
     xp_recompensa: int
     estado: Literal["cumplido", "en_curso", "bloqueado"]
     fecha_completado: datetime | None
+    criterio_completado: str | None
+    requiere_evidencia: bool
+
+
+class CompleteChallengeIn(BaseModel):
+    """Informacion o evidencia que entrega el emprendedor al cumplir un reto (CU07)."""
+
+    evidencia_texto: Annotated[
+        str | None, StringConstraints(strip_whitespace=True, max_length=2000)
+    ] = None
+    documento_id: int | None = None
 
 
 class JourneyStage(BaseModel):

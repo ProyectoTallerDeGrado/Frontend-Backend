@@ -7,6 +7,19 @@ class CompleteChallengeUseCase {
 
   final GamificationRepository _repository;
 
-  Future<Result<CompletionResult>> call(int challengeId, {int? ventureId}) =>
-      _repository.completeChallenge(challengeId, ventureId: ventureId);
+  /// [evidenceText] y [documentId] son la evidencia del reto (CU07).
+  Future<Result<CompletionResult>> call(
+    int challengeId, {
+    int? ventureId,
+    String? evidenceText,
+    int? documentId,
+  }) {
+    final text = evidenceText?.trim();
+    return _repository.completeChallenge(
+      challengeId,
+      ventureId: ventureId,
+      evidenceText: (text == null || text.isEmpty) ? null : text,
+      documentId: documentId,
+    );
+  }
 }

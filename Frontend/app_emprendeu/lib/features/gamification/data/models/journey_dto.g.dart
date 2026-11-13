@@ -31,6 +31,8 @@ _JourneyChallengeDto _$JourneyChallengeDtoFromJson(Map<String, dynamic> json) =>
       fechaCompletado: json['fecha_completado'] == null
           ? null
           : DateTime.parse(json['fecha_completado'] as String),
+      criterioCompletado: json['criterio_completado'] as String?,
+      requiereEvidencia: json['requiere_evidencia'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$JourneyChallengeDtoToJson(
@@ -43,6 +45,8 @@ Map<String, dynamic> _$JourneyChallengeDtoToJson(
   'xp_recompensa': instance.xpRecompensa,
   'estado': instance.estado,
   'fecha_completado': instance.fechaCompletado?.toIso8601String(),
+  'criterio_completado': instance.criterioCompletado,
+  'requiere_evidencia': instance.requiereEvidencia,
 };
 
 _JourneyDto _$JourneyDtoFromJson(Map<String, dynamic> json) => _JourneyDto(

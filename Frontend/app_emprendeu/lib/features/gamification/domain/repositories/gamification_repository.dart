@@ -10,6 +10,8 @@ abstract interface class GamificationRepository {
   Future<Result<CompletionResult>> completeChallenge(
     int challengeId, {
     int? ventureId,
+    String? evidenceText,
+    int? documentId,
   });
 
   Future<Result<GamificationProfile>> getProfile();

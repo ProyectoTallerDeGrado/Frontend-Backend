@@ -27,7 +27,7 @@ class UploadEvidenceUseCase {
 
   Future<Result<Evidence>> call({
     required int ventureId,
-    required int milestoneId,
+    int? milestoneId,
     required PickedFile file,
   }) {
     final dot = file.name.lastIndexOf('.');

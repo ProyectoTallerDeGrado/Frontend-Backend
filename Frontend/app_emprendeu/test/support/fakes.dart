@@ -155,7 +155,7 @@ const sampleStages = [
   JourneyStage(id: 3, name: 'Crecimiento', status: StageStatus.locked),
 ];
 
-Journey sampleJourney({int done = 2}) {
+Journey sampleJourney({int done = 2, bool evidence = false}) {
   const titles = [
     'Definir la propuesta de valor',
     'Entrevistar a 5 clientes potenciales',
@@ -176,6 +176,8 @@ Journey sampleJourney({int done = 2}) {
           description: 'Descripción de ${titles[i]}',
           stageName: i < 2 ? 'Preincubación' : 'Incubación',
           xp: 100 + i * 25,
+          criterion: evidence ? 'Sube tu avance' : null,
+          requiresEvidence: evidence,
           status: i < done
               ? ChallengeStatus.done
               : (i == done ? ChallengeStatus.current : ChallengeStatus.locked),
@@ -196,6 +198,7 @@ class FakeGamificationRepository implements GamificationRepository {
   Failure? journeyFailure;
   int completeCalls = 0;
   Failure? completeFailure;
+  String? lastEvidenceText;
 
   /// Último emprendimiento pedido (para verificar el selector).
   int? lastVentureId;
@@ -224,8 +227,11 @@ class FakeGamificationRepository implements GamificationRepository {
   Future<Result<CompletionResult>> completeChallenge(
     int challengeId, {
     int? ventureId,
+    String? evidenceText,
+    int? documentId,
   }) async {
     completeCalls++;
+    lastEvidenceText = evidenceText;
     if (completeFailure != null) return Result.err(completeFailure!);
     final updated = [
       for (final c in journey.challenges)

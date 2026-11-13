@@ -78,9 +78,10 @@ async def complete_challenge(
     reto_id: int,
     service: Svc,
     user: CurrentUserDep,
+    body: s.CompleteChallengeIn | None = None,
     emprendimiento_id: int | None = None,
 ) -> s.CompletionOut:
-    return await service.complete_challenge(user, reto_id, emprendimiento_id)
+    return await service.complete_challenge(user, reto_id, emprendimiento_id, body)
 
 
 @router.get("/gamification/me", response_model=s.ProfileOut)

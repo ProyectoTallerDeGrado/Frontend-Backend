@@ -10,6 +10,8 @@ export const challengeSchema = z.object({
   orden: z.number().nullable(),
   xp_recompensa: z.number(),
   estado: z.string().nullable(),
+  criterio_completado: z.string().nullable(),
+  requiere_evidencia: z.boolean(),
 });
 
 export const badgeSchema = z.object({
@@ -54,6 +56,8 @@ export const journeySchema = z.object({
       xp_recompensa: z.number(),
       estado: z.enum(["cumplido", "en_curso", "bloqueado"]),
       fecha_completado: z.string().nullable(),
+      criterio_completado: z.string().nullable(),
+      requiere_evidencia: z.boolean(),
     }),
   ),
 });

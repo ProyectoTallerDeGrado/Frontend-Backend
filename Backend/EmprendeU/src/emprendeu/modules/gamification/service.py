@@ -8,11 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.errors import Forbidden
 from emprendeu.modules.audit import AuditService
+from emprendeu.modules.documents import DocumentService
 from emprendeu.modules.entrepreneurs import EntrepreneurRef, EntrepreneurService
 from emprendeu.modules.gamification import schemas as s
 from emprendeu.modules.gamification.exceptions import (
     BadgeNotFound,
     ChallengeAlreadyCompleted,
+    ChallengeCriteriaNotMet,
     ChallengeLocked,
     ChallengeNotFound,
     InvalidStage,
@@ -34,6 +36,7 @@ from emprendeu.modules.ventures import VentureService
 
 STREAK_DAYS = 7
 HISTORY_LIMIT = 20
+MIN_EVIDENCE_CHARS = 10
 
 # Nombres de insignia (los siembra la migracion de catalogos).
 FIRST_STEP = "Primer paso"
@@ -60,6 +63,7 @@ class GamificationService:
         self._audit = AuditService(session)
         self._entrepreneurs = EntrepreneurService(session)
         self._ventures = VentureService(session)
+        self._documents = DocumentService(session)
 
     # --- API publica para otros modulos --------------------------------------
 
@@ -109,6 +113,8 @@ class GamificationService:
             orden=r.orden,
             xp_recompensa=r.xp_recompensa or 0,
             estado=r.estado,
+            criterio_completado=r.criterio_completado,
+            requiere_evidencia=bool(r.requiere_evidencia),
         )
 
     async def list_challenges(self) -> list[s.ChallengeOut]:
@@ -130,6 +136,8 @@ class GamificationService:
             etapa_id=body.etapa_id,
             orden=body.orden or (await self._repo.max_order()) + 1,
             xp_recompensa=body.xp_recompensa,
+            criterio_completado=body.criterio_completado,
+            requiere_evidencia=body.requiere_evidencia,
             estado="activo",
         )
         await self._repo.add(reto)
@@ -257,6 +265,8 @@ class GamificationService:
                     xp_recompensa=r.xp_recompensa or 0,
                     estado=state,  # type: ignore[arg-type]
                     fecha_completado=row.fecha_completado if row else None,
+                    criterio_completado=r.criterio_completado,
+                    requiere_evidencia=bool(r.requiere_evidencia),
                 )
             )
         journey_stages: list[s.JourneyStage] = []
@@ -321,8 +331,38 @@ class GamificationService:
             if b.estado == "activa"
         ]
 
+    async def _check_evidence(
+        self, reto: Reto, venture_id: int, body: s.CompleteChallengeIn | None
+    ) -> tuple[str | None, int | None]:
+        """Verifica los criterios del reto (CU07) y devuelve la evidencia a guardar."""
+        text = (body.evidencia_texto or None) if body else None
+        document_id = body.documento_id if body else None
+        if document_id is not None and not await self._documents.is_evidence_of(
+            document_id, venture_id
+        ):
+            raise ChallengeCriteriaNotMet(
+                "El documento no existe o no es de tu emprendimiento.",
+                details={"faltante": "documento_id"},
+            )
+        if reto.requiere_evidencia and document_id is None:
+            if text is None:
+                raise ChallengeCriteriaNotMet(
+                    "Este reto exige evidencia: un texto o un documento.",
+                    details={"faltante": "evidencia"},
+                )
+            if len(text) < MIN_EVIDENCE_CHARS:
+                raise ChallengeCriteriaNotMet(
+                    f"Describe la evidencia con al menos {MIN_EVIDENCE_CHARS} caracteres.",
+                    details={"faltante": "evidencia_texto"},
+                )
+        return text, document_id
+
     async def complete_challenge(
-        self, user: CurrentUser, reto_id: int, emprendimiento_id: int | None
+        self,
+        user: CurrentUser,
+        reto_id: int,
+        emprendimiento_id: int | None,
+        body: s.CompleteChallengeIn | None = None,
     ) -> s.CompletionOut:
         venture_id, ref = await self._resolve_venture(user, emprendimiento_id)
         if ref is None or venture_id not in ref.emprendimiento_ids:
@@ -342,6 +382,9 @@ class GamificationService:
             if other.reto_id != reto_id:
                 raise ChallengeLocked
             break
+        evidence_text, evidence_document = await self._check_evidence(
+            reto, venture_id, body
+        )
 
         before_xp = await self._repo.xp_total(ref.emprendedor_id)
         if row is None:
@@ -350,6 +393,8 @@ class GamificationService:
             )
         row.estado = "completado"
         row.fecha_completado = now()
+        row.evidencia_texto = evidence_text
+        row.documento_id = evidence_document
         await self._repo.add(row)
         awarded = reto.xp_recompensa or 0
         await self._repo.add(
