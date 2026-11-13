@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,9 +19,8 @@ from emprendeu.modules.gamification.exceptions import (
     NoVenture,
 )
 from emprendeu.modules.gamification.levels import (
-    LEVEL_THRESHOLDS,
     level_for,
-    next_threshold,
+    progress_for,
 )
 from emprendeu.modules.gamification.models import (
     EmprendedorInsignia,
@@ -276,14 +275,51 @@ class GamificationService:
             journey_stages.append(
                 s.JourneyStage(etapa_id=etapa.etapa_id, nombre=etapa.nombre, estado=st)  # type: ignore[arg-type]
             )
+        member_ids = await self._entrepreneurs.entrepreneur_ids_of_venture(venture_id)
         xp = await self._venture_xp(venture_id)
+        target, progress = progress_for(xp)
+        earned: dict[int, datetime | None] = {}
+        movements: list[MovimientoXp] = []
+        for eid in member_ids:
+            for badge_id, when in (await self._repo.earned_badges(eid)).items():
+                prev = earned.get(badge_id)
+                if badge_id not in earned or (
+                    when is not None and (prev is None or when < prev)
+                ):
+                    earned[badge_id] = when
+            movements.extend(await self._repo.history(eid, HISTORY_LIMIT))
+        movements.sort(key=lambda m: (m.fecha is not None, m.fecha), reverse=True)
         return s.JourneyOut(
             emprendimiento_id=venture_id,
             xp_total=xp,
             nivel=level_for(xp),
+            xp_siguiente_nivel=target,
+            xp_faltante=None if target is None else target - xp,
+            progreso_pct=progress,
             etapas=journey_stages,
             retos=items,
+            insignias=await self._badge_progress(earned),
+            historial=[
+                s.XpMovement(motivo=m.motivo, cantidad=m.cantidad or 0, fecha=m.fecha)
+                for m in movements[:HISTORY_LIMIT]
+            ],
         )
+
+    async def _badge_progress(
+        self, earned: dict[int, datetime | None]
+    ) -> list[s.BadgeProgress]:
+        return [
+            s.BadgeProgress(
+                insignia_id=b.insignia_id,
+                nombre=b.nombre,
+                criterio=b.criterio,
+                xp_recompensa=b.xp_recompensa or 0,
+                obtenida=b.insignia_id in earned,
+                fecha_obtenida=earned.get(b.insignia_id),
+            )
+            for b in await self._repo.list_badges()
+            if b.estado == "activa"
+        ]
 
     async def complete_challenge(
         self, user: CurrentUser, reto_id: int, emprendimiento_id: int | None
@@ -408,12 +444,8 @@ class GamificationService:
             if await self._grant(ref.emprendedor_id, CONSTANCY):
                 await self._repo.commit()
         xp = await self._repo.xp_total(ref.emprendedor_id)
-        target = next_threshold(xp)
         level = level_for(xp)
-        floor = max((t for n, t in LEVEL_THRESHOLDS if n == level), default=0)
-        progress = (
-            100.0 if target is None else round((xp - floor) / (target - floor) * 100, 1)
-        )
+        target, progress = progress_for(xp)
         earned = await self._repo.earned_badges(ref.emprendedor_id)
         return s.ProfileOut(
             xp_total=xp,
@@ -421,18 +453,7 @@ class GamificationService:
             xp_siguiente_nivel=target,
             xp_faltante=None if target is None else target - xp,
             progreso_pct=progress,
-            insignias=[
-                s.BadgeProgress(
-                    insignia_id=b.insignia_id,
-                    nombre=b.nombre,
-                    criterio=b.criterio,
-                    xp_recompensa=b.xp_recompensa or 0,
-                    obtenida=b.insignia_id in earned,
-                    fecha_obtenida=earned.get(b.insignia_id),
-                )
-                for b in await self._repo.list_badges()
-                if b.estado == "activa"
-            ],
+            insignias=await self._badge_progress(earned),
             historial=[
                 s.XpMovement(motivo=m.motivo, cantidad=m.cantidad or 0, fecha=m.fecha)
                 for m in await self._repo.history(ref.emprendedor_id, HISTORY_LIMIT)

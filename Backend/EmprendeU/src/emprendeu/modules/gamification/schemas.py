@@ -72,14 +72,6 @@ class JourneyStage(BaseModel):
     estado: Literal["cumplida", "en_curso", "bloqueada"]
 
 
-class JourneyOut(BaseModel):
-    emprendimiento_id: int
-    xp_total: int
-    nivel: int
-    etapas: list[JourneyStage]
-    retos: list[JourneyChallenge]
-
-
 class CompletionOut(BaseModel):
     reto_id: int
     xp_otorgado: int
@@ -110,5 +102,18 @@ class ProfileOut(BaseModel):
     xp_siguiente_nivel: int | None
     xp_faltante: int | None
     progreso_pct: float
+    insignias: list[BadgeProgress]
+    historial: list[XpMovement]
+
+
+class JourneyOut(BaseModel):
+    emprendimiento_id: int
+    xp_total: int
+    nivel: int
+    xp_siguiente_nivel: int | None
+    xp_faltante: int | None
+    progreso_pct: float
+    etapas: list[JourneyStage]
+    retos: list[JourneyChallenge]
     insignias: list[BadgeProgress]
     historial: list[XpMovement]

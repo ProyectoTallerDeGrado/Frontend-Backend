@@ -14,9 +14,9 @@ Ver el «Camino» del emprendimiento: XP, nivel, etapas completadas/actual/pendi
 
 ## Qué se hizo
 
-- `GET /journey` devuelve el camino (retos ordenados y su estado de desbloqueo); el personal puede pedir el de un emprendimiento ajeno, un emprendedor ajeno no.
+- `GET /journey` devuelve el camino (retos ordenados y su estado de desbloqueo) junto con el avance hacia el siguiente nivel (`xp_siguiente_nivel`, `xp_faltante`, `progreso_pct`), las `insignias` del equipo (la más antigua de cada una entre sus integrantes) y el `historial` de XP; el personal puede pedir el de un emprendimiento ajeno, un emprendedor ajeno no.
 - Móvil: pestaña «Camino» (`JourneyScreen` con `JourneyPath`) e Inicio con `ProgressCard` y `NextChallengeCard`.
-- Web: `/ventures/[id]/progress` (`JourneyScreen` de solo lectura) enlazado desde la lista de emprendimientos.
+- Web: `/ventures/[id]/progress` (`JourneyScreen` de solo lectura) con barra de nivel, etapas, insignias, historial de XP y retos; muestra mensajes para «sin etapas configuradas» y «sin progreso registrado».
 
 ## Dónde está implementado
 
@@ -34,6 +34,7 @@ Ver el «Camino» del emprendimiento: XP, nivel, etapas completadas/actual/pendi
 ## Verificación
 
 - `Backend/EmprendeU/tests/test_gamification_api.py::test_camino_inicial_y_orden_de_desbloqueo`, `test_personal_ve_camino_ajeno_y_emprendedor_ajeno_no`
+- `Backend/EmprendeU/tests/test_gamification_api.py::test_camino_ajeno_incluye_insignias_progreso_e_historial`
 - `Backend/EmprendeU/tests/test_entrepreneurs_api.py::test_cu06_progreso_visible_para_el_personal_y_cu07_cu08_del_emprendedor`
 - `Frontend/app_emprendeu/test/features/gamification/journey_screen_test.dart`, `Frontend/app_emprendeu/test/features/home/home_screen_test.dart`
 

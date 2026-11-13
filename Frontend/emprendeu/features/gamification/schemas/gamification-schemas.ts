@@ -24,6 +24,22 @@ export const journeySchema = z.object({
   emprendimiento_id: z.number(),
   xp_total: z.number(),
   nivel: z.number(),
+  xp_siguiente_nivel: z.number().nullable(),
+  xp_faltante: z.number().nullable(),
+  progreso_pct: z.number(),
+  insignias: z.array(
+    z.object({
+      insignia_id: z.number(),
+      nombre: z.string(),
+      criterio: z.string().nullable(),
+      xp_recompensa: z.number(),
+      obtenida: z.boolean(),
+      fecha_obtenida: z.string().nullable(),
+    }),
+  ),
+  historial: z.array(
+    z.object({ motivo: z.string().nullable(), cantidad: z.number(), fecha: z.string().nullable() }),
+  ),
   etapas: z.array(
     z.object({ etapa_id: z.number(), nombre: z.string(), estado: z.enum(["cumplida", "en_curso", "bloqueada"]) }),
   ),

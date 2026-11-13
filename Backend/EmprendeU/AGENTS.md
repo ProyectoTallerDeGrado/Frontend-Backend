@@ -90,6 +90,7 @@ src/emprendeu/
 │   ├── base.py              ✅ Base declarativa con MetaData(schema="cieu")
 │   ├── session.py           ✅ engine async + dependencia get_session
 │   ├── metadata.py          ✅ unico punto que importa los modelos de los 11 modulos
+│   ├── seed.py              ✅ datos de demostracion (una vez, solo con la base vacia); ver database/SEED.md
 │   └── migrations/          ✅ Alembic (plantilla async)
 │       ├── env.py           ✅ URL desde Settings, include_schemas, CREATE SCHEMA
 │       ├── script.py.mako   ✅ plantilla ajustada para pasar ruff
@@ -227,6 +228,10 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
 
 ### Operación
 
+- Datos de demostración: `uv run python -m emprendeu.db.seed` (solo si `usuario` está vacía; no corre con
+  `ENVIRONMENT=production`). En Docker lo hace el servicio `seed` (desactivable con `SEED_DEMO_DATA=false`).
+  Cuentas de prueba y contenido en `database/SEED.md`. `db/seed.py` importa los modelos de varios módulos,
+  igual que `db/metadata.py`: ningún módulo lo importa.
 - Migraciones: `uv run alembic upgrade head` (en Docker, `docker compose run --rm migrate`).
 - Primer administrador: `uv run python -m emprendeu.modules.users.cli create-admin ...`.
 - Detección de alertas: `uv run python -m emprendeu.modules.alerts.jobs`, o `POST /alerts/evaluate`

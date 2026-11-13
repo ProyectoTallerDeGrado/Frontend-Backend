@@ -86,7 +86,8 @@ consumidos desde componentes cliente.
   nunca deja el emprendimiento vacío), «Editar»
   (nombre, sector, descripción y estado, solo `emprendedores:modificacion`) y los enlaces «Progreso» e «Historial».
   El **progreso** (`JourneyScreen` en `features/gamification`, `/ventures/[id]/progress`) muestra XP, nivel, etapas
-  completadas/actual/pendientes y los retos del emprendimiento; es de solo lectura.
+  completadas/actual/pendientes, la barra hacia el siguiente nivel, las insignias del equipo, el historial de XP y los retos
+  del emprendimiento; es de solo lectura.
 - **Base de conocimiento** (fase 5): `features/ai_assistant` (`KnowledgeScreen`, `/knowledge`, permiso `config:consulta`;
   subir y desactivar con `config:modificacion`, es decir coordinación y administración). Muestra si Ollama responde,
   los documentos activos y la tabla con el **estado de procesamiento** (Procesando, Activo, Error, Inactivo) y los

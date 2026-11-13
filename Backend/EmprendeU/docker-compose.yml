@@ -5,7 +5,8 @@
 # credenciales. Copia `.env.example` a `.env` y ajusta los valores. Las variables
 # marcadas como obligatorias hacen fallar `docker compose` con un mensaje claro.
 #
-# El paso `migrate` crea/actualiza el esquema una vez y la API arranca despues.
+# El paso `migrate` crea/actualiza el esquema una vez, `seed` carga datos de demostracion
+# si la base esta vacia, y la API arranca despues.
 # La base usa pgvector (busqueda semantica del asistente) y la misma version 17
 # que ya usaba el proyecto, para no invalidar volumenes existentes.
 services:
@@ -38,12 +39,34 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en tu entorno (ver .env.example)}
 
+  # Datos de demostracion: solo si la base no tiene usuarios (una vez). Desactivalo con
+  # SEED_DEMO_DATA=false. Cuentas y contenido: database/SEED.md.
+  seed:
+    build: .
+    restart: "no"
+    command:
+      - sh
+      - -c
+      - if [ "$$SEED_DEMO_DATA" = "true" ]; then python -m emprendeu.db.seed; fi
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en tu entorno (ver .env.example)}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+
   api:
     build: .
     depends_on:
       db:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      seed:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}

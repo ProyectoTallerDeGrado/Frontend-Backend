@@ -157,3 +157,36 @@ async def test_personal_ve_camino_ajeno_y_emprendedor_ajeno_no(
     assert (await client.get(f"{API}/journey", headers=other)).json()["error"][
         "code"
     ] == "no_venture"
+
+
+async def test_camino_ajeno_incluye_insignias_progreso_e_historial(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    _, emp, vid = await _setup(client, make_user, login)
+    await make_user(rol="coordinador", email="c@test.com")
+    coord = await login("c@test.com")
+
+    empty = (
+        await client.get(f"{API}/journey?emprendimiento_id={vid}", headers=coord)
+    ).json()
+    assert empty["progreso_pct"] == 0 and empty["xp_siguiente_nivel"] == 200
+    assert empty["historial"] == []
+    assert not any(b["obtenida"] for b in empty["insignias"])
+
+    retos = (await client.get(f"{API}/journey", headers=emp)).json()["retos"]
+    for r in retos[:3]:
+        await client.post(
+            f"{API}/journey/challenges/{r['reto_id']}/complete", headers=emp
+        )
+
+    j = (
+        await client.get(f"{API}/journey?emprendimiento_id={vid}", headers=coord)
+    ).json()
+    assert j["xp_total"] == 375 and j["nivel"] == 2
+    assert j["xp_siguiente_nivel"] == 400 and j["xp_faltante"] == 25
+    assert j["progreso_pct"] == 87.5  # (375-200)/(400-200)
+    assert {b["nombre"] for b in j["insignias"] if b["obtenida"]} == {
+        "Primer paso",
+        "Validador",
+    }
+    assert len(j["historial"]) >= 3

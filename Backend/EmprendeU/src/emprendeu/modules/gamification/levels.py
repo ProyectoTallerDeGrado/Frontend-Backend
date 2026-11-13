@@ -23,3 +23,13 @@ def next_threshold(xp: int) -> int | None:
         if xp < threshold:
             return threshold
     return None
+
+
+def progress_for(xp: int) -> tuple[int | None, float]:
+    """(XP del siguiente nivel, % de avance dentro del nivel actual)."""
+    target = next_threshold(xp)
+    if target is None:
+        return None, 100.0
+    level = level_for(xp)
+    floor = max(t for n, t in LEVEL_THRESHOLDS if n == level)
+    return target, round((xp - floor) / (target - floor) * 100, 1)
