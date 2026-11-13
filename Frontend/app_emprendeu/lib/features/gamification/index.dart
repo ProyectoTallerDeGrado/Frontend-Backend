@@ -10,5 +10,5 @@ export 'presentation/controllers/gamification_providers.dart'
         gamificationRepositoryProvider,
         journeyProvider;
 export 'presentation/gamification_routes.dart'
-    show GamificationRoutes, gamificationRoutes;
+    show GamificationRoutes, gamificationDetailRoutes, gamificationRoutes;
 export 'presentation/widgets/xp_badges_section.dart' show XpBadgesSection;

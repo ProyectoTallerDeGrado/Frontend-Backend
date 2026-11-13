@@ -86,9 +86,8 @@ void main() {
     expect(find.text('295 XP · Nivel 2'), findsOneWidget);
     expect(find.text('Te faltan 105 XP para el nivel 3.'), findsOneWidget);
     expect(find.text('Insignias · 1 de 2'), findsOneWidget);
-    expect(find.text('Primer paso'), findsOneWidget);
-    expect(find.text('Constancia'), findsOneWidget);
-    expect(find.text('+75 XP'), findsOneWidget);
+    // El detalle (insignias y movimientos) vive en la pantalla `/xp`.
+    expect(find.text('Ver experiencia e insignias'), findsOneWidget);
   });
 
   testWidgets(

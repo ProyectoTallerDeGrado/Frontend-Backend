@@ -198,8 +198,10 @@ test/                         # espejo exacto de lib/
   conexión, Coach) leen `currentVentureIdProvider` por el barrel de `ventures` y envían `emprendimiento_id`; para
   recargar los emprendimientos se invalida `myVenturesProvider`. «Mi emprendimiento» lista el equipo en solo lectura.
 - **Perfil completo** (CU05, CU08, CU20; requiere conexión): la pestaña Perfil compone `MyVentureCard` (datos del
-  emprendimiento y accesos), `XpBadgesSection` (XP, nivel, barra hacia el siguiente nivel, insignias obtenidas y
-  últimos movimientos, de `GET /gamification/me`) y los botones de cuenta. «Editar emprendimiento»
+  emprendimiento y accesos), `XpBadgesSection` (resumen de XP, nivel, barra y «N de M insignias», de
+  `GET /gamification/me`, con estado vacío y un botón a «Experiencia e insignias», `/xp`, pantalla a pantalla completa
+  registrada en `gamificationDetailRoutes` fuera de la barra inferior: nivel, insignias con detalle en hoja inferior
+  —criterio, XP y fecha— e historial de movimientos) y los botones de cuenta. «Editar emprendimiento»
   (`/venture/edit`) cambia nombre, sector y descripción con `PATCH /ventures/{id}`; la etapa y el estado los fija la
   coordinación y solo se muestran. «Hitos y evidencia» (`/venture/milestones`) lista los hitos y permite registrar uno,
   adjuntar evidencia (PDF, imagen u hoja de documento) y marcarlo cumplido. La evidencia es la feature `documents`:

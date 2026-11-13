@@ -191,11 +191,13 @@ class FakeGamificationRepository implements GamificationRepository {
     Journey? journey,
     this.profile,
     this.journeyFailure,
+    this.profileFailure,
   }) : journey = journey ?? sampleJourney();
 
   Journey journey;
   GamificationProfile? profile;
   Failure? journeyFailure;
+  Failure? profileFailure;
   int completeCalls = 0;
   Failure? completeFailure;
   String? lastEvidenceText;
@@ -212,16 +214,19 @@ class FakeGamificationRepository implements GamificationRepository {
   }
 
   @override
-  Future<Result<GamificationProfile>> getProfile() async => Result.ok(
-    profile ??
-        const GamificationProfile(
-          xp: 295,
-          level: 2,
-          nextLevelXp: 400,
-          missingXp: 105,
-          progressPct: 47.5,
-        ),
-  );
+  Future<Result<GamificationProfile>> getProfile() async =>
+      profileFailure != null
+      ? Result.err(profileFailure!)
+      : Result.ok(
+          profile ??
+              const GamificationProfile(
+                xp: 295,
+                level: 2,
+                nextLevelXp: 400,
+                missingXp: 105,
+                progressPct: 47.5,
+              ),
+        );
 
   @override
   Future<Result<CompletionResult>> completeChallenge(
