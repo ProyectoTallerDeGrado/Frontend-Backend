@@ -229,10 +229,14 @@ class UserService:
         email: str,
         documento_identidad: str,
         password: str | None,
+        *,
+        commit: bool = True,
     ) -> tuple[Usuario, str | None]:
         """CU04: cuenta + perfil de emprendedor + documento, todo o nada.
 
         El documento se comprueba antes de crear nada; el commit es uno solo.
+        Con `commit=False` solo hace flush: quien llama cierra la transaccion
+        (lo usa la admision, CU26, para crear cuenta y emprendimiento juntos).
         """
         await self._entrepreneurs.ensure_document_free(documento_identidad)
         temporary = None if password else secrets.token_urlsafe(9)
@@ -248,7 +252,10 @@ class UserService:
             id_registro=user.usuario_id,
             despues={"rol": DEFAULT_ROLE, "origen": "registro de emprendedor"},
         )
-        await self._repo.commit()
+        if commit:
+            await self._repo.commit()
+        else:
+            await self._repo.flush()
         return user, temporary
 
     async def change_role(

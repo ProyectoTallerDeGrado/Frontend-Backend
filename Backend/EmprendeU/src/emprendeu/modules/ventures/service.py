@@ -238,7 +238,9 @@ class VentureService:
             return []
         return [s.MemberIn(emprendedor_id=own_id, rol_en_emprendimiento="fundador")]
 
-    async def create(self, user: CurrentUser, body: s.VentureCreate) -> s.VentureOut:
+    async def create(
+        self, user: CurrentUser, body: s.VentureCreate, *, commit: bool = True
+    ) -> s.VentureOut:
         # CU05: el personal crea el emprendimiento con su equipo (uno o mas
         # emprendedores); un emprendedor solo crea el suyo.
         if user.can_staff("emprendedores:registro"):
@@ -280,7 +282,10 @@ class VentureService:
                 "integrantes": [m.emprendedor_id for m in team],
             },
         )
-        await self._repo.commit()
+        if commit:
+            await self._repo.commit()
+        else:
+            await self._repo.flush()
         return await self._out(venture, first)
 
     async def _out(self, venture: Emprendimiento, stage: Etapa | None) -> s.VentureOut:

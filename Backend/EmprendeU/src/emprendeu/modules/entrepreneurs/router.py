@@ -1,13 +1,23 @@
 """HTTP de entrepreneurs."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.pagination import Page, PageParamsDep
 from emprendeu.db.session import get_session
+from emprendeu.modules.entrepreneurs.admission_service import (
+    AdmissionService,
+    get_admission_limiter,
+)
+from emprendeu.modules.entrepreneurs.provisioning import UsersAndVenturesProvisioner
 from emprendeu.modules.entrepreneurs.schemas import (
+    AdmissionCreate,
+    AdmissionDecided,
+    AdmissionDecision,
+    AdmissionOut,
+    AdmissionReceived,
     EntrepreneurCreate,
     EntrepreneurCreated,
     EntrepreneurOut,
@@ -79,3 +89,55 @@ async def get_entrepreneur(
     emprendedor_id: int, session: SessionDep, _: CanRead
 ) -> EntrepreneurOut:
     return await EntrepreneurService(session).get(emprendedor_id)
+
+
+# --- admision al programa (CU26) ---------------------------------------------------
+
+admissions_router = APIRouter(prefix="/admissions", tags=["admissions"])
+
+
+@admissions_router.post(
+    "", response_model=AdmissionReceived, status_code=status.HTTP_201_CREATED
+)
+async def apply(
+    body: AdmissionCreate, session: SessionDep, request: Request
+) -> AdmissionReceived:
+    """Postulacion publica (sin sesion), limitada por IP."""
+    ip = request.client.host if request.client else None
+    return await AdmissionService(session, limiter=get_admission_limiter()).submit(
+        body, ip
+    )
+
+
+@admissions_router.get("", response_model=Page[AdmissionOut])
+async def list_admissions(
+    params: PageParamsDep,
+    session: SessionDep,
+    _: CanRead,
+    estado: Literal["pendiente", "admitida", "rechazada"] | None = None,
+    q: str | None = None,
+) -> Page[AdmissionOut]:
+    items, total = await AdmissionService(session).list(params, estado, q)
+    return Page[AdmissionOut].build(items, params, total)
+
+
+@admissions_router.get("/{postulacion_id}", response_model=AdmissionOut)
+async def get_admission(
+    postulacion_id: int, session: SessionDep, _: CanRead
+) -> AdmissionOut:
+    return await AdmissionService(session).get(postulacion_id)
+
+
+@admissions_router.post("/{postulacion_id}/decision", response_model=AdmissionDecided)
+async def decide_admission(
+    postulacion_id: int,
+    body: AdmissionDecision,
+    session: SessionDep,
+    actor: Annotated[
+        CurrentUser, Depends(require_staff_permission("emprendedores:registro"))
+    ],
+) -> AdmissionDecided:
+    """Admite (crea cuenta y emprendimiento), rechaza o mantiene pendiente."""
+    return await AdmissionService(
+        session, provisioner=UsersAndVenturesProvisioner(session, actor)
+    ).decide(actor.usuario_id, postulacion_id, body)
