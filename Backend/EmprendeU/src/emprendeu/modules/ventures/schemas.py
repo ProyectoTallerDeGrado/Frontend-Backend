@@ -124,6 +124,8 @@ class NeedOut(BaseModel):
 class VentureNeedCreate(BaseModel):
     necesidad_id: int
     prioridad: Literal["baja", "media", "alta"] = "media"
+    tipo: Literal["necesidad", "dificultad"] = "necesidad"
+    descripcion: str | None = Field(default=None, max_length=2000)
 
 
 class VentureNeedOut(BaseModel):
@@ -132,5 +134,14 @@ class VentureNeedOut(BaseModel):
     necesidad: str
     estado: str | None
     prioridad: str | None
+    tipo: str = "necesidad"
+    descripcion: str | None = None
     fecha_detectada: datetime | None
     fecha_resuelta: datetime | None
+
+
+class VentureNeedInboxItem(VentureNeedOut):
+    """Fila de la bandeja del personal: la necesidad con su emprendimiento."""
+
+    emprendimiento_id: int
+    emprendimiento: str

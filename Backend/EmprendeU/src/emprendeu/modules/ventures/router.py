@@ -1,6 +1,6 @@
 """HTTP de ventures: /stages, /ventures y /needs."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -223,6 +223,21 @@ async def add_venture_need(
     user: CurrentUserDep,
 ) -> s.VentureNeedOut:
     return await service.add_venture_need(user, emprendimiento_id, body)
+
+
+@router.get("/venture-needs", response_model=Page[s.VentureNeedInboxItem])
+async def needs_inbox(
+    params: PageParamsDep,
+    service: Svc,
+    _: Annotated[CurrentUser, staff("seguimiento:consulta")],
+    estado: Literal["detectada", "resuelta"] | None = None,
+    tipo: Literal["necesidad", "dificultad"] | None = None,
+    emprendimiento_id: int | None = None,
+) -> Page[s.VentureNeedInboxItem]:
+    items, total = await service.list_needs_inbox(
+        params, estado, tipo, emprendimiento_id
+    )
+    return Page[s.VentureNeedInboxItem].build(items, params, total)
 
 
 @router.patch("/venture-needs/{row_id}/resolve", response_model=s.VentureNeedOut)

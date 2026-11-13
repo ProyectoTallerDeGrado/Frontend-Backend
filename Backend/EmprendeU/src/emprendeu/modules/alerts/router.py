@@ -62,6 +62,15 @@ async def list_alerts(
     return Page[s.AlertOut].build(items, params, total)
 
 
+@router.get("/{alerta_id}", response_model=s.AlertOut)
+async def get_alert(
+    alerta_id: int,
+    service: Svc,
+    user: Annotated[CurrentUser, staff("seguimiento:consulta")],
+) -> s.AlertOut:
+    return await service.get(user, alerta_id)
+
+
 @router.patch("/{alerta_id}", response_model=s.AlertOut)
 async def update_alert(
     alerta_id: int,

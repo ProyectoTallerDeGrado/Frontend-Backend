@@ -233,6 +233,8 @@ class IndicatorService:
                     total=total,
                 )
                 for stage, total in await self._ventures.stage_distribution()
+                # Foto del estado actual: respeta la etapa elegida; el periodo no aplica.
+                if etapa_id is None or stage.etapa_id == etapa_id
             ],
             sesiones=s.SessionsBlock(
                 programadas=sum(a.sessions_scheduled for a in activity),

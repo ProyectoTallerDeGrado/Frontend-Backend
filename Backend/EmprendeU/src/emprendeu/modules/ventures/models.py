@@ -174,15 +174,23 @@ class Necesidad(Base):
 class EmprendimientoNecesidad(Base):
     __tablename__ = "emprendimiento_necesidades"
     __table_args__ = (
-        UniqueConstraint(
+        # Una necesidad ABIERTA por emprendimiento y rubro del catalogo; al resolverla
+        # se puede volver a registrar (CU24).
+        Index(
+            "uq_emprendimiento_necesidades_abierta",
             "emprendimientoid",
             "necesidadesid",
-            name="uq_emprendimiento_necesidades_emprendimientoid_necesidadesid",
+            unique=True,
+            postgresql_where=text("estado = 'detectada'"),
         ),
         CheckConstraint(
             "fecha_resuelta IS NULL OR fecha_detectada IS NULL "
             "OR fecha_resuelta >= fecha_detectada",
             name="ck_necesidades_fechas",
+        ),
+        CheckConstraint(
+            "tipo IN ('necesidad', 'dificultad')",
+            name="ck_emprendimiento_necesidades_tipo",
         ),
         Index("ix_emprendimiento_necesidades_emprendimientoid", "emprendimientoid"),
         Index("ix_emprendimiento_necesidades_necesidadesid", "necesidadesid"),
@@ -194,6 +202,8 @@ class EmprendimientoNecesidad(Base):
     )
     fecha_resuelta: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     prioridad: Mapped[str | None] = mapped_column(String(30))
+    tipo: Mapped[str] = mapped_column(String(20), server_default="necesidad")
+    descripcion: Mapped[str | None] = mapped_column(Text)
     emprendimiento_necesidad_id: Mapped[int] = mapped_column(
         "emprendimiento_necesidadesid",
         BigInteger,

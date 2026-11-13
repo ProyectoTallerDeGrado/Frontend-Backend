@@ -18,7 +18,12 @@ from emprendeu.modules.ai_assistant.exceptions import AIUnavailable
 class LLMClient(Protocol):
     async def embed(self, texts: list[str]) -> list[list[float]]: ...
 
-    async def chat(self, system: str, question: str) -> str: ...
+    async def chat(
+        self,
+        system: str,
+        question: str,
+        history: list[tuple[str, str]] | None = None,
+    ) -> str: ...
 
     async def ping(self) -> bool: ...
 
@@ -50,7 +55,13 @@ class OllamaClient:
             raise AIUnavailable("Respuesta de embeddings invalida.")
         return embeddings
 
-    async def chat(self, system: str, question: str) -> str:
+    async def chat(
+        self,
+        system: str,
+        question: str,
+        history: list[tuple[str, str]] | None = None,
+    ) -> str:
+        """`history`: turnos previos como (`user`|`assistant`, texto), del mas viejo al mas nuevo."""
         data = await self._post(
             "/api/chat",
             {
@@ -58,6 +69,7 @@ class OllamaClient:
                 "stream": False,
                 "messages": [
                     {"role": "system", "content": system},
+                    *({"role": role, "content": text} for role, text in history or []),
                     {"role": "user", "content": question},
                 ],
             },

@@ -162,6 +162,21 @@ class CommitmentOut(BaseModel):
     estado: str | None
     fecha_limite: datetime | None
     fecha_completado: datetime | None
+    responsable: str | None = None
+
+
+class TaskOut(BaseModel):
+    """Tarea pendiente del emprendedor: un compromiso o un hito (CU22)."""
+
+    tipo: Literal["compromiso", "hito"]
+    referencia_id: int
+    emprendimiento_id: int
+    titulo: str
+    detalle: str | None
+    responsable: str | None
+    estado: Literal["pendiente", "cumplido"]
+    fecha_prevista: datetime | None
+    vencida: bool
 
 
 class RecommendationCreate(BaseModel):
@@ -211,6 +226,18 @@ class ProgressOut(BaseModel):
     fecha: datetime | None
     referencia_cliente: str | None
     creado: bool = True
+
+
+class ProgressSummary(BaseModel):
+    """Progreso derivado del emprendimiento (CU20), calculado al consultarlo."""
+
+    emprendimiento_id: int
+    hitos_total: int
+    hitos_cumplidos: int
+    ultimo_avance: Decimal | None
+    fecha_ultimo_avance: datetime | None
+    # Hitos cumplidos / total; sin hitos, el ultimo porcentaje de avance reportado.
+    porcentaje: int
 
 
 class SyncCommitment(BaseModel):

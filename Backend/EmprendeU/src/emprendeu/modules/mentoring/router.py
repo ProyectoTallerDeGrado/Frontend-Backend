@@ -230,6 +230,19 @@ async def my_commitments(
     return await service.my_commitments(user, estado)
 
 
+@router.get("/tasks/me", response_model=list[s.TaskOut])
+async def my_tasks(
+    service: Svc,
+    user: CurrentUserDep,
+    tipo: Annotated[Literal["compromiso", "hito"] | None, Query()] = None,
+    estado: Annotated[Literal["pendiente", "cumplido"] | None, Query()] = None,
+    desde: date | None = None,
+    hasta: date | None = None,
+) -> list[s.TaskOut]:
+    """Tareas y compromisos pendientes del emprendedor, con filtros (CU22)."""
+    return await service.my_tasks(user, tipo, estado, desde, hasta)
+
+
 @router.patch("/commitments/{compromiso_id}", response_model=s.CommitmentOut)
 async def update_commitment(
     compromiso_id: int, body: s.CommitmentUpdate, service: Svc, user: CurrentUserDep
@@ -270,14 +283,37 @@ async def my_recommendations(
 # --- historial del emprendimiento (CU19) ----------------------------------------------
 
 
+HistoryKind = Literal[
+    "sesion", "avance", "hito", "recomendacion", "compromiso", "etapa"
+]
+
+
 @router.get("/ventures/me/history", response_model=list[s.HistoryEvent])
 async def my_history(
     service: Svc,
     user: CurrentUserDep,
     orden: Annotated[Literal["asc", "desc"], Query()] = "desc",
+    tipo: Annotated[list[HistoryKind] | None, Query()] = None,
+    desde: date | None = None,
+    hasta: date | None = None,
 ) -> list[s.HistoryEvent]:
     """Historial del emprendimiento principal del usuario (la app movil)."""
-    return await service.history(user, None, orden)
+    return await service.history(user, None, orden, tipo, desde, hasta)
+
+
+@router.get("/ventures/me/progress-summary", response_model=s.ProgressSummary)
+async def my_progress_summary(service: Svc, user: CurrentUserDep) -> s.ProgressSummary:
+    """Progreso derivado del emprendimiento principal (hitos y ultimo avance)."""
+    return await service.progress_summary(user, None)
+
+
+@router.get(
+    "/ventures/{emprendimiento_id}/progress-summary", response_model=s.ProgressSummary
+)
+async def venture_progress_summary(
+    emprendimiento_id: int, service: Svc, user: CurrentUserDep
+) -> s.ProgressSummary:
+    return await service.progress_summary(user, emprendimiento_id)
 
 
 @router.get(
@@ -288,9 +324,40 @@ async def venture_history(
     service: Svc,
     user: CurrentUserDep,
     orden: Annotated[Literal["asc", "desc"], Query()] = "asc",
+    tipo: Annotated[list[HistoryKind] | None, Query()] = None,
+    desde: date | None = None,
+    hasta: date | None = None,
 ) -> list[s.HistoryEvent]:
-    """Linea de tiempo cronologica (de lo mas antiguo a lo mas reciente por defecto)."""
-    return await service.history(user, emprendimiento_id, orden)
+    """Linea de tiempo cronologica (de lo mas antiguo a lo mas reciente por defecto).
+
+    Filtros opcionales: `tipo` (repetible) y el periodo `desde`/`hasta`.
+    """
+    return await service.history(user, emprendimiento_id, orden, tipo, desde, hasta)
+
+
+@router.get(
+    "/ventures/{emprendimiento_id}/recommendations",
+    response_model=list[s.RecommendationOut],
+)
+async def venture_recommendations(
+    emprendimiento_id: int, service: Svc, user: CurrentUserDep
+) -> list[s.RecommendationOut]:
+    """Recomendaciones del emprendimiento (CU17), segun el acceso de quien consulta."""
+    return await service.venture_recommendations(user, emprendimiento_id)
+
+
+@router.get(
+    "/ventures/{emprendimiento_id}/commitments",
+    response_model=list[s.CommitmentOut],
+)
+async def venture_commitments(
+    emprendimiento_id: int,
+    service: Svc,
+    user: CurrentUserDep,
+    estado: Annotated[str | None, Query(pattern="^(pendiente|cumplido)$")] = None,
+) -> list[s.CommitmentOut]:
+    """Compromisos del emprendimiento con su responsable (CU18)."""
+    return await service.venture_commitments(user, emprendimiento_id, estado)
 
 
 # --- avances y sincronizacion ---------------------------------------------------------

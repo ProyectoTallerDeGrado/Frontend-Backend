@@ -181,3 +181,46 @@ async def test_cu20_cu24_duplicados_y_auditoria(
         "negocio.asignacion",
     } <= actions
     _ = mentor_id
+
+
+async def test_cu24_tipo_descripcion_bandeja_y_repetir_tras_resolver(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    h, vid, *_ = await _world(client, make_user, login)
+    need = (
+        await client.post(
+            f"{API}/needs", json={"nombre": "Marketing"}, headers=h["admin"]
+        )
+    ).json()
+    url = f"{API}/ventures/{vid}/needs"
+    payload = {
+        "necesidad_id": need["necesidad_id"],
+        "prioridad": "alta",
+        "tipo": "dificultad",
+        "descripcion": "No logro llegar a clientes",
+    }
+    created = await client.post(url, json=payload, headers=h["e"])
+    assert created.status_code == 201
+    assert created.json()["tipo"] == "dificultad"
+    assert created.json()["descripcion"] == "No logro llegar a clientes"
+    assert (await client.post(url, json=payload, headers=h["e"])).status_code == 409
+
+    invalid = await client.post(url, json={**payload, "tipo": "otra"}, headers=h["e"])
+    assert invalid.status_code == 422
+
+    inbox = (
+        await client.get(
+            f"{API}/venture-needs?estado=detectada&tipo=dificultad", headers=h["coord"]
+        )
+    ).json()
+    assert inbox["total"] == 1
+    assert inbox["items"][0]["emprendimiento"] == "Sabores"
+    assert (await client.get(f"{API}/venture-needs", headers=h["e"])).status_code == 403
+
+    row_id = created.json()["emprendimiento_necesidad_id"]
+    resolved = await client.patch(
+        f"{API}/venture-needs/{row_id}/resolve", headers=h["coord"]
+    )
+    assert resolved.json()["estado"] == "resuelta"
+    again = await client.post(url, json=payload, headers=h["e"])
+    assert again.status_code == 201

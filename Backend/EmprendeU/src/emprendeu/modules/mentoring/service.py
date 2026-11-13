@@ -1327,20 +1327,33 @@ class MentoringService:
 
     # --- historial del emprendimiento (CU19) -------------------------------------------
 
-    async def history(
-        self, user: CurrentUser, emprendimiento_id: int | None, orden: str = "asc"
-    ) -> list[s.HistoryEvent]:
-        """Sesiones, avances, hitos, recomendaciones, compromisos y cambios de etapa.
-
-        Permisos por emprendimiento: un emprendedor ve el suyo, el personal con
-        `seguimiento:consulta` los de todos y un asesor solo los que tiene asignados.
-        """
+    async def _authorized_venture(
+        self, user: CurrentUser, emprendimiento_id: int | None
+    ) -> int:
+        """Emprendimiento que `user` puede consultar (miembro, personal o asesor asignado)."""
         venture_id, _ = await self._venture_for(user, emprendimiento_id)
         if (
             user.rol == ADVISOR_ROLE
             and await self._repo.active_assignment(user.usuario_id, venture_id) is None
         ):
             raise NotAssigned
+        return venture_id
+
+    async def history(
+        self,
+        user: CurrentUser,
+        emprendimiento_id: int | None,
+        orden: str = "asc",
+        tipos: list[str] | None = None,
+        desde: date | None = None,
+        hasta: date | None = None,
+    ) -> list[s.HistoryEvent]:
+        """Sesiones, avances, hitos, recomendaciones, compromisos y cambios de etapa.
+
+        Permisos por emprendimiento: un emprendedor ve el suyo, el personal con
+        `seguimiento:consulta` los de todos y un asesor solo los que tiene asignados.
+        """
+        venture_id = await self._authorized_venture(user, emprendimiento_id)
         events: list[s.HistoryEvent] = []
 
         for x in await self._sessions_out(
@@ -1431,9 +1444,161 @@ class MentoringService:
                 )
             )
 
+        if tipos:
+            events = [e for e in events if e.tipo in tipos]
+        if desde or hasta:
+            # Con periodo, un evento sin fecha no se puede ubicar: queda fuera.
+            start, end = self._range(desde, hasta)
+            events = [
+                e
+                for e in events
+                if e.fecha is not None
+                and (start is None or e.fecha >= start)
+                and (end is None or e.fecha < end)
+            ]
         dated = sorted(
             (e for e in events if e.fecha is not None),
             key=lambda e: e.fecha or datetime.min.replace(tzinfo=UTC),
             reverse=orden == "desc",
         )
         return dated + [e for e in events if e.fecha is None]
+
+    # --- progreso derivado (CU20) --------------------------------------------------
+
+    async def progress_summary(
+        self, user: CurrentUser, emprendimiento_id: int | None
+    ) -> s.ProgressSummary:
+        venture_id = await self._authorized_venture(user, emprendimiento_id)
+        milestones = await self._ventures.list_milestones(user, venture_id)
+        done = sum(1 for h in milestones if h.estado == "cumplido")
+        last = next(
+            (
+                p
+                for p in await self._repo.progress_for_venture(venture_id, 50)
+                if p.porcentaje_avance is not None
+            ),
+            None,
+        )
+        if milestones:
+            percent = round(done * 100 / len(milestones))
+        elif last is not None and last.porcentaje_avance is not None:
+            percent = round(last.porcentaje_avance)
+        else:
+            percent = 0
+        return s.ProgressSummary(
+            emprendimiento_id=venture_id,
+            hitos_total=len(milestones),
+            hitos_cumplidos=done,
+            ultimo_avance=last.porcentaje_avance if last else None,
+            fecha_ultimo_avance=last.fecha if last else None,
+            porcentaje=percent,
+        )
+
+    # --- listados por emprendimiento (CU17, CU18) ----------------------------------
+
+    async def venture_recommendations(
+        self, user: CurrentUser, emprendimiento_id: int
+    ) -> list[s.RecommendationOut]:
+        """Recomendaciones de un emprendimiento para quien puede consultarlo."""
+        venture_id = await self._authorized_venture(user, emprendimiento_id)
+        return [
+            self._recommendation_out(r)
+            for r in await self._repo.recommendations_for_ventures([venture_id])
+        ]
+
+    async def venture_commitments(
+        self, user: CurrentUser, emprendimiento_id: int, estado: str | None
+    ) -> list[s.CommitmentOut]:
+        """Compromisos de un emprendimiento con el nombre del responsable."""
+        venture_id = await self._authorized_venture(user, emprendimiento_id)
+        rows = [
+            c
+            for c in await self._repo.commitments_of_venture(venture_id)
+            if estado is None or c.estado == estado
+        ]
+        rows.sort(
+            key=lambda c: (c.fecha_limite is None, c.fecha_limite, c.compromiso_id)
+        )
+        names = await self._users.names_by_ids(
+            sorted({c.responsable_usuario_id for c in rows})
+        )
+        out = []
+        for c in rows:
+            item = self._commitment_out(c)
+            item.responsable = names.get(c.responsable_usuario_id)
+            out.append(item)
+        return out
+
+    # --- tareas y compromisos pendientes (CU22) ------------------------------------
+
+    async def my_tasks(
+        self,
+        user: CurrentUser,
+        tipo: str | None,
+        estado: str | None,
+        desde: date | None,
+        hasta: date | None,
+    ) -> list[s.TaskOut]:
+        """Compromisos propios e hitos de sus emprendimientos; por defecto, los pendientes."""
+        wanted = estado or "pendiente"
+        moment = now()
+        start, end = self._range(desde, hasta)
+        tasks: list[s.TaskOut] = []
+        if tipo in (None, "compromiso"):
+            rows = await self._repo.commitments_for_user(user.usuario_id, None)
+            names = await self._users.names_by_ids(
+                sorted({c.responsable_usuario_id for c in rows})
+            )
+            for c in rows:
+                state = "cumplido" if c.estado == "cumplido" else "pendiente"
+                tasks.append(
+                    s.TaskOut(
+                        tipo="compromiso",
+                        referencia_id=c.compromiso_id,
+                        emprendimiento_id=c.emprendimiento_id,
+                        titulo=c.descripcion or "Compromiso",
+                        detalle=None,
+                        responsable=names.get(c.responsable_usuario_id),
+                        estado=state,
+                        fecha_prevista=c.fecha_limite,
+                        vencida=state == "pendiente"
+                        and c.fecha_limite is not None
+                        and c.fecha_limite < moment,
+                    )
+                )
+        if tipo in (None, "hito"):
+            for venture_id in await self._entrepreneurs.venture_ids_of_user(
+                user.usuario_id
+            ):
+                for h in await self._ventures.list_milestones(user, venture_id):
+                    state = "cumplido" if h.estado == "cumplido" else "pendiente"
+                    tasks.append(
+                        s.TaskOut(
+                            tipo="hito",
+                            referencia_id=h.hito_id,
+                            emprendimiento_id=venture_id,
+                            titulo=h.titulo,
+                            detalle=h.descripcion,
+                            responsable=None,
+                            estado=state,
+                            fecha_prevista=h.fecha_cumplimiento or h.fecha_estimada,
+                            vencida=state == "pendiente"
+                            and h.fecha_estimada is not None
+                            and h.fecha_estimada < moment,
+                        )
+                    )
+        tasks = [
+            t
+            for t in tasks
+            if t.estado == wanted
+            and (
+                (start is None and end is None)
+                or (
+                    t.fecha_prevista is not None
+                    and (start is None or t.fecha_prevista >= start)
+                    and (end is None or t.fecha_prevista < end)
+                )
+            )
+        ]
+        tasks.sort(key=lambda t: (t.fecha_prevista is None, t.fecha_prevista or moment))
+        return tasks

@@ -40,6 +40,7 @@ FALLBACK = (
 )
 # Estados de un documento de conocimiento (columna `estado`, sin CHECK en la base).
 PROCESSING, ACTIVE, FAILED, INACTIVE = "procesando", "activo", "error", "inactivo"
+HISTORY_TURNS = 6  # mensajes previos que se envian al modelo
 HANDOFF_KEYWORDS = ("financ", "credito", "inversi", "legal", "contrato", "demanda")
 SYSTEM_PROMPT = (
     "Eres el coach virtual del CIE-U (Centro de Innovacion y Emprendimiento "
@@ -289,6 +290,13 @@ class AssistantService:
             if found is None or found.emprendedor_id != ref.emprendedor_id:
                 raise ConversationNotFound
             conversation = found
+        # Turnos previos de la misma conversacion, para que el modelo no responda "en frio".
+        history = [
+            ("user" if m.tipo == "usuario" else "assistant", m.contenido)
+            for m in (await self._repo.messages(conversation.conversacion_ia_id))[
+                -HISTORY_TURNS:
+            ]
+        ]
         question = MensajeIa(
             conversacion_ia_id=conversation.conversacion_ia_id,
             tipo="usuario",
@@ -311,7 +319,7 @@ class AssistantService:
             if sources:
                 context = "\n\n".join(f"[{title}] {text}" for text, title in sources)
                 answer = await self._llm.chat(
-                    SYSTEM_PROMPT.format(context=context), body.mensaje
+                    SYSTEM_PROMPT.format(context=context), body.mensaje, history
                 )
                 titles = list(dict.fromkeys(title for _, title in sources))
             else:

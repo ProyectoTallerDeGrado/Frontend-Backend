@@ -123,6 +123,7 @@ async def test_dashboard_ejecutivo_con_filtros_de_periodo_y_etapa(
         )
     ).json()
     assert inc["emprendimientos_total"] == 1 and inc["alertas"]["abiertas"] == 0
+    assert {x["etapa"]: x["total"] for x in inc["por_etapa"]} == {"Incubación": 1}
     assert inc["sesiones"]["realizadas"] == 1 and inc["compromisos"]["vencidos"] == 1
     pre = (
         await client.get(

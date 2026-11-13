@@ -577,9 +577,35 @@ class VentureService:
             necesidad=name,
             estado=row.estado,
             prioridad=row.prioridad,
+            tipo=row.tipo or "necesidad",
+            descripcion=row.descripcion,
             fecha_detectada=row.fecha_detectada,
             fecha_resuelta=row.fecha_resuelta,
         )
+
+    async def list_needs_inbox(
+        self,
+        params: PageParams,
+        estado: str | None,
+        tipo: str | None,
+        emprendimiento_id: int | None,
+    ) -> tuple[list[s.VentureNeedInboxItem], int]:
+        """Bandeja del personal con las necesidades y dificultades reportadas (CU24)."""
+        rows, total = await self._repo.list_venture_needs_all(
+            estado=estado,
+            tipo=tipo,
+            emprendimiento_id=emprendimiento_id,
+            offset=params.offset,
+            limit=params.page_size,
+        )
+        return [
+            s.VentureNeedInboxItem(
+                **self._need_out(row, need).model_dump(),
+                emprendimiento_id=row.emprendimiento_id,
+                emprendimiento=venture,
+            )
+            for row, need, venture in rows
+        ], total
 
     async def list_venture_needs(
         self, user: CurrentUser, emprendimiento_id: int
@@ -606,6 +632,8 @@ class VentureService:
             necesidad_id=need.necesidad_id,
             estado="detectada",
             prioridad=body.prioridad,
+            tipo=body.tipo,
+            descripcion=body.descripcion,
             fecha_detectada=now(),
         )
         try:
@@ -619,7 +647,11 @@ class VentureService:
             need.nombre,
             tabla="emprendimiento_necesidades",
             id_registro=row.emprendimiento_necesidad_id,
-            despues={"accion": "registrar", "emprendimiento_id": emprendimiento_id},
+            despues={
+                "accion": "registrar",
+                "emprendimiento_id": emprendimiento_id,
+                "tipo": body.tipo,
+            },
         )
         await self._repo.commit()
         return self._need_out(row, need.nombre)
