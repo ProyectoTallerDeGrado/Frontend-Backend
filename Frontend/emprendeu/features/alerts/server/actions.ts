@@ -78,6 +78,8 @@ export async function updateAlertAction(
     return fail(error);
   }
   revalidatePath("/alerts");
+  revalidatePath("/alerts/[id]", "page");
+  revalidatePath("/", "layout"); // el contador de abiertas del menú
   const text = { revisada: "Alerta marcada como revisada.", atendida: "Alerta atendida.", descartada: "Alerta descartada." };
   return { ok: true, message: text[estado] };
 }

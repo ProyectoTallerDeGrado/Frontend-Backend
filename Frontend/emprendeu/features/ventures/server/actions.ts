@@ -153,3 +153,17 @@ export async function removeVentureMemberAction(
   revalidatePath("/ventures");
   return { ok: true, message: `${name} ya no es parte del equipo.` };
 }
+
+/** CU24: marca una necesidad o dificultad como resuelta (queda en auditoría). */
+export async function resolveNeedAction(rowId: number, name: string): Promise<{ ok: boolean; message: string }> {
+  try {
+    await authedFetch(`/venture-needs/${rowId}/resolve`, { method: "PATCH" });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      return { ok: false, message: "No tienes permiso para resolver esta necesidad." };
+    }
+    return { ok: false, message: "No se pudo marcar como resuelta. Intenta de nuevo." };
+  }
+  revalidatePath("/needs");
+  return { ok: true, message: `Resuelta: ${name}. Registrado en auditoría.` };
+}

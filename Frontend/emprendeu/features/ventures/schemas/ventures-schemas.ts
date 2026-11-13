@@ -74,3 +74,25 @@ export const teamSchema = z
   .refine((team) => new Set(team.map((m) => m.entrepreneurId)).size === team.length, {
     message: "Un emprendedor aparece dos veces en el equipo.",
   });
+
+/** Una necesidad o dificultad reportada, con su emprendimiento (`GET /venture-needs`). */
+export const needInboxItemSchema = z.object({
+  emprendimiento_necesidad_id: z.number(),
+  necesidad_id: z.number(),
+  necesidad: z.string(),
+  estado: z.string().nullable(),
+  prioridad: z.string().nullable(),
+  tipo: z.string(),
+  descripcion: z.string().nullable(),
+  fecha_detectada: z.string().nullable(),
+  fecha_resuelta: z.string().nullable(),
+  emprendimiento_id: z.number(),
+  emprendimiento: z.string(),
+});
+
+export const needInboxPageSchema = z.object({
+  items: z.array(needInboxItemSchema),
+  page: z.number(),
+  page_size: z.number(),
+  total: z.number(),
+});

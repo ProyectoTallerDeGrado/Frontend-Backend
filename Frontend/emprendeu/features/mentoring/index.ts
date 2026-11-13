@@ -1,3 +1,8 @@
 export { AssignmentsScreen, AvailabilityScreen, SessionsScreen } from "./components/screens";
 export type { SessionFilters } from "./types";
 export { HistoryScreen } from "./components/history-screen";
+export { parseHistoryFilters } from "./history-filters";
+export type { HistoryFilters } from "./types";
+export { FollowUpScreen } from "./components/follow-up-screen";
+export { ProgressSummaryCard } from "./components/progress-summary-card";
+export { buildAdvisorsColumn, type AdvisorsColumn } from "./server/advisors-column";

@@ -15,7 +15,7 @@ import { hasPermission, requireSession } from "@/features/auth";
 import { formatDateTime } from "@/lib/format";
 
 import { getVentureHistory } from "../server/queries";
-import type { HistoryEvent } from "../types";
+import type { HistoryEvent, HistoryFilters, HistoryKind } from "../types";
 
 const KIND: Record<HistoryEvent["tipo"], { label: string; icon: LucideIcon; tone: string }> = {
   sesion: { label: "Sesión", icon: CalendarCheck, tone: "bg-blue-50 text-primary" },
@@ -26,16 +26,31 @@ const KIND: Record<HistoryEvent["tipo"], { label: string; icon: LucideIcon; tone
   etapa: { label: "Etapa", icon: Rocket, tone: "bg-navy-900 text-white" },
 };
 
-type Props = { ventureId: number; ventureName: string; orden: "asc" | "desc" };
+type Props = { ventureId: number; ventureName: string; filters: HistoryFilters };
 
-/** CU19 · Historial del emprendimiento en orden cronológico (o del más reciente al más antiguo). */
-export async function HistoryScreen({ ventureId, ventureName, orden }: Props) {
+const dateInput =
+  "h-11 rounded-xl border-[1.5px] border-border-strong bg-card px-3 text-sm font-normal outline-none focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15";
+
+function historyHref(base: string, f: Partial<HistoryFilters>): string {
+  const search = new URLSearchParams();
+  if (f.orden && f.orden !== "asc") search.set("orden", f.orden);
+  for (const tipo of f.tipos ?? []) search.append("tipo", tipo);
+  if (f.desde) search.set("desde", f.desde);
+  if (f.hasta) search.set("hasta", f.hasta);
+  const query = search.toString();
+  return query ? `${base}?${query}` : base;
+}
+
+/** CU19 · Historial del emprendimiento: orden cronológico, tipos de evento y periodo (todo en la URL). */
+export async function HistoryScreen({ ventureId, ventureName, filters }: Props) {
   const user = await requireSession();
   if (!hasPermission(user, "seguimiento:consulta")) return <NoAccess section="Historial" />;
 
-  const events = await getVentureHistory(ventureId, orden);
+  const { orden } = filters;
+  const events = await getVentureHistory(ventureId, filters);
   const base = `/ventures/${ventureId}/history`;
   const other = orden === "asc" ? "desc" : "asc";
+  const filtered = filters.tipos.length > 0 || Boolean(filters.desde) || Boolean(filters.hasta);
 
   return (
     <>
@@ -44,7 +59,7 @@ export async function HistoryScreen({ ventureId, ventureName, orden }: Props) {
         subtitle="Sesiones, avances, hitos, recomendaciones, compromisos y cambios de etapa del emprendimiento."
         actions={
           <Link
-            href={`${base}?orden=${other}`}
+            href={historyHref(base, { ...filters, orden: other })}
             className="inline-flex min-h-11 items-center rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-sm font-semibold outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30"
           >
             {orden === "asc" ? "Ver lo más reciente primero" : "Ver en orden cronológico"}
@@ -55,9 +70,59 @@ export async function HistoryScreen({ ventureId, ventureName, orden }: Props) {
         ← Volver a emprendimientos
       </Link>
 
+      <form
+        method="get"
+        action={base}
+        aria-label="Filtros del historial"
+        className="mb-6 flex flex-col gap-4 rounded-2xl border border-border bg-card p-5"
+      >
+        {orden === "desc" && <input type="hidden" name="orden" value="desc" />}
+        <fieldset className="flex flex-wrap gap-x-5 gap-y-2">
+          <legend className="mb-2 text-[13px] font-semibold">Tipo de evento</legend>
+          {(Object.keys(KIND) as HistoryKind[]).map((tipo) => (
+            <label key={tipo} className="inline-flex min-h-11 items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="tipo"
+                value={tipo}
+                defaultChecked={filters.tipos.includes(tipo)}
+                className="size-5 accent-[var(--primary)]"
+              />
+              {KIND[tipo].label}
+            </label>
+          ))}
+        </fieldset>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
+            Desde
+            <input type="date" name="desde" defaultValue={filters.desde ?? ""} className={dateInput} />
+          </label>
+          <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
+            Hasta
+            <input type="date" name="hasta" defaultValue={filters.hasta ?? ""} className={dateInput} />
+          </label>
+          <button
+            type="submit"
+            className="h-11 rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-sm font-semibold outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30"
+          >
+            Aplicar filtros
+          </button>
+          {filtered && (
+            <Link
+              href={historyHref(base, { orden })}
+              className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-primary"
+            >
+              Quitar filtros
+            </Link>
+          )}
+        </div>
+      </form>
+
       {events.length === 0 ? (
         <p className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
-          Este emprendimiento todavía no tiene actividad registrada.
+          {filtered
+            ? "No hay eventos con esos filtros."
+            : "Este emprendimiento todavía no tiene actividad registrada."}
         </p>
       ) : (
         <ol className="flex flex-col">

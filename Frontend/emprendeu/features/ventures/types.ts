@@ -1,8 +1,18 @@
 import type { z } from "zod";
 
-import type { memberSchema, stageSchema, stepSchema, ventureSchema } from "./schemas/ventures-schemas";
+import type {
+  memberSchema,
+  needInboxItemSchema,
+  stageSchema,
+  stepSchema,
+  ventureSchema,
+} from "./schemas/ventures-schemas";
 
 export type Stage = z.infer<typeof stageSchema>;
+/** Necesidad o dificultad reportada por un emprendimiento (CU24). */
+export type NeedItem = z.infer<typeof needInboxItemSchema>;
+/** Filtros de la bandeja de necesidades (viajan en la URL). */
+export type NeedFilters = { estado?: "detectada" | "resuelta"; tipo?: "necesidad" | "dificultad"; page?: number };
 export type Venture = z.infer<typeof ventureSchema>;
 /** Integrante del equipo de un emprendimiento. */
 export type VentureMember = z.infer<typeof memberSchema>;

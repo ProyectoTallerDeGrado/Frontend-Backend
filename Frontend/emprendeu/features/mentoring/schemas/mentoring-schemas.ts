@@ -104,3 +104,37 @@ export const historyEventSchema = z.object({
   estado: z.string().nullable(),
   autor: z.string().nullable(),
 });
+
+export const recommendationSchema = z.object({
+  recomendacion_id: z.number(),
+  sesion_id: z.number().nullable(),
+  titulo: z.string(),
+  contenido: z.string().nullable(),
+  estado: z.string().nullable(),
+  fecha: z.string().nullable(),
+});
+
+export const commitmentSchema = z.object({
+  compromiso_id: z.number(),
+  emprendimiento_id: z.number().nullable(),
+  responsable_id: z.number().nullable(),
+  sesion_id: z.number().nullable(),
+  descripcion: z.string().nullable(),
+  estado: z.string().nullable(),
+  fecha_limite: z.string().nullable(),
+  fecha_completado: z.string().nullable(),
+  responsable: z.string().nullable(),
+});
+
+/** CU20 · Progreso derivado: el backend serializa el decimal como texto o número. */
+export const progressSummarySchema = z.object({
+  emprendimiento_id: z.number(),
+  hitos_total: z.number(),
+  hitos_cumplidos: z.number(),
+  ultimo_avance: z
+    .union([z.number(), z.string()])
+    .nullable()
+    .transform((v) => (v === null ? null : Number(v))),
+  fecha_ultimo_avance: z.string().nullable(),
+  porcentaje: z.number(),
+});

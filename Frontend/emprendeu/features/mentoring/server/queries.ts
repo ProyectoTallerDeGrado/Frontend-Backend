@@ -6,11 +6,25 @@ import {
   assignmentSchema,
   availabilitySchema,
   historyEventSchema,
+  commitmentSchema,
   mentorSchema,
+  progressSummarySchema,
+  recommendationSchema,
   sessionPageSchema,
   sessionSchema,
 } from "../schemas/mentoring-schemas";
-import type { Assignment, Availability, HistoryEvent, Mentor, Session, SessionFilters } from "../types";
+import type {
+  Assignment,
+  Availability,
+  HistoryEvent,
+  HistoryFilters,
+  Mentor,
+  ProgressSummary,
+  Recommendation,
+  Session,
+  SessionFilters,
+  VentureCommitment,
+} from "../types";
 
 export const SESSIONS_PAGE_SIZE = 20;
 
@@ -54,6 +68,30 @@ export async function listSessions(filters: SessionFilters) {
 }
 
 /** CU19 · Línea de tiempo del emprendimiento (el backend aplica los permisos por emprendimiento). */
-export async function getVentureHistory(ventureId: number, orden: "asc" | "desc"): Promise<HistoryEvent[]> {
-  return historyEventSchema.array().parse(await authedFetch(`/mentoring/ventures/${ventureId}/history?orden=${orden}`));
+export async function getVentureHistory(ventureId: number, filters: HistoryFilters): Promise<HistoryEvent[]> {
+  const search = new URLSearchParams({ orden: filters.orden });
+  for (const tipo of filters.tipos) search.append("tipo", tipo);
+  if (filters.desde) search.set("desde", filters.desde);
+  if (filters.hasta) search.set("hasta", filters.hasta);
+  return historyEventSchema.array().parse(await authedFetch(`/mentoring/ventures/${ventureId}/history?${search}`));
+}
+
+/** CU17 · Recomendaciones del emprendimiento. */
+export async function listVentureRecommendations(ventureId: number): Promise<Recommendation[]> {
+  return recommendationSchema.array().parse(await authedFetch(`/mentoring/ventures/${ventureId}/recommendations`));
+}
+
+/** CU18 · Compromisos del emprendimiento con su responsable. */
+export async function listVentureCommitments(ventureId: number): Promise<VentureCommitment[]> {
+  const rows = commitmentSchema.array().parse(await authedFetch(`/mentoring/ventures/${ventureId}/commitments`));
+  const now = Date.now();
+  return rows.map((c) => ({
+    ...c,
+    vencido: c.estado !== "cumplido" && c.fecha_limite !== null && new Date(c.fecha_limite).getTime() < now,
+  }));
+}
+
+/** CU20 · Progreso derivado (hitos cumplidos y último avance reportado). */
+export async function getProgressSummary(ventureId: number): Promise<ProgressSummary> {
+  return progressSummarySchema.parse(await authedFetch(`/mentoring/ventures/${ventureId}/progress-summary`));
 }
