@@ -5,6 +5,7 @@ import '../../../../core/error/result.dart';
 import '../../../../core/network/api_error_mapper.dart';
 import '../../domain/entities/coach_conversation.dart';
 import '../../domain/entities/coach_reply.dart';
+import '../../domain/entities/conversation_summary.dart';
 import '../../domain/repositories/assistant_repository.dart';
 import '../datasources/assistant_remote_data_source.dart';
 import '../models/assistant_dto.dart';
@@ -38,6 +39,15 @@ class AssistantRepositoryImpl implements AssistantRepository {
           await _remote.messages(latest.conversacionId),
         );
       });
+
+  @override
+  Future<Result<List<ConversationSummary>>> getConversations() => _guard(
+    () async => [for (final c in await _remote.conversations()) c.toEntity()],
+  );
+
+  @override
+  Future<Result<CoachConversation>> getConversation(int id) =>
+      _guard(() async => conversationFrom(id, await _remote.messages(id)));
 
   @override
   Future<Result<CoachReply>> ask(

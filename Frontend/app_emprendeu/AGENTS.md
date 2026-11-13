@@ -101,7 +101,7 @@ test/                         # espejo exacto de lib/
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
 `auth` ✅, `ventures` ✅ (editar, hitos), `gamification` ✅ (Camino, XP e insignias), `mentoring` ✅ (compromisos y avances, agendar y ver sesiones, historial),
-`documents` ✅ (evidencia de hitos), `ai_assistant` ✅ (Coach IA), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
+`documents` ✅ (evidencia de hitos), `ai_assistant` ✅ (Coach IA y conversaciones anteriores), `needs` ✅ (necesidades y dificultades), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
 (regla global §4.6).
 
 > **`home` es una excepción documentada a la regla 6:** no tiene módulo en el backend porque
@@ -181,16 +181,33 @@ test/                         # espejo exacto de lib/
   de uso `BookSessionUseCase` **vuelve a pedir los turnos del día antes de agendar**: si el horario se
   ocupó, devuelve `SlotUnavailableFailure`, la pantalla avisa y renueva la lista. El emprendedor solo ve
   asesores asignados y habilitados (lo filtra el backend).
+- **Detalle y cancelar mentoría** (CU23, requiere conexión): tocar una tarjeta de la lista abre `/mentoring/session/:id`
+  (`GET /mentoring/sessions/{id}`). Una mentoría **programada** se cancela con confirmación (`POST /sessions/{id}/cancel`,
+  `CancelSessionUseCase`) y libera el horario; si el servidor responde `session_closed` (ya realizada o cancelada) llega
+  como `SessionClosedFailure` y la pantalla se refresca.
 - **Historial del emprendimiento** (CU19, requiere conexión): botón «Ver historial del emprendimiento» en
-  Mentorías → `/mentoring/history`, que llama a `GET /mentoring/ventures/me/history?orden=` (`GetHistoryUseCase`,
-  `HistoryEvent`) y deja alternar entre «Más reciente primero» y «Cronológico».
+  Mentorías → `/mentoring/history`, que llama a `GET /mentoring/ventures/me/history` (`GetHistoryUseCase`,
+  `HistoryEvent`). Se filtra por **orden, tipos de evento (varios) y periodo** con un `HistoryFilter` (igualdad por valor:
+  es la clave del provider). Los tipos viajan como `tipo=a&tipo=b` (`ListFormat.multi`; el formato por defecto de Dio,
+  `tipo[]=a`, no lo lee FastAPI).
+- **Tareas y compromisos** (CU22, requiere conexión): botón «Tareas y compromisos» en Mentorías → `/mentoring/tasks`,
+  que llama a `GET /mentoring/tasks/me` (`GetTasksUseCase`, `Task`, `TaskFilter`): compromisos e hitos con chips de
+  estado (pendientes/cumplidas), tipo y rango de fecha prevista; las vencidas llevan su etiqueta. Es una consulta: la cola
+  sin conexión de compromisos de `CommitmentsSection` no cambia.
 - **Coach IA** (CU11, requiere conexión): la pestaña «Coach» (`/coach`) abre la conversación más reciente
   (`GET /ai/conversations/me` y sus mensajes) o una invitación con preguntas sugeridas. `AskCoachUseCase` valida el texto
   (no vacío, máximo 2000) y `POST /ai/chat` lleva **plazo propio de 90 s** (el modelo local tarda más que una consulta
   normal). Cada respuesta muestra sus **fuentes** y, si el coach no tenía información suficiente o el tema es
   legal/financiero, un botón «Agendar una mentoría» que lleva a la pestaña Mentorías. Si el servicio de IA no responde
   (`ai_unavailable` → `AssistantUnavailableFailure`) **nada quedó guardado**: se quita la burbuja, se avisa con un
-  mensaje claro y el texto vuelve al campo para reenviarlo. «Nueva conversación» abre otra sin borrar la anterior.
+  mensaje claro y el texto vuelve al campo para reenviarlo. «Nueva conversación» abre otra sin borrar la anterior. El icono de historial abre `/coach/conversations` (`GET /ai/conversations/me`) y elegir una
+  reabre sus mensajes para continuarla (`OpenConversationUseCase`).
+- **Necesidades y dificultades** (CU24, requiere conexión): feature `needs`. Perfil → «Necesidades y dificultades»
+  (`/venture/needs`, solo con emprendimiento) lista lo reportado; «Reportar» (`/venture/needs/report`) pide tipo
+  (necesidad o dificultad), rubro del catálogo del CIE-U (`GET /needs`), prioridad y descripción, y llama a
+  `POST /ventures/{id}/needs`. `ReportNeedUseCase` valida rubro y descripción antes de llamar; una necesidad ya abierta
+  del mismo rubro es `NeedAlreadyRegisteredFailure` (se puede repetir cuando el CIE-U la resuelva). Si el catálogo está
+  vacío (el seed demo lo crea, las migraciones no) la pantalla lo explica.
 - **Varios emprendimientos** (CU05): la coordinación puede poner a un emprendedor en más de un equipo.
   `myVenturesProvider` trae la lista, `selectedVentureIdProvider` guarda el elegido (en memoria: al reabrir la app vuelve
   al primero) y `myVentureProvider` es el elegido o el primero. `VentureSwitcher` aparece en Inicio y en «Mi

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../gamification/index.dart';
+import '../../../needs/index.dart';
 import '../../../ventures/index.dart';
 import '../auth_routes.dart';
 import '../controllers/auth_controller.dart';
@@ -90,6 +91,18 @@ class AccountScreen extends ConsumerWidget {
               const SizedBox(height: 14),
               const XpBadgesSection(),
               const SizedBox(height: 14),
+              if (ref.watch(myVentureProvider).value != null) ...[
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push(NeedsRoutes.list),
+                    icon: const Icon(Icons.support_agent_outlined, size: 18),
+                    label: const Text('Necesidades y dificultades'),
+                    style: outlined,
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
               SizedBox(
                 height: 52,
                 child: OutlinedButton.icon(

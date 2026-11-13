@@ -5,8 +5,10 @@ import '../../../../core/error/result.dart';
 import '../../../ventures/index.dart';
 import '../../domain/entities/booking_status.dart';
 import '../../domain/entities/history_event.dart';
+import '../../domain/entities/history_filter.dart';
 import '../../domain/entities/mentor.dart';
 import '../../domain/entities/mentoring_session.dart';
+import '../../domain/entities/task.dart';
 import '../../domain/entities/time_slot.dart';
 import '../../domain/repositories/booking_repository.dart';
 import '../../domain/usecases/booking_usecases.dart';
@@ -31,6 +33,15 @@ final getMySessionsUseCaseProvider = Provider(
 );
 final getHistoryUseCaseProvider = Provider(
   (ref) => GetHistoryUseCase(ref.watch(bookingRepositoryProvider)),
+);
+final getSessionUseCaseProvider = Provider(
+  (ref) => GetSessionUseCase(ref.watch(bookingRepositoryProvider)),
+);
+final cancelSessionUseCaseProvider = Provider(
+  (ref) => CancelSessionUseCase(ref.watch(bookingRepositoryProvider)),
+);
+final getTasksUseCaseProvider = Provider(
+  (ref) => GetTasksUseCase(ref.watch(bookingRepositoryProvider)),
 );
 final bookSessionUseCaseProvider = Provider(
   (ref) => BookSessionUseCase(ref.watch(bookingRepositoryProvider)),
@@ -76,20 +87,52 @@ final mySessionsProvider = FutureProvider.autoDispose
       )).getOrThrow(),
     );
 
-/// Historial del emprendimiento activo; `true` = más reciente primero.
+/// Historial del emprendimiento activo según orden, tipos y periodo.
 final historyProvider = FutureProvider.autoDispose
-    .family<List<HistoryEvent>, bool>((ref, newestFirst) async {
+    .family<List<HistoryEvent>, HistoryFilter>((ref, filter) async {
       final ventureId = await ref.watch(currentVentureIdProvider.future);
       return (await ref.watch(getHistoryUseCaseProvider)(
-        newestFirst: newestFirst,
+        filter: filter,
         ventureId: ventureId,
       )).getOrThrow();
     });
+
+/// Detalle de una mentoría (CU23).
+final sessionDetailProvider = FutureProvider.autoDispose
+    .family<MentoringSession, int>(
+      (ref, id) async =>
+          (await ref.watch(getSessionUseCaseProvider)(id)).getOrThrow(),
+    );
+
+/// Compromisos e hitos del emprendedor (CU22; requiere conexión).
+final tasksProvider = FutureProvider.autoDispose.family<List<Task>, TaskFilter>(
+  (ref, filter) async =>
+      (await ref.watch(getTasksUseCaseProvider)(filter)).getOrThrow(),
+);
 
 /// Agendar una mentoría. Devuelve `null` si salió bien o el [Failure] para mostrarlo.
 class BookingController extends Notifier<void> {
   @override
   void build() {}
+
+  /// Cancela una mentoría programada. `null` si salió bien o el [Failure] para mostrarlo.
+  Future<Failure?> cancel(int sessionId) async {
+    final result = await ref.read(cancelSessionUseCaseProvider)(sessionId);
+    // Salió bien o ya no estaba programada: en ambos casos la pantalla debe refrescarse.
+    switch (result) {
+      case Ok():
+        ref.invalidate(mySessionsProvider);
+        ref.invalidate(sessionDetailProvider);
+        ref.invalidate(slotsProvider);
+        return null;
+      case Err(:final failure):
+        if (failure is SessionClosedFailure) {
+          ref.invalidate(mySessionsProvider);
+          ref.invalidate(sessionDetailProvider);
+        }
+        return failure;
+    }
+  }
 
   Future<Failure?> book({
     required Mentor mentor,

@@ -2,8 +2,10 @@ import 'package:app_emprendeu/core/error/failure.dart';
 import 'package:app_emprendeu/core/error/result.dart';
 import 'package:app_emprendeu/features/mentoring/domain/entities/booking_status.dart';
 import 'package:app_emprendeu/features/mentoring/domain/entities/history_event.dart';
+import 'package:app_emprendeu/features/mentoring/domain/entities/history_filter.dart';
 import 'package:app_emprendeu/features/mentoring/domain/entities/mentor.dart';
 import 'package:app_emprendeu/features/mentoring/domain/entities/mentoring_session.dart';
+import 'package:app_emprendeu/features/mentoring/domain/entities/task.dart';
 import 'package:app_emprendeu/features/mentoring/domain/entities/time_slot.dart';
 import 'package:app_emprendeu/features/mentoring/domain/repositories/booking_repository.dart';
 
@@ -122,15 +124,99 @@ class FakeBookingRepository implements BookingRepository {
       state: 'pendiente',
     ),
   ];
-  bool? lastNewestFirst;
+  HistoryFilter? lastFilter;
+  bool? get lastNewestFirst => lastFilter?.newestFirst;
 
   @override
   Future<Result<List<HistoryEvent>>> getHistory({
-    bool newestFirst = true,
+    HistoryFilter filter = const HistoryFilter(),
     int? ventureId,
   }) async {
-    lastNewestFirst = newestFirst;
-    return Result.ok(history);
+    lastFilter = filter;
+    return Result.ok([
+      for (final e in history)
+        if (filter.kinds.isEmpty || filter.kinds.contains(e.kind)) e,
+    ]);
+  }
+
+  /// Si se indica, [cancelSession] falla con él (p. ej. `SessionClosedFailure`).
+  Failure? cancelFailure;
+  int cancelCalls = 0;
+
+  @override
+  Future<Result<MentoringSession>> getSession(int id) async {
+    for (final s in sessions) {
+      if (s.id == id) return Result.ok(s);
+    }
+    return const Result.err(UnknownFailure('Mentoría no encontrada.'));
+  }
+
+  @override
+  Future<Result<MentoringSession>> cancelSession(int id) async {
+    cancelCalls++;
+    if (cancelFailure != null) return Result.err(cancelFailure!);
+    final index = sessions.indexWhere((s) => s.id == id);
+    if (index < 0) {
+      return const Result.err(UnknownFailure('Mentoría no encontrada.'));
+    }
+    final old = sessions[index];
+    final cancelled = MentoringSession(
+      id: old.id,
+      state: SessionState.cancelled,
+      topic: old.topic,
+      mentorName: old.mentorName,
+      specialty: old.specialty,
+      scheduledAt: old.scheduledAt,
+    );
+    sessions[index] = cancelled;
+    return Result.ok(cancelled);
+  }
+
+  List<Task> tasks = [
+    Task(
+      kind: TaskKind.commitment,
+      refId: 1,
+      ventureId: 1,
+      title: 'Entrevistar 5 clientes',
+      responsible: 'Camila Justiniano',
+      state: TaskState.pending,
+      dueAt: DateTime.now().add(const Duration(days: 5)),
+    ),
+    Task(
+      kind: TaskKind.commitment,
+      refId: 2,
+      ventureId: 1,
+      title: 'Enviar cotización',
+      state: TaskState.pending,
+      dueAt: DateTime.now().subtract(const Duration(days: 2)),
+      overdue: true,
+    ),
+    const Task(
+      kind: TaskKind.milestone,
+      refId: 7,
+      ventureId: 1,
+      title: 'Primer prototipo',
+      state: TaskState.pending,
+    ),
+    const Task(
+      kind: TaskKind.milestone,
+      refId: 8,
+      ventureId: 1,
+      title: 'Registro de marca',
+      state: TaskState.done,
+    ),
+  ];
+  TaskFilter? lastTaskFilter;
+
+  @override
+  Future<Result<List<Task>>> getTasks(TaskFilter filter) async {
+    lastTaskFilter = filter;
+    return Result.ok([
+      for (final t in tasks)
+        if (t.state == filter.state &&
+            (filter.kind == null || t.kind == filter.kind))
+          t,
+    ]);
   }
 
   @override

@@ -292,7 +292,7 @@ as String,
 /// @nodoc
 mixin _$ConversationSummaryDto {
 
-@JsonKey(name: 'conversacion_id') int get conversacionId;@JsonKey(name: 'total_mensajes') int get totalMensajes;
+@JsonKey(name: 'conversacion_id') int get conversacionId;@JsonKey(name: 'total_mensajes') int get totalMensajes;@JsonKey(name: 'fecha_inicio') DateTime? get fechaInicio;@JsonKey(name: 'fecha_fin') DateTime? get fechaFin;
 /// Create a copy of ConversationSummaryDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -306,20 +306,20 @@ $ConversationSummaryDtoCopyWith<ConversationSummaryDto> get copyWith => _$Conver
 @override
 bool operator ==(Object other) {
   final _this = this as ConversationSummaryDto;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ConversationSummaryDto&&(identical(other.conversacionId, _this.conversacionId) || other.conversacionId == _this.conversacionId)&&(identical(other.totalMensajes, _this.totalMensajes) || other.totalMensajes == _this.totalMensajes));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ConversationSummaryDto&&(identical(other.conversacionId, _this.conversacionId) || other.conversacionId == _this.conversacionId)&&(identical(other.totalMensajes, _this.totalMensajes) || other.totalMensajes == _this.totalMensajes)&&(identical(other.fechaInicio, _this.fechaInicio) || other.fechaInicio == _this.fechaInicio)&&(identical(other.fechaFin, _this.fechaFin) || other.fechaFin == _this.fechaFin));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as ConversationSummaryDto;
-  return Object.hash(runtimeType,_this.conversacionId,_this.totalMensajes);
+  return Object.hash(runtimeType,_this.conversacionId,_this.totalMensajes,_this.fechaInicio,_this.fechaFin);
 }
 
 @override
 String toString() {
   final _this = this as ConversationSummaryDto;
-  return 'ConversationSummaryDto(conversacionId: ${_this.conversacionId}, totalMensajes: ${_this.totalMensajes})';
+  return 'ConversationSummaryDto(conversacionId: ${_this.conversacionId}, totalMensajes: ${_this.totalMensajes}, fechaInicio: ${_this.fechaInicio}, fechaFin: ${_this.fechaFin})';
 }
 
 
@@ -330,7 +330,7 @@ abstract mixin class $ConversationSummaryDtoCopyWith<$Res>  {
   factory $ConversationSummaryDtoCopyWith(ConversationSummaryDto value, $Res Function(ConversationSummaryDto) _then) = _$ConversationSummaryDtoCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'conversacion_id') int conversacionId,@JsonKey(name: 'total_mensajes') int totalMensajes
+@JsonKey(name: 'conversacion_id') int conversacionId,@JsonKey(name: 'total_mensajes') int totalMensajes,@JsonKey(name: 'fecha_inicio') DateTime? fechaInicio,@JsonKey(name: 'fecha_fin') DateTime? fechaFin
 });
 
 
@@ -347,11 +347,13 @@ class _$ConversationSummaryDtoCopyWithImpl<$Res>
 
 /// Create a copy of ConversationSummaryDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? conversacionId = null,Object? totalMensajes = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? conversacionId = null,Object? totalMensajes = null,Object? fechaInicio = freezed,Object? fechaFin = freezed,}) {
   return _then(ConversationSummaryDto(
 conversacionId: null == conversacionId ? _self.conversacionId : conversacionId // ignore: cast_nullable_to_non_nullable
 as int,totalMensajes: null == totalMensajes ? _self.totalMensajes : totalMensajes // ignore: cast_nullable_to_non_nullable
-as int,
+as int,fechaInicio: freezed == fechaInicio ? _self.fechaInicio : fechaInicio // ignore: cast_nullable_to_non_nullable
+as DateTime?,fechaFin: freezed == fechaFin ? _self.fechaFin : fechaFin // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -436,10 +438,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'conversacion_id')  int conversacionId, @JsonKey(name: 'total_mensajes')  int totalMensajes)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'conversacion_id')  int conversacionId, @JsonKey(name: 'total_mensajes')  int totalMensajes, @JsonKey(name: 'fecha_inicio')  DateTime? fechaInicio, @JsonKey(name: 'fecha_fin')  DateTime? fechaFin)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ConversationSummaryDto() when $default != null:
-return $default(_that.conversacionId,_that.totalMensajes);case _:
+return $default(_that.conversacionId,_that.totalMensajes,_that.fechaInicio,_that.fechaFin);case _:
   return orElse();
 
 }
@@ -457,10 +459,10 @@ return $default(_that.conversacionId,_that.totalMensajes);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'conversacion_id')  int conversacionId, @JsonKey(name: 'total_mensajes')  int totalMensajes)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'conversacion_id')  int conversacionId, @JsonKey(name: 'total_mensajes')  int totalMensajes, @JsonKey(name: 'fecha_inicio')  DateTime? fechaInicio, @JsonKey(name: 'fecha_fin')  DateTime? fechaFin)  $default,) {final _that = this;
 switch (_that) {
 case _ConversationSummaryDto():
-return $default(_that.conversacionId,_that.totalMensajes);case _:
+return $default(_that.conversacionId,_that.totalMensajes,_that.fechaInicio,_that.fechaFin);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -477,10 +479,10 @@ return $default(_that.conversacionId,_that.totalMensajes);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'conversacion_id')  int conversacionId, @JsonKey(name: 'total_mensajes')  int totalMensajes)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'conversacion_id')  int conversacionId, @JsonKey(name: 'total_mensajes')  int totalMensajes, @JsonKey(name: 'fecha_inicio')  DateTime? fechaInicio, @JsonKey(name: 'fecha_fin')  DateTime? fechaFin)?  $default,) {final _that = this;
 switch (_that) {
 case _ConversationSummaryDto() when $default != null:
-return $default(_that.conversacionId,_that.totalMensajes);case _:
+return $default(_that.conversacionId,_that.totalMensajes,_that.fechaInicio,_that.fechaFin);case _:
   return null;
 
 }
@@ -491,12 +493,14 @@ return $default(_that.conversacionId,_that.totalMensajes);case _:
 /// @nodoc
 @JsonSerializable()
 
-class _ConversationSummaryDto implements ConversationSummaryDto {
-  const _ConversationSummaryDto({@JsonKey(name: 'conversacion_id') required this.conversacionId, @JsonKey(name: 'total_mensajes') this.totalMensajes = 0});
+class _ConversationSummaryDto extends ConversationSummaryDto {
+  const _ConversationSummaryDto({@JsonKey(name: 'conversacion_id') required this.conversacionId, @JsonKey(name: 'total_mensajes') this.totalMensajes = 0, @JsonKey(name: 'fecha_inicio') this.fechaInicio, @JsonKey(name: 'fecha_fin') this.fechaFin}): super._();
   factory _ConversationSummaryDto.fromJson(Map<String, dynamic> json) => _$ConversationSummaryDtoFromJson(json);
 
 @override@JsonKey(name: 'conversacion_id') final  int conversacionId;
 @override@JsonKey(name: 'total_mensajes') final  int totalMensajes;
+@override@JsonKey(name: 'fecha_inicio') final  DateTime? fechaInicio;
+@override@JsonKey(name: 'fecha_fin') final  DateTime? fechaFin;
 
 /// Create a copy of ConversationSummaryDto
 /// with the given fields replaced by the non-null parameter values.
@@ -511,18 +515,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ConversationSummaryDto&&(identical(other.conversacionId, conversacionId) || other.conversacionId == conversacionId)&&(identical(other.totalMensajes, totalMensajes) || other.totalMensajes == totalMensajes));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ConversationSummaryDto&&(identical(other.conversacionId, conversacionId) || other.conversacionId == conversacionId)&&(identical(other.totalMensajes, totalMensajes) || other.totalMensajes == totalMensajes)&&(identical(other.fechaInicio, fechaInicio) || other.fechaInicio == fechaInicio)&&(identical(other.fechaFin, fechaFin) || other.fechaFin == fechaFin));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,conversacionId,totalMensajes);
+    return Object.hash(runtimeType,conversacionId,totalMensajes,fechaInicio,fechaFin);
 }
 
 @override
 String toString() {
-    return 'ConversationSummaryDto(conversacionId: $conversacionId, totalMensajes: $totalMensajes)';
+    return 'ConversationSummaryDto(conversacionId: $conversacionId, totalMensajes: $totalMensajes, fechaInicio: $fechaInicio, fechaFin: $fechaFin)';
 }
 
 
@@ -533,7 +537,7 @@ abstract mixin class _$ConversationSummaryDtoCopyWith<$Res> implements $Conversa
   factory _$ConversationSummaryDtoCopyWith(_ConversationSummaryDto value, $Res Function(_ConversationSummaryDto) _then) = __$ConversationSummaryDtoCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'conversacion_id') int conversacionId,@JsonKey(name: 'total_mensajes') int totalMensajes
+@JsonKey(name: 'conversacion_id') int conversacionId,@JsonKey(name: 'total_mensajes') int totalMensajes,@JsonKey(name: 'fecha_inicio') DateTime? fechaInicio,@JsonKey(name: 'fecha_fin') DateTime? fechaFin
 });
 
 
@@ -550,11 +554,13 @@ class __$ConversationSummaryDtoCopyWithImpl<$Res>
 
 /// Create a copy of ConversationSummaryDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? conversacionId = null,Object? totalMensajes = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? conversacionId = null,Object? totalMensajes = null,Object? fechaInicio = freezed,Object? fechaFin = freezed,}) {
   return _then(_ConversationSummaryDto(
 conversacionId: null == conversacionId ? _self.conversacionId : conversacionId // ignore: cast_nullable_to_non_nullable
 as int,totalMensajes: null == totalMensajes ? _self.totalMensajes : totalMensajes // ignore: cast_nullable_to_non_nullable
-as int,
+as int,fechaInicio: freezed == fechaInicio ? _self.fechaInicio : fechaInicio // ignore: cast_nullable_to_non_nullable
+as DateTime?,fechaFin: freezed == fechaFin ? _self.fechaFin : fechaFin // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

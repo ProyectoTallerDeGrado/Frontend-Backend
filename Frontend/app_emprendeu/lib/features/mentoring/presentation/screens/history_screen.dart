@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../domain/entities/history_event.dart';
+import '../../domain/entities/history_filter.dart';
 import '../controllers/booking_providers.dart';
 
 const _kinds = <HistoryKind, (String, IconData)>{
@@ -26,12 +27,39 @@ class HistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
-  bool _newestFirst = true;
+  HistoryFilter _filter = const HistoryFilter();
+
+  Future<void> _pickRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 3),
+      lastDate: DateTime(now.year + 2),
+      initialDateRange: _filter.from == null || _filter.to == null
+          ? null
+          : DateTimeRange(start: _filter.from!, end: _filter.to!),
+      helpText: 'Periodo del historial',
+      cancelText: 'Cancelar',
+      confirmText: 'Aplicar',
+      saveText: 'Aplicar',
+    );
+    if (picked != null && mounted) {
+      setState(
+        () => _filter = _filter.copyWith(from: picked.start, to: picked.end),
+      );
+    }
+  }
+
+  void _toggleKind(HistoryKind kind, bool selected) {
+    final kinds = {..._filter.kinds};
+    selected ? kinds.add(kind) : kinds.remove(kind);
+    setState(() => _filter = _filter.copyWith(kinds: kinds));
+  }
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final history = ref.watch(historyProvider(_newestFirst));
+    final history = ref.watch(historyProvider(_filter));
     return Scaffold(
       appBar: AppBar(title: const Text('Historial')),
       body: SafeArea(
@@ -39,7 +67,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           onRefresh: () async {
             ref.invalidate(historyProvider);
             await ref
-                .read(historyProvider(_newestFirst).future)
+                .read(historyProvider(_filter).future)
                 .catchError((_) => <HistoryEvent>[]);
           },
           child: ListView(
@@ -56,14 +84,56 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 children: [
                   ChoiceChip(
                     label: const Text('Más reciente primero'),
-                    selected: _newestFirst,
-                    onSelected: (_) => setState(() => _newestFirst = true),
+                    selected: _filter.newestFirst,
+                    onSelected: (_) => setState(
+                      () => _filter = _filter.copyWith(newestFirst: true),
+                    ),
                   ),
                   ChoiceChip(
                     label: const Text('Cronológico'),
-                    selected: !_newestFirst,
-                    onSelected: (_) => setState(() => _newestFirst = false),
+                    selected: !_filter.newestFirst,
+                    onSelected: (_) => setState(
+                      () => _filter = _filter.copyWith(newestFirst: false),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final entry in _kinds.entries)
+                    FilterChip(
+                      label: Text(entry.value.$1),
+                      selected: _filter.kinds.contains(entry.key),
+                      onSelected: (on) => _toggleKind(entry.key, on),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  ActionChip(
+                    avatar: const Icon(Icons.date_range, size: 18),
+                    label: Text(
+                      _filter.from == null || _filter.to == null
+                          ? 'Filtrar por periodo'
+                          : '${shortDay(_filter.from!)} – ${shortDay(_filter.to!)}',
+                    ),
+                    onPressed: _pickRange,
+                  ),
+                  if (_filter.isFiltered)
+                    TextButton(
+                      onPressed: () => setState(
+                        () => _filter = HistoryFilter(
+                          newestFirst: _filter.newestFirst,
+                        ),
+                      ),
+                      child: const Text('Quitar filtros'),
+                    ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -91,7 +161,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: 32),
                         child: Text(
-                          'Todavía no hay actividad registrada en tu emprendimiento.',
+                          _filter.isFiltered
+                              ? 'No hay eventos con esos filtros.'
+                              : 'Todavía no hay actividad registrada en tu emprendimiento.',
                           textAlign: TextAlign.center,
                           style: text.bodyMedium?.copyWith(
                             color: AppColors.muted,

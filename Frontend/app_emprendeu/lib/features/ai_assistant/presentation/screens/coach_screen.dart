@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/failure.dart';
 import '../../../mentoring/index.dart';
 import '../../domain/usecases/assistant_usecases.dart';
+import '../assistant_routes.dart';
 import '../controllers/assistant_providers.dart';
 import '../widgets/message_bubble.dart';
 
@@ -95,6 +96,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                         ),
                       ],
                     ),
+                  ),
+                  IconButton(
+                    tooltip: 'Conversaciones anteriores',
+                    onPressed: () =>
+                        context.push(AssistantRoutes.conversations),
+                    icon: const Icon(Icons.history),
                   ),
                   IconButton(
                     tooltip: 'Nueva conversación',

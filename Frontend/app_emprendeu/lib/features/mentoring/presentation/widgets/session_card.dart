@@ -6,9 +6,12 @@ import '../../domain/entities/mentoring_session.dart';
 
 /// Una mentoría en la lista: cuándo, con quién, de qué y en qué estado está.
 class SessionCard extends StatelessWidget {
-  const SessionCard({super.key, required this.session});
+  const SessionCard({super.key, required this.session, this.onTap});
 
   final MentoringSession session;
+
+  /// Si se indica, la tarjeta abre el detalle de la mentoría.
+  final VoidCallback? onTap;
 
   (String, Color, Color) get _badge => switch (session.state) {
     SessionState.scheduled => (
@@ -41,73 +44,81 @@ class SessionCard extends StatelessWidget {
     ];
     return Semantics(
       container: true,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border.all(color: AppColors.border),
+      button: onTap != null,
+      child: Material(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: AppColors.border),
           borderRadius: BorderRadius.circular(18),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    when == null ? 'Sin fecha' : sessionWhen(when),
-                    style: text.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        when == null ? 'Sin fecha' : sessionWhen(when),
+                        style: text.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: background,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        label,
+                        style: text.bodySmall?.copyWith(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: foreground,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if ((session.topic ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(session.topic!, style: text.bodyMedium),
+                ],
+                const SizedBox(height: 6),
+                Text(
+                  [
+                    if (session.mentorName != null) 'Con ${session.mentorName}',
+                    if ((session.specialty ?? '').isNotEmpty)
+                      session.specialty!,
+                  ].join(' · '),
+                  style: text.bodySmall?.copyWith(
+                    fontSize: 13,
+                    color: AppColors.muted,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: background,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    label,
+                if (extras.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    extras.join(' · '),
                     style: text.bodySmall?.copyWith(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: foreground,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
                     ),
                   ),
-                ),
+                ],
               ],
             ),
-            if ((session.topic ?? '').isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(session.topic!, style: text.bodyMedium),
-            ],
-            const SizedBox(height: 6),
-            Text(
-              [
-                if (session.mentorName != null) 'Con ${session.mentorName}',
-                if ((session.specialty ?? '').isNotEmpty) session.specialty!,
-              ].join(' · '),
-              style: text.bodySmall?.copyWith(
-                fontSize: 13,
-                color: AppColors.muted,
-              ),
-            ),
-            if (extras.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                extras.join(' · '),
-                style: text.bodySmall?.copyWith(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );

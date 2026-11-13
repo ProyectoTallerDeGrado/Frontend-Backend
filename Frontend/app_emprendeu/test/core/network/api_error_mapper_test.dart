@@ -44,6 +44,14 @@ void main() {
       mapDioException(_error(409, code: 'slot_unavailable')),
       isA<SlotUnavailableFailure>(),
     );
+    expect(
+      mapDioException(_error(409, code: 'session_closed')),
+      isA<SessionClosedFailure>(),
+    );
+    expect(
+      mapDioException(_error(409, code: 'need_already_registered')),
+      isA<NeedAlreadyRegisteredFailure>(),
+    );
     // 400, no 401: una clave actual equivocada no debe cerrar la sesión
     final wrong = mapDioException(_error(400, code: 'wrong_password'));
     expect(wrong, isA<FieldFailure>());

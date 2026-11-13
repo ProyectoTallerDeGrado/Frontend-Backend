@@ -2,8 +2,10 @@ import '../../../../core/error/failure.dart';
 import '../../../../core/error/result.dart';
 import '../entities/booking_status.dart';
 import '../entities/history_event.dart';
+import '../entities/history_filter.dart';
 import '../entities/mentor.dart';
 import '../entities/mentoring_session.dart';
+import '../entities/task.dart';
 import '../entities/time_slot.dart';
 import '../repositories/booking_repository.dart';
 
@@ -81,7 +83,33 @@ class GetHistoryUseCase {
   final BookingRepository _repository;
 
   Future<Result<List<HistoryEvent>>> call({
-    bool newestFirst = true,
+    HistoryFilter filter = const HistoryFilter(),
     int? ventureId,
-  }) => _repository.getHistory(newestFirst: newestFirst, ventureId: ventureId);
+  }) => _repository.getHistory(filter: filter, ventureId: ventureId);
+}
+
+/// Detalle de una mentoría propia (CU23).
+class GetSessionUseCase {
+  const GetSessionUseCase(this._repository);
+  final BookingRepository _repository;
+
+  Future<Result<MentoringSession>> call(int id) => _repository.getSession(id);
+}
+
+/// Cancela una mentoría programada y libera el horario (CU23).
+class CancelSessionUseCase {
+  const CancelSessionUseCase(this._repository);
+  final BookingRepository _repository;
+
+  Future<Result<MentoringSession>> call(int id) =>
+      _repository.cancelSession(id);
+}
+
+/// Compromisos e hitos del emprendedor con sus filtros (CU22).
+class GetTasksUseCase {
+  const GetTasksUseCase(this._repository);
+  final BookingRepository _repository;
+
+  Future<Result<List<Task>>> call(TaskFilter filter) =>
+      _repository.getTasks(filter);
 }

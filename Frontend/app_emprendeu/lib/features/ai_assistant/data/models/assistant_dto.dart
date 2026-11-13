@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../domain/entities/chat_message.dart';
 import '../../domain/entities/coach_conversation.dart';
+import '../../domain/entities/conversation_summary.dart';
 import '../../domain/entities/coach_reply.dart';
 
 part 'assistant_dto.freezed.dart';
@@ -34,13 +35,24 @@ abstract class ChatMessageDto with _$ChatMessageDto {
 
 @freezed
 abstract class ConversationSummaryDto with _$ConversationSummaryDto {
+  const ConversationSummaryDto._();
+
   const factory ConversationSummaryDto({
     @JsonKey(name: 'conversacion_id') required int conversacionId,
     @JsonKey(name: 'total_mensajes') @Default(0) int totalMensajes,
+    @JsonKey(name: 'fecha_inicio') DateTime? fechaInicio,
+    @JsonKey(name: 'fecha_fin') DateTime? fechaFin,
   }) = _ConversationSummaryDto;
 
   factory ConversationSummaryDto.fromJson(Map<String, dynamic> json) =>
       _$ConversationSummaryDtoFromJson(json);
+
+  ConversationSummary toEntity() => ConversationSummary(
+    id: conversacionId,
+    messageCount: totalMensajes,
+    startedAt: fechaInicio,
+    lastMessageAt: fechaFin,
+  );
 }
 
 @freezed
