@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.errors import Forbidden
@@ -21,7 +22,9 @@ from emprendeu.modules.ventures.exceptions import (
     InvalidStageTransition,
     LastMember,
     MemberNotFound,
+    MilestoneDuplicate,
     MilestoneNotFound,
+    NeedAlreadyRegistered,
     NeedNotFound,
     ReservedFields,
     StageInactive,
@@ -499,6 +502,8 @@ class VentureService:
     ) -> s.MilestoneOut:
         await self._require_access(user, emprendimiento_id, "seguimiento:registro")
         await self._venture(emprendimiento_id)
+        if await self._repo.milestone_title_exists(emprendimiento_id, body.titulo):
+            raise MilestoneDuplicate
         current = await self._repo.active_stage_row(emprendimiento_id)
         milestone = Hito(
             emprendimiento_id=emprendimiento_id,
@@ -511,6 +516,14 @@ class VentureService:
             estado="pendiente",
         )
         await self._repo.add(milestone)
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.hito",
+            body.titulo,
+            tabla="hito",
+            id_registro=milestone.hito_id,
+            despues={"accion": "crear", "emprendimiento_id": emprendimiento_id},
+        )
         await self._repo.commit()
         return self._milestone_out(milestone)
 
@@ -525,6 +538,14 @@ class VentureService:
         )
         milestone.estado = body.estado
         milestone.fecha_cumplimiento = now() if body.estado == "cumplido" else None
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.hito",
+            milestone.titulo,
+            tabla="hito",
+            id_registro=hito_id,
+            despues={"accion": "estado", "estado": body.estado},
+        )
         await self._repo.commit()
         return self._milestone_out(milestone)
 
@@ -578,6 +599,8 @@ class VentureService:
         need = await self._repo.get_need(body.necesidad_id)
         if need is None:
             raise NeedNotFound
+        if await self._repo.venture_need_exists(emprendimiento_id, need.necesidad_id):
+            raise NeedAlreadyRegistered
         row = EmprendimientoNecesidad(
             emprendimiento_id=emprendimiento_id,
             necesidad_id=need.necesidad_id,
@@ -585,7 +608,19 @@ class VentureService:
             prioridad=body.prioridad,
             fecha_detectada=now(),
         )
-        await self._repo.add(row)
+        try:
+            await self._repo.add(row)
+        except IntegrityError as exc:  # peticion simultanea
+            await self._repo.rollback()
+            raise NeedAlreadyRegistered from exc
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.necesidad",
+            need.nombre,
+            tabla="emprendimiento_necesidades",
+            id_registro=row.emprendimiento_necesidad_id,
+            despues={"accion": "registrar", "emprendimiento_id": emprendimiento_id},
+        )
         await self._repo.commit()
         return self._need_out(row, need.nombre)
 
@@ -601,5 +636,13 @@ class VentureService:
         row.estado = "resuelta"
         row.fecha_resuelta = now()
         need = await self._repo.get_need(row.necesidad_id)
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.necesidad",
+            need.nombre if need else None,
+            tabla="emprendimiento_necesidades",
+            id_registro=row_id,
+            despues={"accion": "resolver"},
+        )
         await self._repo.commit()
         return self._need_out(row, need.nombre if need else "")

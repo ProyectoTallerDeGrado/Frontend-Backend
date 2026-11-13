@@ -28,6 +28,9 @@ class VentureRepository:
     async def commit(self) -> None:
         await self._session.commit()
 
+    async def rollback(self) -> None:
+        await self._session.rollback()
+
     async def flush(self) -> None:
         await self._session.flush()
 
@@ -178,6 +181,22 @@ class VentureRepository:
             .order_by(Hito.fecha_estimada.asc().nulls_last(), Hito.hito_id)
         )
         return list((await self._session.execute(stmt)).scalars().all())
+
+    async def milestone_title_exists(self, emprendimiento_id: int, titulo: str) -> bool:
+        stmt = select(Hito.hito_id).where(
+            Hito.emprendimiento_id == emprendimiento_id,
+            func.lower(func.trim(Hito.titulo)) == titulo.strip().lower(),
+        )
+        return (await self._session.execute(stmt)).first() is not None
+
+    async def venture_need_exists(
+        self, emprendimiento_id: int, necesidad_id: int
+    ) -> bool:
+        stmt = select(EmprendimientoNecesidad.emprendimiento_necesidad_id).where(
+            EmprendimientoNecesidad.emprendimiento_id == emprendimiento_id,
+            EmprendimientoNecesidad.necesidad_id == necesidad_id,
+        )
+        return (await self._session.execute(stmt)).first() is not None
 
     async def get_milestone(self, hito_id: int) -> Hito | None:
         return await self._session.get(Hito, hito_id)

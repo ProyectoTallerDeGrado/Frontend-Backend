@@ -115,3 +115,17 @@ class LastMember(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("El emprendimiento debe quedar con al menos un integrante.")
+
+
+class MilestoneDuplicate(ConflictError):
+    code = "milestone_duplicate"
+
+    def __init__(self) -> None:
+        super().__init__("El emprendimiento ya tiene un hito con ese titulo.")
+
+
+class NeedAlreadyRegistered(ConflictError):
+    code = "need_already_registered"
+
+    def __init__(self) -> None:
+        super().__init__("Esa necesidad ya esta registrada en el emprendimiento.")

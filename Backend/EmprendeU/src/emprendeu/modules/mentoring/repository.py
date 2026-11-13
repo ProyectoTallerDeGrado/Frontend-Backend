@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import column, delete, func, select, table
+from sqlalchemy import column, delete, func, select, table, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.modules.mentoring.models import (
@@ -154,6 +154,48 @@ class MentoringRepository:
             ).all()
         )
         return {i: (recs.get(i, 0), coms.get(i, 0)) for i in sesion_ids}
+
+    async def lock_mentor(self, mentor_id: int) -> None:
+        """Serializa las escrituras de agenda de un mentor hasta el fin de la transaccion."""
+        await self._session.execute(
+            text("SELECT pg_advisory_xact_lock(:k)"),
+            {"k": 7_000_000_000 + mentor_id},
+        )
+
+    async def mentor_sessions_overlapping(
+        self, mentor_id: int, start: datetime, end: datetime, minutes: int
+    ) -> list[SesionAcompanamiento]:
+        """Sesiones programadas del mentor que se cruzan con `[start, end)`."""
+        begin = SesionAcompanamiento.fecha_programada
+        stmt = (
+            select(SesionAcompanamiento)
+            .join(
+                SesionParticipante,
+                SesionParticipante.sesion_acompanamiento_id
+                == SesionAcompanamiento.sesion_acompanamiento_id,
+            )
+            .where(
+                SesionParticipante.usuario_id == mentor_id,
+                SesionParticipante.rol_participante == MENTOR_ROLE,
+                SesionAcompanamiento.estado == "programada",
+                begin < end,
+                begin + func.make_interval(0, 0, 0, 0, 0, minutes) > start,
+            )
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
+    async def venture_sessions_overlapping(
+        self, emprendimiento_id: int, start: datetime, end: datetime
+    ) -> list[SesionAcompanamiento]:
+        """Sesiones vigentes (programadas o realizadas) del emprendimiento en `[start, end)`."""
+        when = _effective_date()
+        stmt = select(SesionAcompanamiento).where(
+            SesionAcompanamiento.emprendimiento_id == emprendimiento_id,
+            SesionAcompanamiento.estado.in_(["programada", "realizada"]),
+            when >= start,
+            when < end,
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
 
     async def mentor_sessions_between(
         self, mentor_id: int, start: datetime, end: datetime

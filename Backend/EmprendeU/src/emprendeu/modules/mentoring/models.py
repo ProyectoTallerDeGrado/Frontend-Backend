@@ -313,6 +313,15 @@ class Asignacion(Base):
         ),
         Index("ix_asignaciones_usuarioid", "usuarioid"),
         Index("ix_asignaciones_emprendimientoid", "emprendimientoid"),
+        # Un asesor no puede tener dos asignaciones activas al mismo emprendimiento
+        # (respaldo del chequeo del servicio ante peticiones simultaneas).
+        Index(
+            "uq_asignaciones_activa_usuario_emprendimiento",
+            "usuarioid",
+            "emprendimientoid",
+            unique=True,
+            postgresql_where=text("estado = 'activa'"),
+        ),
     )
 
     estado: Mapped[str | None] = mapped_column(String(40))
