@@ -16,24 +16,23 @@ const COLS = "grid-cols-[minmax(240px,2.2fr)_190px_220px_150px]";
 
 export function UsersTable({ users, roles, currentUserId, canToggle, canChangeRole }: UsersTableProps) {
   return (
-    <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-border bg-card">
+    <div className="relative overflow-x-auto overflow-y-hidden rounded-2xl border border-border bg-card">
       <div className="min-w-[900px]">
         <div
-          className={`grid ${COLS} gap-4 border-b border-border bg-[#f8fafe] px-6 py-3.5 text-[13px] font-bold tracking-[.04em] text-muted-foreground uppercase`}
+          className={`grid ${COLS} gap-4 border-b border-border bg-surface-head px-6 py-3.5 text-[13px] font-semibold text-muted-foreground`}
         >
           <span>Usuario</span>
           <span>Rol</span>
           <span>Estado de la cuenta</span>
           <span>Último acceso</span>
         </div>
-        {users.map((u, i) => {
+        {users.map((u) => {
           const [bg, fg] = AVATAR_COLORS[u.usuario_id % AVATAR_COLORS.length];
           const name = `${u.nombre} ${u.apellido}`;
           return (
             <div
               key={u.usuario_id}
-              className={`grid ${COLS} animate-[fade-up_.45s_ease_both] items-center gap-4 border-b border-[#eef2fa] px-6 py-3 transition-colors hover:bg-[#f4f7ff]`}
-              style={{ animationDelay: `${Math.min(i, 10) * 45}ms` }}
+              className={`grid ${COLS} items-center gap-4 border-b border-muted px-6 py-3 transition-colors hover:bg-row-hover`}
             >
               <div className="flex min-w-0 items-center gap-3.5">
                 <div

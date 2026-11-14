@@ -19,7 +19,7 @@ const ALERT_ROWS: { key: keyof Pick<TrackingSettings, "notificar_coordinador" | 
   { key: "alertar_incumplimiento", title: "Incumplimiento de compromisos", hint: "Genera alerta cuando vence un compromiso sin avance." },
 ];
 
-const card = "rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-[0_14px_30px_-18px_rgba(10,26,68,.35)]";
+const card = "rounded-2xl border border-border bg-card p-6";
 
 export function TrackingForm({ initial, canEdit, canEvaluate }: Props) {
   const [saved, setSaved] = useState(initial);
@@ -48,7 +48,7 @@ export function TrackingForm({ initial, canEdit, canEvaluate }: Props) {
       else toast.error(result.message);
     });
 
-  const stepper = "flex size-11 items-center justify-center rounded-[10px] bg-[#f4f6fb] outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30 disabled:opacity-50";
+  const stepper = "flex size-11 items-center justify-center rounded-[10px] bg-background outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30 disabled:opacity-50";
 
   return (
     <div className="flex flex-wrap items-start gap-6">
@@ -139,7 +139,7 @@ export function TrackingForm({ initial, canEdit, canEvaluate }: Props) {
             Una alerta no modifica automáticamente el estado del emprendimiento.
           </p>
           {ALERT_ROWS.map((row) => (
-            <div key={row.key} className="flex items-center gap-4 border-t border-[#eef2fa] py-3">
+            <div key={row.key} className="flex items-center gap-4 border-t border-muted py-3">
               <div className="min-w-0 flex-1">
                 <div className="text-[15px] font-semibold">{row.title}</div>
                 <div className="text-[13px] text-muted-foreground">{row.hint}</div>
@@ -184,9 +184,9 @@ export function TrackingForm({ initial, canEdit, canEvaluate }: Props) {
         </section>
       </div>
 
-      <aside className="flex min-w-[280px] flex-[0_1_340px] animate-[fade-up_.5s_.1s_ease_both] flex-col gap-[18px] rounded-2xl bg-navy-900 p-6 text-white">
+      <aside className="flex min-w-[280px] flex-[0_1_340px] flex-col gap-[18px] rounded-2xl bg-navy-900 p-6 text-white">
         <div>
-          <div className="text-[13px] font-bold tracking-[.06em] text-[#9fb4ee] uppercase">
+          <div className="text-[13px] font-semibold text-on-navy-dim">
             Configuración que se aplicará
           </div>
           <div className="mt-1.5 text-sm text-on-navy-muted">Revisa los valores antes de confirmar.</div>
@@ -209,8 +209,8 @@ export function TrackingForm({ initial, canEdit, canEvaluate }: Props) {
           ))}
         </dl>
         {!dirty ? (
-          <div role="status" className="flex items-center gap-3 rounded-xl bg-[#0e7a4f]/30 p-3.5 text-sm leading-snug">
-            <Check aria-hidden="true" className="size-[22px] shrink-0 text-[#7fe0b0]" strokeWidth={2.6} />
+          <div role="status" className="flex items-center gap-3 rounded-xl bg-success/30 p-3.5 text-sm leading-snug">
+            <Check aria-hidden="true" className="size-[22px] shrink-0 text-success-bright" strokeWidth={2.6} />
             Esta configuración está aplicada y registrada en la auditoría.
           </div>
         ) : (
@@ -218,7 +218,7 @@ export function TrackingForm({ initial, canEdit, canEvaluate }: Props) {
             type="button"
             disabled={!canEdit || pending}
             onClick={apply}
-            className="h-[50px] gap-2 rounded-xl bg-accent-bright text-[15px] font-bold text-[#2a0008] hover:bg-accent-bright/90"
+            className="h-[50px] gap-2 rounded-xl bg-accent-bright text-[15px] font-bold text-on-accent hover:bg-accent-bright/90"
           >
             {pending && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
             Confirmar y aplicar

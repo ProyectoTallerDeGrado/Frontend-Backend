@@ -37,23 +37,22 @@ export async function AuditView({ categoria, page }: Props) {
           );
         })}
       </div>
-      <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-border bg-card">
+      <div className="relative overflow-x-auto overflow-y-hidden rounded-2xl border border-border bg-card">
         <div className="min-w-[840px]">
           <div
-            className={`grid ${COLS} gap-4 border-b border-border bg-[#f8fafe] px-6 py-3.5 text-[13px] font-bold tracking-[.04em] text-muted-foreground uppercase`}
+            className={`grid ${COLS} gap-4 border-b border-border bg-surface-head px-6 py-3.5 text-[13px] font-semibold text-muted-foreground`}
           >
             <span>Hora</span>
             <span>Actor</span>
             <span>Acción</span>
             <span>Resultado</span>
           </div>
-          {data.items.map((a, i) => {
+          {data.items.map((a) => {
             const ok = a.resultado === "exitoso";
             return (
               <div
                 key={a.bitacora_id}
-                className={`grid ${COLS} animate-[fade-up_.4s_ease_both] items-center gap-4 border-b border-[#eef2fa] px-6 py-3.5 transition-colors hover:bg-[#f4f7ff]`}
-                style={{ animationDelay: `${Math.min(i, 12) * 35}ms` }}
+                className={`grid ${COLS} items-center gap-4 border-b border-muted px-6 py-3.5 transition-colors hover:bg-row-hover`}
               >
                 <span className="text-sm text-muted-foreground">{formatWhen(a.fecha)}</span>
                 <span className="text-sm font-semibold">{a.actor ?? "Sistema"}</span>
@@ -63,7 +62,7 @@ export async function AuditView({ categoria, page }: Props) {
                 </span>
                 <span>
                   <span
-                    className={`inline-block rounded-full px-3 py-1 text-[13px] font-bold ${ok ? "bg-success-tint text-success-foreground" : "bg-[#ffe3e8] text-[#8f0f25]"}`}
+                    className={`inline-block rounded-full px-3 py-1 text-[13px] font-bold ${ok ? "bg-success-tint text-success-foreground" : "bg-danger-tint text-danger-foreground"}`}
                   >
                     {ok ? "Exitoso" : "Rechazado"}
                   </span>

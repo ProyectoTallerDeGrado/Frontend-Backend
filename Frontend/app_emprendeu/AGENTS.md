@@ -38,6 +38,16 @@ features **conectadas al backend**: `auth` (login, registro, sesión), `ventures
 | Cola/cachés locales (no secretos) | **`shared_preferences`** (detrás de `KeyValueStore`) | SQLite/Isar (excesivo para una cola pequeña) |
 | Estado de red | **`connectivity_plus`** (detrás de `ConnectivitySource`) | sondeo manual |
 | Elegir un archivo (evidencia) | **`file_picker`** (detrás de `EvidencePicker`, en `documents`) | pedir permisos de galería a mano |
+| Leer PDF en el celular (archivos propios para la IA) | **`read_pdf_text` 0.3.1** (PDFBox en Android, PDFKit en iOS; detrás de `TextExtractor`) | `pdfrx`: su hook nativo exige `clang` en la máquina y rompía `flutter test`; `syncfusion_flutter_pdf`: licencia comercial |
+| Leer DOCX / rutas de archivos | **`archive`** + **`xml`** (el `.docx` es un ZIP con XML) y **`path_provider`** | |
+| Abrir un documento descargado (CU30) | **`open_filex` 5.0.0** (detrás de `FileOpener`, en `documents`). Sus permisos `READ_MEDIA_*` y `READ_EXTERNAL_STORAGE` se quitan en `AndroidManifest.xml` (`tools:node="remove"`): solo abre archivos privados de la app | |
+| IA en el celular (chat + embeddings) | **`flutter_edge_ai` 2.5.4 + `flutter_edge_ai_litertlm` 1.19.0**, versiones exactas (motor LiteRT-LM, detrás de `LocalAiRepository`, en `ai_assistant`) | `llama_cpp_dart` (sin mantenimiento activo); embeddings GGUF (el paquete aún no los ejecuta) |
+
+> **IA local: requisitos de plataforma.** LiteRT-LM exige `minSdk 30` (Android 11) y solo corre en
+> **arm64**: por eso `android/app/build.gradle.kts` fija `minSdk = 30` para toda la app. En un emulador
+> x86_64 la tarjeta muestra «no compatible» y el Coach sigue con el servidor. **iOS aún no:** el paquete
+> pide un `ios/Podfile` con `use_frameworks! :linkage => :static` y el proyecto usa Swift Package Manager
+> (sin Podfile); `LocalAiEngineDataSource.isSupported` devuelve `false` fuera de Android.
 
 > Si el equipo prefiere **Bloc** en vez de Riverpod, hay que cambiarlo **en este
 > documento primero** y luego escribir código. No se mezclan dos gestores de estado.
@@ -76,7 +86,7 @@ lib/
 │   ├── config/               # env, base url, flavors
 │   ├── network/              # cliente Dio, AuthInterceptor, eventos de sesión, mapeo de errores
 │   ├── error/                # Failure, Result
-│   ├── storage/              # token seguro, KeyValueStore (cola/cachés), LocalDataCleaner
+│   ├── storage/              # token seguro, KeyValueStore (cola/cachés), userFilesDirectory, LocalDataCleaner
 │   ├── connectivity/         # estado de red (connectivity_plus detrás de ConnectivitySource)
 │   └── utils/                # formato de fechas, referencia de cliente
 ├── features/
@@ -202,6 +212,48 @@ test/                         # espejo exacto de lib/
   (`ai_unavailable` → `AssistantUnavailableFailure`) **nada quedó guardado**: se quita la burbuja, se avisa con un
   mensaje claro y el texto vuelve al campo para reenviarlo. «Nueva conversación» abre otra sin borrar la anterior. El icono de historial abre `/coach/conversations` (`GET /ai/conversations/me`) y elegir una
   reabre sus mensajes para continuarla (`OpenConversationUseCase`).
+- **IA en tu celular** (descarga desde Perfil): la tarjeta `LocalAiSection` (de `ai_assistant`, exportada por su
+  barrel) ofrece «Descargar IA», con confirmación del tamaño y la recomendación de usar Wi‑Fi. Se descargan dos modelos
+  públicos sin token, Apache-2.0: **EmbeddingGemma 2 text 270m** (~165 MB, buscar en documentos) y **Gemma 4 E2B**
+  (~2,6 GB, chat). Las URL y los tamaños se cambian con `--dart-define` (`LOCAL_AI_CHAT_URL`, `LOCAL_AI_EMBEDDER_URL`,
+  `LOCAL_AI_CHAT_BYTES`, `LOCAL_AI_EMBEDDER_BYTES`; `core/config/app_config.dart`). La barra muestra el porcentaje
+  total, ponderado por tamaño; «Cancelar descarga» detiene sin mostrar error (`LocalAiCancelledFailure`), y un corte
+  se reintenta y continúa. Instalada, ofrece «Eliminar del celular». `LocalAiController` no se descarta al salir de
+  Perfil: la descarga sigue mientras la app esté abierta. **Los modelos no se borran al cerrar sesión** (no son datos
+  del usuario). Solo `data/datasources/local_ai_engine_data_source.dart` importa `flutter_edge_ai`.
+- **Coach en el celular (RAG local):** con la IA instalada, el Coach responde **en el celular por defecto**
+  (`coachModeProvider`); unos chips «En tu celular / En línea» permiten cambiar. Las reglas viven en
+  `AskLocalCoachUseCase` (`domain`, Dart puro): busca los `topK` = 4 fragmentos más parecidos, descarta los de
+  similitud < `LOCAL_AI_MIN_SIMILARITY` (0,45 por defecto, **sin calibrar con datos reales**: ajústalo en dispositivo)
+  y, si no queda ninguno, responde el mismo texto que el servidor **sin llamar al modelo**. Pide un mentor si no hay
+  fuentes o el tema es financiero/legal (mismas palabras clave que el backend). El prompt lleva el contexto
+  `[Título] texto`, los últimos 6 turnos y la pregunta; si piden un plan, lo da en pasos con tiempos. La respuesta se
+  ve **mientras se escribe** (`ChatState.partial`).
+  - **Índice local:** `LocalKnowledgeRepositoryImpl.sync` baja `GET /ai/knowledge/index`, borra los documentos
+    retirados, y de los nuevos o recargados pide `GET /ai/knowledge/{id}/fragments?incluir_embedding=false` y
+    **calcula los vectores en el celular** con EmbeddingGemma (`retrievalDocument`; la pregunta con
+    `retrievalQuery`). Así todo comparte un espacio vectorial; los vectores `nomic-embed-text` del servidor no se
+    usan. Se guarda por documento en `coach_knowledge_index.json` (directorio de soporte de la app, `Float32` en
+    base64), y si cambia el modelo de embeddings el índice se descarta. La búsqueda es coseno por fuerza bruta en
+    memoria (suficiente para miles de fragmentos). Se sincroniza al terminar de instalar la IA y al abrir el Coach si
+    pasaron 12 h (`LocalKnowledgeController.syncIfStale`).
+  - **Conversación local:** una sola, en `KeyValueStore` bajo `user.coach.local_conversation` (máx. 100 mensajes; se
+    borra al cerrar sesión). «Nueva conversación» la borra. No llega al servidor, así que **no alimenta el análisis de
+    sentimiento ni las alertas** (RF07); en línea todo sigue igual.
+  - **Archivos propios del emprendedor** («Mis archivos para la IA», `/ai-files`, fuera de la barra inferior; se
+    abre desde la tarjeta de Perfil y desde «Tus archivos» en el Coach): PDF, DOCX, TXT o MD de hasta 20 MB. El
+    texto se extrae **en el celular** (`TextExtractor`), se trocea con `chunkText` (**copia fiel de `chunking.py`**:
+    `test/features/ai_assistant/chunk_text_fixture.json` lo generó el backend y la prueba exige el mismo resultado),
+    se embebe y se guarda en `coach_own_documents.json` dentro de `userFilesDirectory()` (`core/storage`). **El
+    archivo no se copia ni se sube**; un PDF escaneado sin texto se explica. Mismo nombre = se reemplaza; tope de 400
+    partes por archivo. El coach busca 4 fragmentos del CIE-U y 3 propios, los marca en el prompt como
+    `[CIE-U: …]` y `[Tu archivo: …]` y le pide comparar los archivos con las guías para recomendar mejoras. Las
+    fuentes propias se ven como «Tu archivo: …». Sin una guía del CIE-U que respalde la respuesta, sugiere un mentor.
+  - **Al cerrar sesión** `LocalDataCleaner` borra también `userFilesDirectory()` (archivos propios), y el almacén
+    descarta su copia en memoria si el archivo desapareció. El chat (`CoachChatController`) y la lista de archivos
+    se reconstruyen cuando cambia el usuario (leen `authControllerProvider` por el barrel de `auth`). En pruebas de
+    pantalla, `userFilesDirectoryProvider` devuelve un error sin E/S: la E/S real no termina bajo `testWidgets`.
+  - Pendiente: probar en dispositivo real (memoria y velocidad de Gemma 4 E2B, umbral de similitud).
 - **Necesidades y dificultades** (CU24, requiere conexión): feature `needs`. Perfil → «Necesidades y dificultades»
   (`/venture/needs`, solo con emprendimiento) lista lo reportado; «Reportar» (`/venture/needs/report`) pide tipo
   (necesidad o dificultad), rubro del catálogo del CIE-U (`GET /needs`), prioridad y descripción, y llama a
@@ -212,8 +264,13 @@ test/                         # espejo exacto de lib/
   `GET /training` con `GET /training/me` para marcar la inscripción y la asistencia propia (`asistencia`: `null` = sin
   registrar); «Inscribirme» llama a `POST /training/{id}/enroll` y solo aparece en las `programadas`.
 - **Documentos** (CU30, requiere conexión): Perfil → «Documentos» (`/venture/documents`, feature `documents`) lista todos los
-  archivos del emprendimiento, sube con `EvidencePicker` y elimina los propios (`DELETE /documents/{id}`). **La descarga no
-  está** (haría falta `path_provider` + `open_filex`).
+  archivos del emprendimiento, sube con `EvidencePicker` y elimina los propios (`DELETE /documents/{id}`). «Abrir»
+  (`OpenDocumentUseCase`) descarga con `GET /documents/{id}/download` a `userFilesDirectory()/documents/<id>_<nombre>`
+  (se borra al cerrar sesión; un documento del servidor no cambia, así que la copia se reutiliza; la descarga va a un
+  `.part` y se renombra al terminar) y lo abre con la app del sistema; sin app para ese tipo, se explica.
+  La IA local reutiliza esa descarga (`downloadDocumentUseCaseProvider`, por el barrel) para analizar en el celular lo
+  que el emprendedor ya subió: «Mis archivos para la IA» → «Agregar archivo» → «Desde los documentos de tu
+  emprendimiento» (solo lista PDF, DOCX, TXT y MD).
 - **Varios emprendimientos** (CU05): la coordinación puede poner a un emprendedor en más de un equipo.
   `myVenturesProvider` trae la lista, `selectedVentureIdProvider` guarda el elegido (en memoria: al reabrir la app vuelve
   al primero) y `myVentureProvider` es el elegido o el primero. `VentureSwitcher` aparece en Inicio y en «Mi

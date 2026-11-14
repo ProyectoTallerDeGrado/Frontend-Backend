@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 import { NoAccess } from "@/components/layout/no-access";
-import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/layout/section-header";
 import { hasPermission, requireSession } from "@/features/auth";
 import { formatDateTime } from "@/lib/format";
 
@@ -20,13 +20,13 @@ import type { HistoryEvent, HistoryFilters, HistoryKind } from "../types";
 const KIND: Record<HistoryEvent["tipo"], { label: string; icon: LucideIcon; tone: string }> = {
   sesion: { label: "Sesión", icon: CalendarCheck, tone: "bg-blue-50 text-primary" },
   avance: { label: "Avance", icon: TrendingUp, tone: "bg-success-tint text-success-foreground" },
-  hito: { label: "Hito", icon: Flag, tone: "bg-[#fff0cc] text-[#5e3f00]" },
-  recomendacion: { label: "Recomendación", icon: Lightbulb, tone: "bg-[#fff0cc] text-[#5e3f00]" },
+  hito: { label: "Hito", icon: Flag, tone: "bg-warning-tint text-warning-foreground" },
+  recomendacion: { label: "Recomendación", icon: Lightbulb, tone: "bg-warning-tint text-warning-foreground" },
   compromiso: { label: "Compromiso", icon: Handshake, tone: "bg-blue-50 text-primary" },
   etapa: { label: "Etapa", icon: Rocket, tone: "bg-navy-900 text-white" },
 };
 
-type Props = { ventureId: number; ventureName: string; filters: HistoryFilters };
+type Props = { ventureId: number; filters: HistoryFilters };
 
 const dateInput =
   "h-11 rounded-xl border-[1.5px] border-border-strong bg-card px-3 text-sm font-normal outline-none focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15";
@@ -42,7 +42,7 @@ function historyHref(base: string, f: Partial<HistoryFilters>): string {
 }
 
 /** CU19 · Historial del emprendimiento: orden cronológico, tipos de evento y periodo (todo en la URL). */
-export async function HistoryScreen({ ventureId, ventureName, filters }: Props) {
+export async function HistoryScreen({ ventureId, filters }: Props) {
   const user = await requireSession();
   if (!hasPermission(user, "seguimiento:consulta")) return <NoAccess section="Historial" />;
 
@@ -54,21 +54,19 @@ export async function HistoryScreen({ ventureId, ventureName, filters }: Props) 
 
   return (
     <>
-      <PageHeader
-        title={`Historial · ${ventureName}`}
+      <SectionHeader
+        title="Historial"
         subtitle="Sesiones, avances, hitos, recomendaciones, compromisos y cambios de etapa del emprendimiento."
         actions={
           <Link
             href={historyHref(base, { ...filters, orden: other })}
+            scroll={false}
             className="inline-flex min-h-11 items-center rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-sm font-semibold outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30"
           >
             {orden === "asc" ? "Ver lo más reciente primero" : "Ver en orden cronológico"}
           </Link>
         }
       />
-      <Link href="/ventures" className="mb-5 inline-flex min-h-11 items-center text-sm font-semibold text-primary">
-        ← Volver a emprendimientos
-      </Link>
 
       <form
         method="get"
@@ -139,7 +137,7 @@ export async function HistoryScreen({ ventureId, ventureName, filters }: Props) 
                 </div>
                 <div className="mb-4 min-w-0 flex-1 rounded-2xl border border-border bg-card px-5 py-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                    <div className="text-[13px] font-bold tracking-[.06em] text-muted-foreground uppercase">
+                    <div className="text-[13px] font-semibold text-muted-foreground">
                       {kind.label}
                     </div>
                     <div className="text-[13px] text-muted-foreground">{e.fecha ? formatDateTime(e.fecha) : "Sin fecha"}</div>

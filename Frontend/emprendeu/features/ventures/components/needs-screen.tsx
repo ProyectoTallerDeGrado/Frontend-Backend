@@ -20,7 +20,7 @@ const TIPOS = [
   { value: "necesidad", label: "Necesidades" },
   { value: "dificultad", label: "Dificultades" },
 ] as const;
-const PRIORITY: Record<string, string> = { alta: "bg-[#ffe3e8] text-[#8f0f25]", media: "bg-[#fff0cc] text-[#5e3f00]", baja: "bg-blue-50 text-primary" };
+const PRIORITY: Record<string, string> = { alta: "bg-danger-tint text-danger-foreground", media: "bg-warning-tint text-warning-foreground", baja: "bg-blue-50 text-primary" };
 
 function hrefFor(f: NeedFilters): string {
   const search = new URLSearchParams();
@@ -73,10 +73,10 @@ export async function NeedsScreen({ filters }: { filters: NeedFilters }) {
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="relative overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full min-w-[920px] border-collapse text-left text-sm">
           <thead>
-            <tr className="bg-[#f4f6fb] text-[12px] font-bold tracking-[.06em] text-muted-foreground uppercase">
+            <tr className="border-b border-border bg-surface-head text-[13px] font-semibold text-muted-foreground">
               <th scope="col" className="px-5 py-3.5">Emprendimiento</th>
               <th scope="col" className="px-5 py-3.5">Reporte</th>
               <th scope="col" className="px-5 py-3.5">Prioridad</th>
@@ -94,14 +94,14 @@ export async function NeedsScreen({ filters }: { filters: NeedFilters }) {
               </tr>
             )}
             {result.items.map((n) => (
-              <tr key={n.emprendimiento_necesidad_id} className="border-t border-[#eef2fa] align-top">
+              <tr key={n.emprendimiento_necesidad_id} className="border-t border-muted transition-colors hover:bg-row-hover align-top">
                 <td className="px-5 py-3.5">
                   <Link href={`/ventures/${n.emprendimiento_id}/history`} className="font-semibold text-primary hover:underline">
                     {n.emprendimiento}
                   </Link>
                 </td>
                 <td className="px-5 py-3.5">
-                  <div className="text-[13px] font-bold tracking-[.06em] text-muted-foreground uppercase">
+                  <div className="text-[13px] font-semibold text-muted-foreground">
                     {n.tipo === "dificultad" ? "Dificultad" : "Necesidad"}
                   </div>
                   <div className="font-semibold">{n.necesidad}</div>

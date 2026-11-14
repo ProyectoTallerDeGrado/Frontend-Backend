@@ -1,19 +1,23 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
+import { DataTable, EmptyRow, THead, Td, Th, Tr } from "@/components/data/data-table";
+import { FilterPills } from "@/components/data/filter-pills";
+import { SearchBar } from "@/components/data/search-bar";
+import { StatusPill, type PillTone } from "@/components/data/status-pill";
 import { NoAccess } from "@/components/layout/no-access";
 import { Pagination } from "@/components/layout/pagination";
 import { PageHeader } from "@/components/layout/page-header";
 import { hasPermission, requireSession } from "@/features/auth";
 import { listEntrepreneurOptions } from "@/features/entrepreneurs";
 
-import { VENTURES_PAGE_SIZE, listStages, listVentures } from "../server/queries";
-import type { Stage } from "../types";
-import { AdvanceStageSheet } from "./advance-stage-sheet";
 import { roleLabel } from "../roles";
-import { TeamSheet } from "./team-sheet";
-import { EditVentureSheet, NewVentureSheet } from "./venture-form-sheet";
-
-import type { ReactNode } from "react";
+import { VENTURE_STATES } from "../schemas/ventures-schemas";
+import { VENTURES_PAGE_SIZE, listStages, listVentures } from "../server/queries";
+import { nextStage } from "../stages";
+import { AdvanceStageSheet } from "./advance-stage-sheet";
+import { ventureHref } from "./venture-header";
+import { NewVentureSheet } from "./venture-form-sheet";
 
 type Props = {
   q: string;
@@ -23,12 +27,8 @@ type Props = {
   extraColumn?: { header: string; cell: (venture: { id: number; name: string }) => ReactNode };
 };
 
-/** Etapa activa inmediatamente siguiente a `current` (la misma regla que aplica el backend). */
-function nextStage(stages: Stage[], current: Stage | null): Stage | null {
-  const active = stages.filter((s) => s.estado === "activa").sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
-  if (!current) return active[0] ?? null;
-  return active.find((s) => (s.orden ?? 0) > (current.orden ?? 0)) ?? null;
-}
+const STATE_LABEL: Record<string, string> = { activo: "Activo", pausado: "Pausado", cerrado: "Cerrado" };
+const STATE_TONE: Record<string, PillTone> = { activo: "success", pausado: "warning", cerrado: "neutral" };
 
 function href(q: string, estado: string, page?: number): string {
   const search = new URLSearchParams();
@@ -39,7 +39,7 @@ function href(q: string, estado: string, page?: number): string {
   return query ? `/ventures?${query}` : "/ventures";
 }
 
-/** CU12 · Emprendimientos con su etapa actual; coordinación los avanza a la etapa siguiente. */
+/** CU12 · Emprendimientos con su etapa actual. El nombre abre la ficha; ahí se edita el equipo y los datos. */
 export async function VenturesScreen({ q, estado, page, extraColumn }: Props) {
   const user = await requireSession();
   if (!hasPermission(user, "emprendedores:consulta")) return <NoAccess section="Emprendimientos" />;
@@ -47,153 +47,109 @@ export async function VenturesScreen({ q, estado, page, extraColumn }: Props) {
   const [result, stages] = await Promise.all([listVentures({ q, estado, page }), listStages()]);
   const canChangeStage = hasPermission(user, "seguimiento:modificacion");
   const canCreate = hasPermission(user, "emprendedores:registro");
-  const canEdit = hasPermission(user, "emprendedores:modificacion");
-  const canSeeProgress = hasPermission(user, "seguimiento:consulta");
-  const entrepreneurs = canCreate || canEdit ? await listEntrepreneurOptions() : [];
-  const columns = 6 + (extraColumn ? 1 : 0) + (canChangeStage || canEdit ? 1 : 0);
+  const canFollow = hasPermission(user, "seguimiento:consulta");
+  const entrepreneurs = canCreate ? await listEntrepreneurOptions() : [];
+  const columns = 4 + (extraColumn ? 1 : 0) + (canChangeStage ? 1 : 0);
 
   return (
     <>
       <PageHeader
         title="Emprendimientos"
-        subtitle="Etapa y equipo de cada emprendimiento. La coordinación arma el equipo y avanza la etapa, sin saltos."
+        subtitle="Etapa y equipo de cada emprendimiento. Abre uno para ver su progreso, seguimiento y documentos."
         actions={canCreate ? <NewVentureSheet entrepreneurs={entrepreneurs} /> : undefined}
       />
-      <form method="get" action="/ventures" className="mb-5 flex flex-wrap items-end gap-3">
-        <label className="flex min-w-[240px] flex-[1_1_280px] flex-col gap-1.5 text-[13px] font-semibold">
-          Buscar
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Nombre del emprendimiento"
-            className="h-12 rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-[15px] font-normal outline-none focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15"
-          />
-        </label>
-        <button
-          type="submit"
-          className="h-12 rounded-xl border-[1.5px] border-border-strong bg-card px-5 text-sm font-semibold outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30"
-        >
-          Buscar
-        </button>
-        {q && (
-          <Link href={href("", estado)} className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-primary">
-            Quitar búsqueda
-          </Link>
-        )}
-      </form>
+      <SearchBar
+        action="/ventures"
+        q={q}
+        placeholder="Nombre del emprendimiento"
+        clearHref={href("", estado)}
+        hidden={{ estado }}
+      >
+        <FilterPills
+          label="Filtrar por estado"
+          options={[
+            { label: "Todos", href: href(q, ""), active: !estado },
+            ...VENTURE_STATES.map((s) => ({ label: STATE_LABEL[s], href: href(q, s), active: estado === s })),
+          ]}
+        />
+      </SearchBar>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-        <table className="w-full min-w-[1320px] border-collapse text-left text-sm">
-          <thead>
-            <tr className="bg-[#f4f6fb] text-[12px] font-bold tracking-[.06em] text-muted-foreground uppercase">
-              <th scope="col" className="px-5 py-3.5">Emprendimiento</th>
-              <th scope="col" className="px-5 py-3.5">Equipo</th>
-              <th scope="col" className="px-5 py-3.5">Sector</th>
-              {extraColumn && <th scope="col" className="px-5 py-3.5">{extraColumn.header}</th>}
-              <th scope="col" className="px-5 py-3.5">Etapa actual</th>
-              <th scope="col" className="px-5 py-3.5">Estado</th>
-              <th scope="col" className="px-5 py-3.5"><span className="sr-only">Consultas</span></th>
-              {(canChangeStage || canEdit) && <th scope="col" className="px-5 py-3.5"><span className="sr-only">Acciones</span></th>}
-            </tr>
-          </thead>
-          <tbody>
-            {result.items.length === 0 && (
-              <tr>
-                <td colSpan={columns} className="px-5 py-10 text-center text-muted-foreground">
-                  No hay emprendimientos con ese criterio.
-                </td>
-              </tr>
-            )}
-            {result.items.map((v) => {
-              const next = nextStage(stages, v.etapa_actual);
-              return (
-                <tr key={v.emprendimiento_id} className="border-t border-[#eef2fa] align-middle">
-                  <td className="px-5 py-3.5 font-semibold">{v.nombre}</td>
-                  <td className="px-5 py-3.5">
-                    {v.integrantes.length === 0 ? (
-                      <span className="text-muted-foreground">Sin integrantes</span>
-                    ) : (
-                      <ul className="flex flex-col gap-0.5">
-                        {v.integrantes.map((m) => (
-                          <li key={m.emprendedor_id} className="text-[13px] leading-snug">
-                            <span className="font-semibold">{`${m.nombre ?? ""} ${m.apellido ?? ""}`.trim() || m.email}</span>
-                            <span className="text-muted-foreground"> · {roleLabel(m.rol_en_emprendimiento)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </td>
-                  <td className="px-5 py-3.5 text-muted-foreground">{v.sector ?? "—"}</td>
-                  {extraColumn && (
-                    <td className="px-5 py-3.5">{extraColumn.cell({ id: v.emprendimiento_id, name: v.nombre })}</td>
-                  )}
-                  <td className="px-5 py-3.5">
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-[13px] font-bold text-primary">
-                      {v.etapa_actual?.nombre ?? "Sin etapa"}
+      <DataTable minWidth={extraColumn ? 1040 : 900} caption="Emprendimientos">
+        <THead>
+          <Th>Emprendimiento</Th>
+          <Th>Equipo</Th>
+          {extraColumn && <Th>{extraColumn.header}</Th>}
+          <Th>Etapa actual</Th>
+          <Th>Estado</Th>
+          {canChangeStage && (
+            <Th>
+              <span className="sr-only">Acciones</span>
+            </Th>
+          )}
+        </THead>
+        <tbody>
+          {result.items.length === 0 && (
+            <EmptyRow colSpan={columns}>
+              {q || estado ? "Ningún emprendimiento coincide con el filtro." : "Todavía no hay emprendimientos registrados."}
+            </EmptyRow>
+          )}
+          {result.items.map((v) => {
+            const next = nextStage(stages, v.etapa_actual);
+            return (
+              <Tr key={v.emprendimiento_id}>
+                <Td className="max-w-[300px]">
+                  <Link
+                    href={ventureHref(v.emprendimiento_id, canFollow)}
+                    transitionTypes={["nav-forward"]}
+                    className="group/name block rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-primary/30"
+                  >
+                    <span className="block truncate text-[15px] font-semibold text-foreground group-hover/name:text-primary group-hover/name:underline">
+                      {v.nombre}
                     </span>
-                  </td>
-                  <td className="px-5 py-3.5 capitalize text-muted-foreground">{v.estado ?? "—"}</td>
-                  <td className="px-5 py-3.5 text-right">
-                    <div className="flex justify-end gap-4">
-                      {canSeeProgress && (
-                        <Link
-                          href={`/ventures/${v.emprendimiento_id}/progress`}
-                          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
-                        >
-                          Progreso
-                        </Link>
-                      )}
-                      {canSeeProgress && (
-                        <Link
-                          href={`/ventures/${v.emprendimiento_id}/follow-up`}
-                          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
-                        >
-                          Seguimiento
-                        </Link>
-                      )}
-                      {canSeeProgress && (
-                        <Link
-                          href={`/ventures/${v.emprendimiento_id}/stages`}
-                          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
-                        >
-                          Etapas
-                        </Link>
-                      )}
-                      <Link
-                        href={`/ventures/${v.emprendimiento_id}/documents`}
-                        className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
-                      >
-                        Documentos
-                      </Link>
-                      <Link
-                        href={`/ventures/${v.emprendimiento_id}/history`}
-                        className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
-                      >
-                        Historial
-                      </Link>
-                    </div>
-                  </td>
-                  {(canChangeStage || canEdit) && (
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        {canEdit && <TeamSheet venture={v} entrepreneurs={entrepreneurs} />}
-                        {canEdit && <EditVentureSheet venture={v} />}
-                        {canChangeStage &&
-                          (next ? (
-                            <AdvanceStageSheet venture={v} next={next} />
-                          ) : (
-                            <span className="inline-flex items-center text-[13px] text-muted-foreground">Última etapa</span>
-                          ))}
-                      </div>
-                    </td>
+                    <span className="block truncate text-[13px] text-muted-foreground">{v.sector ?? "Sin sector"}</span>
+                  </Link>
+                </Td>
+                <Td>
+                  {v.integrantes.length === 0 ? (
+                    <span className="text-muted-foreground">Sin integrantes</span>
+                  ) : (
+                    <ul className="flex flex-col gap-0.5">
+                      {v.integrantes.map((m) => (
+                        <li key={m.emprendedor_id} className="text-[13px] leading-snug">
+                          <span className="font-semibold">{`${m.nombre ?? ""} ${m.apellido ?? ""}`.trim() || m.email}</span>
+                          <span className="text-muted-foreground"> ({roleLabel(m.rol_en_emprendimiento).toLowerCase()})</span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                </Td>
+                {extraColumn && <Td>{extraColumn.cell({ id: v.emprendimiento_id, name: v.nombre })}</Td>}
+                <Td>
+                  <StatusPill tone={v.etapa_actual ? "info" : "neutral"}>{v.etapa_actual?.nombre ?? "Sin etapa"}</StatusPill>
+                </Td>
+                <Td>
+                  {v.estado ? (
+                    <StatusPill tone={STATE_TONE[v.estado] ?? "neutral"} dot>
+                      {STATE_LABEL[v.estado] ?? v.estado}
+                    </StatusPill>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </Td>
+                {canChangeStage && (
+                  <Td className="text-right">
+                    {next ? (
+                      <AdvanceStageSheet venture={v} next={next} />
+                    ) : (
+                      <span className="text-[13px] text-muted-foreground">Última etapa</span>
+                    )}
+                  </Td>
+                )}
+              </Tr>
+            );
+          })}
+        </tbody>
+      </DataTable>
       <Pagination
         page={result.page}
         pageSize={VENTURES_PAGE_SIZE}

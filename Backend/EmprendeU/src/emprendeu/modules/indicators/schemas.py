@@ -121,6 +121,27 @@ class Dashboard(BaseModel):
     indicadores: list[IndicatorSummary]
 
 
+class VentureHealth(BaseModel):
+    """Salud de un emprendimiento: puntaje para ordenar y motivos para actuar."""
+
+    emprendimiento_id: int
+    nombre: str
+    etapa: str | None
+    puntaje: int  # 0-100
+    nivel: Literal["verde", "ambar", "rojo"]
+    motivos: list[str]
+    alertas_abiertas: int
+    compromisos_vencidos: int
+    dias_sin_actividad: int | None
+    dias_en_etapa: int | None
+    sentimiento: float | None  # índice promedio de los últimos 28 días (-1 a 1)
+
+
+class HealthReport(BaseModel):
+    generado_en: datetime
+    emprendimientos: list[VentureHealth]  # del menor al mayor puntaje
+
+
 ReportKind = Literal["resumen", "sesiones", "alertas", "indicadores"]
 
 

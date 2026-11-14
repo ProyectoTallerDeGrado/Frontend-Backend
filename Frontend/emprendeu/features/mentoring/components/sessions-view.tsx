@@ -26,7 +26,7 @@ const STATES = [
 const STATE_BADGE: Record<string, string> = {
   programada: "bg-blue-50 text-primary",
   realizada: "bg-success-tint text-success-foreground",
-  cancelada: "bg-[#ffe3e8] text-[#8f0f25]",
+  cancelada: "bg-danger-tint text-danger-foreground",
 };
 
 function hrefFor(basePath: string, filters: SessionFilters, page?: number): string {
@@ -100,10 +100,10 @@ export function SessionsView({ sessions, filters, paging, ventures, canWrite, ba
           <RegisterSessionSheet ventures={ventures} />
         </div>
       )}
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="relative overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full min-w-[820px] border-collapse text-left text-sm">
           <thead>
-            <tr className="bg-[#f4f6fb] text-[12px] font-bold tracking-[.06em] text-muted-foreground uppercase">
+            <tr className="border-b border-border bg-surface-head text-[13px] font-semibold text-muted-foreground">
               <th scope="col" className="px-5 py-3.5">Cuándo</th>
               <th scope="col" className="px-5 py-3.5">Emprendimiento</th>
               <th scope="col" className="px-5 py-3.5">Tema</th>
@@ -124,7 +124,7 @@ export function SessionsView({ sessions, filters, paging, ventures, canWrite, ba
             {sessions.map((s) => {
               const state = s.estado ?? "";
               return (
-                <tr key={s.sesion_id} className="border-t border-[#eef2fa] align-middle">
+                <tr key={s.sesion_id} className="border-t border-muted transition-colors hover:bg-row-hover align-middle">
                   <td className="px-5 py-3.5 font-semibold whitespace-nowrap">
                     {formatDateTime(s.fecha_realizada ?? s.fecha_programada)}
                   </td>

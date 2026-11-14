@@ -2,8 +2,8 @@ import "server-only";
 
 import { authedDownload, authedFetch } from "@/features/auth";
 
-import { dashboardSchema, overviewSchema, reportSchema } from "../schemas/indicators-schemas";
-import type { Dashboard, Overview, PeriodFilters, Report, ReportKind } from "../types";
+import { dashboardSchema, healthReportSchema, overviewSchema, reportSchema } from "../schemas/indicators-schemas";
+import type { Dashboard, HealthReport, Overview, PeriodFilters, Report, ReportKind } from "../types";
 
 export const PREVIEW_ROWS = 50;
 
@@ -41,4 +41,11 @@ export async function downloadReportCsv(kind: ReportKind, filters: PeriodFilters
       "Content-Disposition": `attachment; filename="reporte-${kind}.csv"`,
     },
   });
+}
+
+/** Puntaje de salud de los emprendimientos activos (el asesor recibe solo los suyos). */
+export async function getHealth(etapa?: number): Promise<HealthReport> {
+  const search = new URLSearchParams();
+  if (etapa) search.set("etapa_id", String(etapa));
+  return healthReportSchema.parse(await authedFetch(`/indicators/health?${search}`));
 }

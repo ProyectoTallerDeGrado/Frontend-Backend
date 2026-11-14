@@ -6,7 +6,9 @@ import '../../domain/entities/chat_message.dart';
 import '../../domain/entities/conversation_summary.dart';
 import '../../domain/repositories/assistant_repository.dart';
 import '../../domain/usecases/assistant_usecases.dart';
+import '../../../auth/index.dart';
 import '../../../ventures/index.dart';
+import 'local_coach_providers.dart';
 
 /// Contrato del repositorio; la implementación se inyecta en `app/providers.dart`.
 final assistantRepositoryProvider = Provider<AssistantRepository>(
@@ -44,23 +46,43 @@ class ChatState {
     this.conversationId,
     this.messages = const [],
     this.sending = false,
+    this.partial,
   });
 
   final int? conversationId;
   final List<ChatMessage> messages;
   final bool sending;
 
-  ChatState copyWith({List<ChatMessage>? messages, bool? sending}) => ChatState(
+  /// Respuesta que el modelo del celular está escribiendo (texto acumulado).
+  final String? partial;
+
+  ChatState copyWith({
+    List<ChatMessage>? messages,
+    bool? sending,
+    String? Function()? partial,
+  }) => ChatState(
     conversationId: conversationId,
     messages: messages ?? this.messages,
     sending: sending ?? this.sending,
+    partial: partial != null ? partial() : this.partial,
   );
 }
 
-/// Conversación con el coach. Al abrir carga la más reciente; enviar exige conexión.
+/// Conversación con el coach. Con la IA del celular la conversación se guarda en el
+/// dispositivo; en línea, la más reciente del servidor (enviar exige conexión).
 class CoachChatController extends AsyncNotifier<ChatState> {
+  bool get _onDevice => ref.read(coachModeProvider) == CoachMode.device;
+
   @override
   Future<ChatState> build() async {
+    // Otra cuenta, otro chat: no se arrastran mensajes de la sesión anterior.
+    ref.watch(authControllerProvider.select((s) => s.value?.user.id));
+    if (ref.watch(coachModeProvider) == CoachMode.device) {
+      final messages = (await ref.watch(
+        loadLocalConversationUseCaseProvider,
+      )()).getOrThrow();
+      return ChatState(messages: messages);
+    }
     final conversation = (await ref.watch(
       getLatestConversationUseCaseProvider,
     )()).getOrThrow();
@@ -79,6 +101,7 @@ class CoachChatController extends AsyncNotifier<ChatState> {
     state = AsyncData(
       current.copyWith(messages: [...current.messages, pending], sending: true),
     );
+    if (_onDevice) return _sendOnDevice(current, text);
     // Solo cuenta al abrir una conversación nueva: queda en el emprendimiento activo.
     final ventureId = current.conversationId == null
         ? await ref.read(currentVentureIdProvider.future)
@@ -103,6 +126,31 @@ class CoachChatController extends AsyncNotifier<ChatState> {
     }
   }
 
+  Future<Failure?> _sendOnDevice(ChatState before, String text) async {
+    final result = await ref.read(askLocalCoachUseCaseProvider)(
+      text,
+      history: before.messages,
+      onPartial: (partial) {
+        final now = state.value;
+        if (now != null && now.sending) {
+          state = AsyncData(now.copyWith(partial: () => partial));
+        }
+      },
+    );
+    switch (result) {
+      case Ok(:final value):
+        state = AsyncData(
+          ChatState(
+            messages: [...before.messages, value.question, value.answer],
+          ),
+        );
+        return null;
+      case Err(:final failure):
+        state = AsyncData(before);
+        return failure;
+    }
+  }
+
   /// Reabre la conversación [id]. `null` si salió bien o el [Failure] para mostrarlo.
   Future<Failure?> open(int id) async {
     final current = state.value;
@@ -119,10 +167,12 @@ class CoachChatController extends AsyncNotifier<ChatState> {
     }
   }
 
-  /// Empieza una conversación nueva (la anterior sigue guardada en el servidor).
-  void startNew() {
+  /// Empieza una conversación nueva. En línea, la anterior sigue guardada en el
+  /// servidor; en el celular solo se guarda una, así que se borra.
+  Future<void> startNew() async {
     final current = state.value;
     if (current == null || current.sending) return;
+    if (_onDevice) await ref.read(clearLocalConversationUseCaseProvider)();
     state = const AsyncData(ChatState());
   }
 }

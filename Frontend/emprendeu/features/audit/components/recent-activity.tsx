@@ -18,7 +18,7 @@ export function RecentActivity({ entries }: { entries: AuditEntry[] }) {
       </div>
       {entries.length === 0 && <p className="py-4 text-sm text-muted-foreground">Aún no hay actividad registrada.</p>}
       {entries.map((a) => (
-        <div key={a.bitacora_id} className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-[#eef2fa] py-3.5">
+        <div key={a.bitacora_id} className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-muted py-3.5">
           <span className="w-24 shrink-0 text-[13px] text-muted-foreground">{formatWhen(a.fecha)}</span>
           <span className="min-w-[260px] flex-1 text-[15px]">
             <strong>{a.actor ?? "Sistema"}</strong> · {a.descripcion}

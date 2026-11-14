@@ -55,10 +55,10 @@ export async function TrainingScreen({ filters }: { filters: TrainingFilters }) 
           </Link>
         ))}
       </div>
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="relative overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full min-w-[760px] border-collapse text-left text-sm">
           <thead>
-            <tr className="bg-[#f4f6fb] text-[12px] font-bold tracking-[.06em] text-muted-foreground uppercase">
+            <tr className="border-b border-border bg-surface-head text-[13px] font-semibold text-muted-foreground">
               <th scope="col" className="px-5 py-3.5">Capacitación</th>
               <th scope="col" className="px-5 py-3.5">Fecha</th>
               <th scope="col" className="px-5 py-3.5">Modalidad</th>
@@ -75,7 +75,7 @@ export async function TrainingScreen({ filters }: { filters: TrainingFilters }) 
               </tr>
             )}
             {result.items.map((t) => (
-              <tr key={t.capacitacion_id} className="border-t border-[#eef2fa]">
+              <tr key={t.capacitacion_id} className="border-t border-muted transition-colors hover:bg-row-hover">
                 <td className="px-5 py-3.5">
                   <Link href={`/training/${t.capacitacion_id}`} className="font-semibold text-primary hover:underline">
                     {t.titulo}

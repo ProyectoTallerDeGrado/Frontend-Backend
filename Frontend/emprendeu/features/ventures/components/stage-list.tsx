@@ -15,13 +15,12 @@ type Props = {
   canEdit: boolean;
 };
 
-function StageRow({ stage, count, canEdit, index }: { stage: Stage; count: number; canEdit: boolean; index: number }) {
+function StageRow({ stage, count, canEdit }: { stage: Stage; count: number; canEdit: boolean }) {
   const [pending, startTransition] = useTransition();
   const on = stage.estado === "activa";
   return (
     <div
-      className="flex animate-[fade-up_.45s_ease_both] items-center gap-[18px] border-b border-[#eef2fa] py-4 transition-colors last:border-b-0 hover:bg-[#f4f7ff]"
-      style={{ animationDelay: `${index * 70}ms` }}
+      className="flex items-center gap-[18px] border-b border-muted py-4 transition-colors last:border-b-0 hover:bg-row-hover"
     >
       <div
         aria-hidden="true"
@@ -55,8 +54,8 @@ function StageRow({ stage, count, canEdit, index }: { stage: Stage; count: numbe
 export function StageList({ stages, challengeCounts, canEdit }: Props) {
   return (
     <div className="rounded-2xl border border-border bg-card px-6 py-2">
-      {stages.map((s, i) => (
-        <StageRow key={s.etapa_id} stage={s} count={challengeCounts[s.etapa_id] ?? 0} canEdit={canEdit} index={i} />
+      {stages.map((s) => (
+        <StageRow key={s.etapa_id} stage={s} count={challengeCounts[s.etapa_id] ?? 0} canEdit={canEdit} />
       ))}
     </div>
   );

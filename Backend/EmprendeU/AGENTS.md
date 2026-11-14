@@ -184,8 +184,8 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 | `gamification` ✅ | `/challenges`, `/badges` (catálogo), `GET /journey`, `POST /journey/challenges/{id}/complete` (cuerpo opcional con evidencia; 422 `criteria_not_met` si el reto la exige y falta), `GET /gamification/me` |
 | `mentoring` ✅ | `/mentoring/mentors` (+ `PUT {id}/enabled`, perfil, `slots`, horarios: `GET/PUT/POST {id}/availability`, `PATCH/DELETE /availability/{id}`), `booking-status`, `sessions` (agendar, `me` y lista con filtros `estado/desde/hasta`, `register`, completar, cancelar), `commitments` (`POST`, `me`), `recommendations` (`POST`, `me`), `progress`, `POST /mentoring/sync`, `assignments`, historial `GET /mentoring/ventures/{id}/history` y `/ventures/me/history` |
 | `alerts` ✅ | `GET/PUT /alerts/settings`, `GET /alerts`, `PATCH /alerts/{id}` (`revisada`, `atendida`, `descartada`), `POST /alerts/evaluate`; tarea `alerts/jobs.py` |
-| `indicators` ✅ | `GET /indicators/overview` (resumen del panel), `GET /indicators/dashboard` (filtros `desde`, `hasta`, `etapa_id`), `GET /indicators/reports/{kind}` y `/export` (CSV) con `kind` ∈ `resumen`, `sesiones`, `alertas`, `indicadores`; tipos y valores por emprendimiento |
-| `ai_assistant` ✅ | `POST /ai/chat`, `GET /ai/conversations/me` y `/{id}/messages`, `GET/POST /ai/knowledge` (texto), `POST /ai/knowledge/upload` (archivo txt/md/pdf/docx), `DELETE /ai/knowledge/{id}` (desactivar), `GET /ai/status`, `GET /ai/sentiment/{emprendedor_id}` |
+| `indicators` ✅ | `GET /indicators/overview` (resumen del panel), `GET /indicators/health` (puntaje de salud), `GET /indicators/dashboard` (filtros `desde`, `hasta`, `etapa_id`), `GET /indicators/reports/{kind}` y `/export` (CSV) con `kind` ∈ `resumen`, `sesiones`, `alertas`, `indicadores`; tipos y valores por emprendimiento |
+| `ai_assistant` ✅ | `POST /ai/chat`, `GET /ai/conversations/me` y `/{id}/messages`, `GET/POST /ai/knowledge` (texto), `POST /ai/knowledge/upload` (archivo txt/md/pdf/docx), `DELETE /ai/knowledge/{id}` (desactivar), `GET /ai/knowledge/index` y `GET /ai/knowledge/{id}/fragments` (índice descargable del coach local, paginado), `GET /ai/knowledge/gaps` (preguntas sin respuesta agrupadas), `GET /ai/status`, `GET /ai/sentiment/{emprendedor_id}` |
 | `training` ✅ | `/training` (CRUD, `me`, inscripción, participantes, asistencia) |
 | `documents` ✅ | `POST /documents` (multipart, `emprendimiento_id` y `hito_id` opcionales), listado (filtros `emprendimiento_id`, `hito_id`), `download`, `DELETE` |
 
@@ -325,6 +325,27 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
   chat se hace `rollback` de todo (conversación nueva, pregunta y sentimiento): nada queda a medias (503
   `ai_unavailable`). **RF07:** `analisis_sentimiento` guarda solo el índice numérico, la fecha y el emprendedor, sin texto y
   **sin enlace al mensaje** (`mensajes_iaid` queda nulo); el personal ve únicamente la serie semanal agregada.
+- **Índice descargable del coach local (móvil):** `GET /ai/knowledge/index` (`ia:consulta`) devuelve
+  `modelo_embeddings`, `dimension` y los documentos `activo` con fragmentos; el móvil compara con lo que
+  ya tiene (descarga los nuevos, borra los que faltan; no hace falta columna de fecha de cambio).
+  `GET /ai/knowledge/{id}/fragments` entrega `numero_fragmento`, `contenido` y `embedding` paginados
+  (404 `knowledge_not_found` si el documento no está `activo`); con `incluir_embedding=false` el
+  `embedding` va `null`. **El móvil usa esa opción**: su motor no ejecuta `nomic-embed-text`, así que
+  recalcula los vectores con EmbeddingGemma en el celular (no hace falta otra columna ni migración). `ChatReply.fuentes_detalle` añade
+  `documento_conocimiento_id` a cada fuente; `fuentes` (títulos) se mantiene por compatibilidad.
+- **Brechas de la base (preguntas sin respuesta):** cada respuesta del asistente guarda `mensajes_ia.con_fuente`
+  (`false` = respondió «no encontré información»; la migración `dd8b7041296c` rellenó las anteriores comparando con
+  ese texto). `GET /ai/knowledge/gaps?desde=&hasta=` (`config:consulta`, 90 días por defecto) toma la pregunta del
+  usuario previa a cada respuesta sin fuente y las agrupa por similitud de embeddings (umbral 0,8, voraz); si el
+  modelo no responde, agrupa por texto igual sin tildes ni signos (`por_similitud=false`). **Anónimo:** solo el texto
+  de la pregunta y la fecha. Lo de la IA del celular no llega al servidor, así que no se cuenta.
+- **Puntaje de salud** (`indicators/health.py`, función pura `score_venture`): parte de 100 y resta por alertas sin
+  resolver (10 c/u, tope 30), compromisos vencidos (8 c/u, tope 24), inactividad pasada `dias_inactividad` (10; 20 si
+  es el doble; misma «última actividad» que la alerta, `AlertService.last_activity_by_venture`), días en la etapa
+  activa (≥ 120: 10; ≥ 180: 15) y ánimo del coach de sus emprendedores en 28 días (≤ -0,2: 15; o caída ≥ 0,25 frente
+  a los 28 previos: 10). Verde ≥ 70, ámbar 40–69, rojo < 40; cada descuento deja un motivo legible.
+  `GET /indicators/health` (`seguimiento:consulta` y ser personal) ordena del menor al mayor; el asesor solo ve
+  sus asignaciones activas. Usa solo el índice de sentimiento anónimo (`AssistantService.sentiment_points`).
 - La matriz por defecto da a `administrador` solo `asesorias:consulta`: quien registra sesiones y
   gestiona asignaciones es coordinación (`consulta/registro`) y el asesor (`consulta/registro/modificacion`).
 - `fragmentos_documento.embedding` es `vector(768)` (pgvector, `EMBEDDING_DIM`); la búsqueda usa

@@ -83,10 +83,10 @@ export async function ReportsScreen({ kind, filters }: { kind: ReportKind; filte
         </a>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="relative overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full min-w-[720px] border-collapse text-left text-sm">
           <thead>
-            <tr className="bg-[#f4f6fb] text-[12px] font-bold tracking-[.06em] text-muted-foreground uppercase">
+            <tr className="border-b border-border bg-surface-head text-[13px] font-semibold text-muted-foreground">
               {report.columnas.map((c) => (
                 <th key={c.clave} scope="col" className="px-5 py-3.5">
                   {c.etiqueta}
@@ -103,7 +103,7 @@ export async function ReportsScreen({ kind, filters }: { kind: ReportKind; filte
               </tr>
             )}
             {report.filas.map((row, i) => (
-              <tr key={i} className="border-t border-[#eef2fa]">
+              <tr key={i} className="border-t border-muted transition-colors hover:bg-row-hover">
                 {report.columnas.map((c) => (
                   <td key={c.clave} className="px-5 py-3">
                     {row[c.clave] === null || row[c.clave] === "" ? "—" : String(row[c.clave])}

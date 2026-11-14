@@ -1,9 +1,11 @@
 import 'package:app_emprendeu/core/error/failure.dart';
 import 'package:app_emprendeu/core/error/result.dart';
+import 'package:app_emprendeu/features/documents/domain/entities/downloaded_document.dart';
 import 'package:app_emprendeu/features/documents/domain/entities/evidence.dart';
 import 'package:app_emprendeu/features/documents/domain/entities/picked_file.dart';
 import 'package:app_emprendeu/features/documents/domain/repositories/documents_repository.dart';
 import 'package:app_emprendeu/features/documents/domain/repositories/evidence_picker.dart';
+import 'package:app_emprendeu/features/documents/domain/repositories/file_opener.dart';
 
 /// Repositorio de documentos en memoria. Puede simular que la subida falla.
 class FakeDocumentsRepository implements DocumentsRepository {
@@ -46,6 +48,35 @@ class FakeDocumentsRepository implements DocumentsRepository {
   @override
   Future<Result<List<Evidence>>> listForVenture(int ventureId) async =>
       Result.ok(List.of(files));
+
+  final List<int> downloaded = [];
+  Failure? downloadFailure;
+
+  @override
+  Future<Result<DownloadedDocument>> download(Evidence document) async {
+    downloaded.add(document.id);
+    if (downloadFailure case final f?) return Err(f);
+    return Ok(
+      DownloadedDocument(
+        name: document.name,
+        path: '/tmp/${document.name}',
+        sizeBytes: 2048,
+      ),
+    );
+  }
+}
+
+/// Abridor que registra qué se abrió; [failure] simula que no hay app para abrirlo.
+class FakeFileOpener implements FileOpener {
+  final List<String> opened = [];
+  Failure? failure;
+
+  @override
+  Future<Result<void>> open(String path) async {
+    if (failure case final f?) return Err(f);
+    opened.add(path);
+    return const Ok(null);
+  }
 }
 
 /// Selector que devuelve siempre el mismo archivo (o `null` = la persona cancela).

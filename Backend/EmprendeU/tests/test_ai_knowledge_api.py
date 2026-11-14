@@ -311,6 +311,73 @@ async def test_cu31_ollama_caido_al_subir_deja_el_documento_en_error(
     assert reply["fuente"] is False
 
 
+async def test_indice_descargable_para_el_coach_local(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    h, _ = await _world(client, make_user, login)
+    await _ingest(client, h["admin"], "Guia de costos", COSTOS)
+    await _ingest(client, h["admin"], "Guia de marketing", MARKETING)
+    index = await client.get(f"{API}/ai/knowledge/index", headers=h["e"])
+    assert index.status_code == 200, index.text
+    body = index.json()
+    assert body["modelo_embeddings"] and body["dimension"] == 768
+    docs = body["documentos"]
+    assert [d["titulo"] for d in docs] == ["Guia de costos", "Guia de marketing"]
+    costos_id = docs[0]["documento_conocimiento_id"]
+
+    page = await client.get(
+        f"{API}/ai/knowledge/{costos_id}/fragments",
+        params={"page": 1, "page_size": 1},
+        headers=h["e"],
+    )
+    assert page.status_code == 200, page.text
+    frag = page.json()
+    assert frag["total"] == docs[0]["total_fragmentos"] and len(frag["items"]) == 1
+    first = frag["items"][0]
+    assert first["numero_fragmento"] == 0 and "costos" in first["contenido"]
+    assert len(first["embedding"]) == 768
+    assert all(isinstance(x, float) for x in first["embedding"])
+
+    # el movil pide solo el texto (recalcula los vectores con su modelo)
+    light = await client.get(
+        f"{API}/ai/knowledge/{costos_id}/fragments",
+        params={"incluir_embedding": "false"},
+        headers=h["e"],
+    )
+    assert light.status_code == 200
+    assert all(f["embedding"] is None for f in light.json()["items"])
+    assert light.json()["items"][0]["contenido"] == first["contenido"]
+
+    # un documento desactivado sale del manifiesto y sus fragmentos dan 404
+    await client.delete(f"{API}/ai/knowledge/{costos_id}", headers=h["coord"])
+    after = (await client.get(f"{API}/ai/knowledge/index", headers=h["e"])).json()
+    assert [d["titulo"] for d in after["documentos"]] == ["Guia de marketing"]
+    gone = await client.get(f"{API}/ai/knowledge/{costos_id}/fragments", headers=h["e"])
+    assert gone.status_code == 404
+    assert gone.json()["error"]["code"] == "knowledge_not_found"
+
+    # el asesor no tiene `ia:consulta`
+    denied = await client.get(f"{API}/ai/knowledge/index", headers=h["asesor"])
+    assert denied.status_code == 403
+
+
+async def test_las_fuentes_del_chat_traen_el_id_del_documento(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    h, _ = await _world(client, make_user, login)
+    await _ingest(client, h["admin"], "Guia de costos", COSTOS)
+    doc_id = (await client.get(f"{API}/ai/knowledge", headers=h["admin"])).json()[0][
+        "documento_conocimiento_id"
+    ]
+    reply = await _ask(client, h["e"], "Como calculo mis costos?")
+    assert reply["fuentes"] == ["Guia de costos"]
+    assert reply["fuentes_detalle"] == [
+        {"documento_conocimiento_id": doc_id, "titulo": "Guia de costos"}
+    ]
+    empty = await _ask(client, h["e"], "Receta de pasta con tomate")
+    assert empty["fuentes_detalle"] == []
+
+
 async def test_rf07_el_sentimiento_se_guarda_anonimizado(
     client: AsyncClient, make_user: MakeUser, login, session: AsyncSession
 ) -> None:
@@ -326,3 +393,68 @@ async def test_rf07_el_sentimiento_se_guarda_anonimizado(
     eid = rows[0].emprendedor_id
     series = (await client.get(f"{API}/ai/sentiment/{eid}", headers=h["coord"])).json()
     assert series[0]["mensajes"] == 2
+
+
+async def test_brechas_preguntas_sin_respuesta_agrupadas_y_anonimas(
+    client: AsyncClient, make_user: MakeUser, login, session: AsyncSession
+) -> None:
+    h, _ = await _world(client, make_user, login)
+    await _ingest(client, h["admin"], "Guia de costos", COSTOS)
+    # sin fuente: dos formas de la misma duda sobre ventas y una receta
+    first = await _ask(client, h["e"], "Como consigo ventas en ferias?")
+    await _ask(client, h["e"], "Quiero mas ventas", first["conversacion_id"])
+    await _ask(client, h["e"], "Receta de pasta")
+    # con fuente: no es una brecha
+    answered = await _ask(client, h["e"], "Como calculo mis costos?")
+    assert answered["fuente"] is True
+
+    flags = (
+        (
+            await session.execute(
+                select(MensajeIa.con_fuente)
+                .where(MensajeIa.tipo == "asistente")
+                .order_by(MensajeIa.mensaje_ia_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert flags == [False, False, False, True]
+
+    r = await client.get(f"{API}/ai/knowledge/gaps", headers=h["coord"])
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["por_similitud"] is True
+    temas = body["temas"]
+    # las dos de ventas quedan juntas (la más reciente como tema) y primero
+    assert temas[0]["veces"] == 2
+    assert temas[0]["tema"] == "Quiero mas ventas"
+    assert temas[0]["ejemplos"] == ["Como consigo ventas en ferias?"]
+    assert {t["tema"] for t in temas} == {"Quiero mas ventas", "Receta de pasta"}
+    # anónimo: ningún dato de quién preguntó
+    assert set(temas[0]) == {"tema", "veces", "ultima_fecha", "ejemplos"}
+
+    # el periodo filtra
+    old = await client.get(
+        f"{API}/ai/knowledge/gaps",
+        params={"hasta": "2020-01-01T00:00:00Z"},
+        headers=h["coord"],
+    )
+    assert old.json()["temas"] == []
+
+
+async def test_brechas_sin_modelo_agrupan_por_texto_y_permisos(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    h, _ = await _world(client, make_user, login)
+    # sin documentos el coach responde sin consultar al modelo
+    await _ask(client, h["e"], "¿Cómo registro mi marca?")
+    await _ask(client, h["e"], "como registro mi marca")
+    client._transport.app.state.fake_llm.down = True  # type: ignore[attr-defined]
+    body = (await client.get(f"{API}/ai/knowledge/gaps", headers=h["admin"])).json()
+    assert body["por_similitud"] is False
+    assert [t["veces"] for t in body["temas"]] == [2]
+
+    for who in ("asesor", "e"):
+        denied = await client.get(f"{API}/ai/knowledge/gaps", headers=h[who])
+        assert denied.status_code == 403, who

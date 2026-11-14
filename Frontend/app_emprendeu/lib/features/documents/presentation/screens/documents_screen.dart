@@ -49,6 +49,9 @@ class _Documents extends ConsumerStatefulWidget {
 class _DocumentsState extends ConsumerState<_Documents> {
   bool _busy = false;
 
+  /// Documento que se está descargando para abrirlo.
+  int? _opening;
+
   void _say(String message) =>
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
@@ -66,6 +69,16 @@ class _DocumentsState extends ConsumerState<_Documents> {
     final failure = result.failureOrNull;
     if (failure == null) ref.invalidate(ventureEvidenceProvider);
     _say(failure?.message ?? 'Documento subido: ${file.name}.');
+  }
+
+  Future<void> _open(Evidence doc) async {
+    if (_opening != null) return;
+    setState(() => _opening = doc.id);
+    final result = await ref.read(openDocumentUseCaseProvider)(doc);
+    if (!mounted) return;
+    setState(() => _opening = null);
+    final failure = result.failureOrNull;
+    if (failure != null) _say(failure.message);
   }
 
   Future<void> _delete(Evidence doc) async {
@@ -206,6 +219,24 @@ class _DocumentsState extends ConsumerState<_Documents> {
                                   ],
                                 ),
                               ),
+                              if (_opening == d.id)
+                                const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox.square(
+                                    dimension: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              else
+                                IconButton(
+                                  tooltip: 'Abrir ${d.name}',
+                                  onPressed: _opening == null
+                                      ? () => _open(d)
+                                      : null,
+                                  icon: const Icon(Icons.open_in_new),
+                                ),
                               if (d.uploadedBy == myId)
                                 IconButton(
                                   tooltip: 'Eliminar ${d.name}',

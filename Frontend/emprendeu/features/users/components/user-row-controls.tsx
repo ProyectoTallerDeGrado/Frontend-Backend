@@ -29,7 +29,7 @@ export function UserStatusSwitch({ userId, name, enabled, locked }: StatusProps)
         }
         className={locked ? "opacity-45" : undefined}
       />
-      <span className={`text-sm font-semibold ${enabled ? "text-success-foreground" : "text-[#8f0f25]"}`}>
+      <span className={`text-sm font-semibold ${enabled ? "text-success-foreground" : "text-danger-foreground"}`}>
         {enabled ? "Habilitada" : "Deshabilitada"}
       </span>
     </div>

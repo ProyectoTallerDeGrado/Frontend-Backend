@@ -129,6 +129,10 @@ class VentureService:
         venture = await self._repo.get(emprendimiento_id)
         return venture.fecha_creacion if venture else None
 
+    async def active_stage_since(self, ids: list[int]) -> dict[int, datetime]:
+        """Desde cuándo está cada emprendimiento en su etapa actual (`activa`)."""
+        return await self._repo.active_stage_since(ids)
+
     async def exists(self, emprendimiento_id: int) -> bool:
         return await self._repo.get(emprendimiento_id) is not None
 

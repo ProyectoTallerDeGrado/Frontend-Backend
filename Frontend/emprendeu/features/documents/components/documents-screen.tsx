@@ -1,7 +1,7 @@
 import { Download } from "lucide-react";
 
 import { NoAccess } from "@/components/layout/no-access";
-import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/layout/section-header";
 import { hasPermission, requireSession } from "@/features/auth";
 import { formatDateTime } from "@/lib/format";
 
@@ -10,7 +10,7 @@ import { DeleteDocumentButton } from "./delete-document-button";
 import { UploadDocumentSheet } from "./upload-document-sheet";
 
 /** CU30 · Documentos de un emprendimiento: subir, descargar y eliminar. */
-export async function DocumentsScreen({ ventureId, ventureName }: { ventureId: number; ventureName: string }) {
+export async function DocumentsScreen({ ventureId }: { ventureId: number }) {
   const user = await requireSession();
   if (!hasPermission(user, "emprendedores:consulta")) return <NoAccess section="Documentos" />;
 
@@ -20,15 +20,15 @@ export async function DocumentsScreen({ ventureId, ventureName }: { ventureId: n
 
   return (
     <>
-      <PageHeader
-        title={`Documentos · ${ventureName}`}
+      <SectionHeader
+        title="Documentos"
         subtitle="Archivos del emprendimiento, incluida la evidencia de sus hitos."
         actions={canUpload ? <UploadDocumentSheet ventureId={ventureId} /> : undefined}
       />
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="relative overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full min-w-[640px] border-collapse text-left text-sm">
           <thead>
-            <tr className="bg-[#f4f6fb] text-[12px] font-bold tracking-[.06em] text-muted-foreground uppercase">
+            <tr className="border-b border-border bg-surface-head text-[13px] font-semibold text-muted-foreground">
               <th scope="col" className="px-5 py-3.5">Archivo</th>
               <th scope="col" className="px-5 py-3.5">Origen</th>
               <th scope="col" className="px-5 py-3.5">Subido</th>
@@ -44,7 +44,7 @@ export async function DocumentsScreen({ ventureId, ventureName }: { ventureId: n
               </tr>
             )}
             {docs.map((d) => (
-              <tr key={d.documento_id} className="border-t border-[#eef2fa]">
+              <tr key={d.documento_id} className="border-t border-muted transition-colors hover:bg-row-hover">
                 <td className="px-5 py-3.5 font-semibold">{d.nombre}</td>
                 <td className="px-5 py-3.5 text-muted-foreground">{d.hito_id ? "Evidencia de hito" : "Documento general"}</td>
                 <td className="px-5 py-3.5 text-muted-foreground">{formatDateTime(d.fecha_subida)}</td>

@@ -1,17 +1,23 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
 import '../../../../core/error/failure.dart';
 import '../../../../core/error/result.dart';
 import '../../../../core/network/api_error_mapper.dart';
+import '../../domain/entities/downloaded_document.dart';
 import '../../domain/entities/evidence.dart';
 import '../../domain/entities/picked_file.dart';
 import '../../domain/repositories/documents_repository.dart';
 import '../datasources/documents_remote_data_source.dart';
 
 class DocumentsRepositoryImpl implements DocumentsRepository {
-  const DocumentsRepositoryImpl(this._remote);
+  const DocumentsRepositoryImpl(this._remote, this._userFiles);
 
   final DocumentsRemoteDataSource _remote;
+
+  /// Directorio privado del usuario: las descargas se borran al cerrar sesión.
+  final Future<Directory> Function() _userFiles;
 
   Future<Result<T>> _guard<T>(Future<T> Function() action) async {
     try {
@@ -63,4 +69,30 @@ class DocumentsRepositoryImpl implements DocumentsRepository {
       for (final d in await _remote.listForVenture(ventureId)) d.toEntity(),
     ],
   );
+
+  @override
+  Future<Result<DownloadedDocument>> download(Evidence document) =>
+      _guard(() async {
+        final dir = Directory('${(await _userFiles()).path}/documents');
+        await dir.create(recursive: true);
+        // El id evita choques entre archivos con el mismo nombre; el nombre se
+        // limpia para que sea un nombre de archivo válido.
+        final safe = document.name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+        final file = File('${dir.path}/${document.id}_$safe');
+        // Un documento del servidor no cambia: si ya se bajó, se reutiliza.
+        if (!await file.exists()) {
+          final partial = File('${file.path}.part');
+          try {
+            await _remote.download(document.id, partial.path);
+            await partial.rename(file.path);
+          } finally {
+            if (await partial.exists()) await partial.delete();
+          }
+        }
+        return DownloadedDocument(
+          name: document.name,
+          path: file.path,
+          sizeBytes: await file.length(),
+        );
+      });
 }

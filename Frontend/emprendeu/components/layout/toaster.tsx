@@ -15,7 +15,7 @@ export function Toaster() {
           className="pointer-events-auto flex max-w-[420px] animate-[fade-up_.35s_cubic-bezier(.2,.8,.2,1)_both] items-center gap-3 rounded-[14px] bg-navy-900 px-[18px] py-3.5 text-sm leading-snug text-white shadow-[0_18px_40px_-12px_rgba(2,31,80,.6)]"
         >
           <span
-            className={`flex size-[26px] shrink-0 items-center justify-center rounded-full ${t.tone === "error" ? "bg-[#b3122d]" : "bg-[#0e7a4f]"}`}
+            className={`flex size-[26px] shrink-0 items-center justify-center rounded-full ${t.tone === "error" ? "bg-destructive" : "bg-success"}`}
           >
             {t.tone === "error" ? (
               <X aria-hidden="true" className="size-3.5" strokeWidth={3} />

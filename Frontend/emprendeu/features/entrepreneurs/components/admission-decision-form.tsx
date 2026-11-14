@@ -108,7 +108,7 @@ export function AdmissionDecisionForm({ id, applicant, hasDocument }: { id: numb
         ))}
       </fieldset>
       {decision === "admitida" && !hasDocument && (
-        <p role="alert" className="rounded-xl bg-[#fff0cc] px-4 py-3 text-sm font-semibold text-[#5e3f00]">
+        <p role="alert" className="rounded-xl bg-warning-tint px-4 py-3 text-sm font-semibold text-warning-foreground">
           La postulación no trae documento de identidad: faltan datos para admitirla.
         </p>
       )}

@@ -1,18 +1,12 @@
-import Link from "next/link";
 import { Award, CheckCircle2, Circle, Lock, PlayCircle, type LucideIcon } from "lucide-react";
 
+import { CountUp } from "@/components/data/count-up";
 import { NoAccess } from "@/components/layout/no-access";
-import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/layout/section-header";
 import { hasPermission, requireSession } from "@/features/auth";
 import { formatDateTime } from "@/lib/format";
 
 import { getJourney } from "../server/queries";
-
-const STAGE: Record<string, { label: string; tone: string }> = {
-  cumplida: { label: "Completada", tone: "bg-success-tint text-success-foreground" },
-  en_curso: { label: "Actual", tone: "bg-blue-50 text-primary" },
-  bloqueada: { label: "Pendiente", tone: "bg-muted text-muted-foreground" },
-};
 
 const CHALLENGE: Record<string, { label: string; icon: LucideIcon; tone: string }> = {
   cumplido: { label: "Cumplido", icon: CheckCircle2, tone: "text-success-foreground" },
@@ -21,7 +15,7 @@ const CHALLENGE: Record<string, { label: string; icon: LucideIcon; tone: string 
 };
 
 /** CU06 · Progreso gamificado del emprendimiento: etapas completadas, actual y pendientes, con sus retos. */
-export async function JourneyScreen({ ventureId, ventureName }: { ventureId: number; ventureName: string }) {
+export async function JourneyScreen({ ventureId }: { ventureId: number }) {
   const user = await requireSession();
   if (!hasPermission(user, "seguimiento:consulta")) return <NoAccess section="Progreso" />;
   const journey = await getJourney(ventureId);
@@ -29,25 +23,28 @@ export async function JourneyScreen({ ventureId, ventureName }: { ventureId: num
 
   return (
     <>
-      <PageHeader
-        title={`Progreso · ${ventureName}`}
+      <SectionHeader
+        title="Progreso"
         subtitle="Etapas del camino y retos del emprendimiento. Solo el emprendedor cumple sus retos desde la app."
       />
-      <Link href="/ventures" className="mb-5 inline-flex min-h-11 items-center text-sm font-semibold text-primary">
-        ← Volver a emprendimientos
-      </Link>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        {[
-          ["XP acumulado", String(journey.xp_total)],
-          ["Nivel", String(journey.nivel)],
-          ["Retos cumplidos", `${done} de ${journey.retos.length}`],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-border bg-card px-5 py-4">
-            <div className="text-[13px] font-semibold text-muted-foreground">{label}</div>
-            <div className="mt-1 font-heading text-2xl font-semibold">{value}</div>
+        <div className="rounded-2xl bg-navy-900 px-5 py-4 text-white">
+          <div className="text-[13px] font-semibold text-on-navy-faint">XP acumulado</div>
+          <div className="mt-1 font-heading text-[32px] leading-tight font-bold tracking-[-.02em]">
+            <CountUp value={journey.xp_total} />
           </div>
-        ))}
+        </div>
+        <div className="rounded-2xl border border-border bg-card px-5 py-4">
+          <div className="text-[13px] font-semibold text-muted-foreground">Nivel</div>
+          <div className="mt-1 font-heading text-[32px] leading-tight font-bold tracking-[-.02em]">{journey.nivel}</div>
+        </div>
+        <div className="rounded-2xl border border-border bg-card px-5 py-4">
+          <div className="text-[13px] font-semibold text-muted-foreground">Retos cumplidos</div>
+          <div className="mt-1 font-heading text-[32px] leading-tight font-bold tracking-[-.02em]">
+            {done} <span className="text-lg font-semibold text-muted-foreground">de {journey.retos.length}</span>
+          </div>
+        </div>
       </div>
 
       <div className="mb-8 rounded-2xl border border-border bg-card px-5 py-4">
@@ -67,24 +64,12 @@ export async function JourneyScreen({ ventureId, ventureName }: { ventureId: num
           aria-label="Progreso hacia el siguiente nivel"
           className="h-3 overflow-hidden rounded-full bg-muted"
         >
-          <div className="h-full rounded-full bg-primary" style={{ width: `${journey.progreso_pct}%` }} />
+          <div
+            className="h-full origin-left animate-[grow-x_1.1s_cubic-bezier(.2,.8,.2,1)_.3s_both] rounded-full bg-primary"
+            style={{ width: `${journey.progreso_pct}%` }}
+          />
         </div>
       </div>
-
-      <h2 className="mb-3 font-heading text-lg font-semibold">Etapas</h2>
-      {journey.etapas.length === 0 ? (
-        <p className="mb-8 rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
-          No hay etapas configuradas con retos activos.
-        </p>
-      ) : (
-        <ol className="mb-8 flex flex-wrap gap-3">
-          {journey.etapas.map((e) => (
-            <li key={e.etapa_id} className={`rounded-full px-4 py-2 text-sm font-bold ${STAGE[e.estado].tone}`}>
-              {e.nombre} · {STAGE[e.estado].label}
-            </li>
-          ))}
-        </ol>
-      )}
 
       <h2 className="mb-3 font-heading text-lg font-semibold">Insignias</h2>
       <ul className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

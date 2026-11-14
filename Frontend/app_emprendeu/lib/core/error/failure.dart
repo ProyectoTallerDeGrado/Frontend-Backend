@@ -74,6 +74,19 @@ final class AssistantUnavailableFailure extends Failure {
       );
 }
 
+/// Falló la descarga, la instalación o el borrado de la IA local del celular.
+final class LocalAiFailure extends Failure {
+  const LocalAiFailure([
+    super.message =
+        'No se pudo preparar la IA en tu celular. Intenta de nuevo.',
+  ]);
+}
+
+/// La persona canceló la descarga de la IA local (no es un error que mostrar).
+final class LocalAiCancelledFailure extends Failure {
+  const LocalAiCancelledFailure() : super('Descarga cancelada.');
+}
+
 /// La mentoría ya no admite cambios, p. ej. cancelarla (el backend responde `session_closed`).
 final class SessionClosedFailure extends Failure {
   const SessionClosedFailure()

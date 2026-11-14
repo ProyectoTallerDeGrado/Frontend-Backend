@@ -7,7 +7,10 @@ import '../../../../core/error/failure.dart';
 import '../../../mentoring/index.dart';
 import '../../domain/usecases/assistant_usecases.dart';
 import '../assistant_routes.dart';
+import '../../domain/entities/chat_message.dart';
 import '../controllers/assistant_providers.dart';
+import '../controllers/local_ai_providers.dart';
+import '../controllers/local_coach_providers.dart';
 import '../widgets/message_bubble.dart';
 
 const _suggestions = [
@@ -28,6 +31,17 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Con la IA del celular, trae los documentos nuevos del CIE-U (si hay red).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ref.read(coachModeProvider) == CoachMode.device) {
+        ref.read(localKnowledgeControllerProvider.notifier).syncIfStale();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -70,7 +84,15 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final chat = ref.watch(coachChatControllerProvider);
+    final mode = ref.watch(coachModeProvider);
+    final onDevice = mode == CoachMode.device;
     ref.listen(coachChatControllerProvider, (_, _) => _toBottom());
+    ref.listen(coachModeProvider, (_, next) {
+      setState(() => _error = null);
+      if (next == CoachMode.device) {
+        ref.read(localKnowledgeControllerProvider.notifier).syncIfStale();
+      }
+    });
 
     return Scaffold(
       body: SafeArea(
@@ -89,7 +111,9 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                           child: Text('Coach IA', style: text.headlineMedium),
                         ),
                         Text(
-                          'Responde con la información del CIE-U.',
+                          onDevice
+                              ? 'Responde en tu celular, sin internet.'
+                              : 'Responde con la información del CIE-U.',
                           style: text.bodyMedium?.copyWith(
                             color: AppColors.muted,
                           ),
@@ -97,12 +121,14 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                       ],
                     ),
                   ),
-                  IconButton(
-                    tooltip: 'Conversaciones anteriores',
-                    onPressed: () =>
-                        context.push(AssistantRoutes.conversations),
-                    icon: const Icon(Icons.history),
-                  ),
+                  // Las conversaciones anteriores viven en el servidor.
+                  if (!onDevice)
+                    IconButton(
+                      tooltip: 'Conversaciones anteriores',
+                      onPressed: () =>
+                          context.push(AssistantRoutes.conversations),
+                      icon: const Icon(Icons.history),
+                    ),
                   IconButton(
                     tooltip: 'Nueva conversación',
                     onPressed: () {
@@ -114,6 +140,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                 ],
               ),
             ),
+            if (ref.watch(localAiReadyProvider)) _ModeBar(mode: mode),
             Expanded(
               child: chat.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -140,7 +167,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                   ),
                 ),
                 data: (state) => state.messages.isEmpty
-                    ? _EmptyChat(onPick: (q) => _send(q))
+                    ? _EmptyChat(onDevice: onDevice, onPick: (q) => _send(q))
                     : ListView(
                         controller: _scroll,
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -155,7 +182,15 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                                     )
                                   : null,
                             ),
-                          if (state.sending)
+                          if (state.sending && (state.partial ?? '').isNotEmpty)
+                            MessageBubble(
+                              message: ChatMessage(
+                                id: -2,
+                                isUser: false,
+                                text: state.partial!,
+                              ),
+                            )
+                          else if (state.sending)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 10),
                               child: Text(
@@ -196,8 +231,9 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
 }
 
 class _EmptyChat extends StatelessWidget {
-  const _EmptyChat({required this.onPick});
+  const _EmptyChat({required this.onDevice, required this.onPick});
 
+  final bool onDevice;
   final ValueChanged<String> onPick;
 
   @override
@@ -218,7 +254,9 @@ class _EmptyChat extends StatelessWidget {
             Text('Hazme una pregunta', style: text.titleMedium),
             const SizedBox(height: 6),
             Text(
-              'Te respondo con los documentos del CIE-U. Si no tengo información suficiente, te lo digo y te sugiero hablar con un mentor.',
+              onDevice
+                  ? 'Te respondo en tu celular con los documentos del CIE-U, sin internet. Si no tengo información suficiente, te lo digo y te sugiero hablar con un mentor.'
+                  : 'Te respondo con los documentos del CIE-U. Si no tengo información suficiente, te lo digo y te sugiero hablar con un mentor.',
               textAlign: TextAlign.center,
               style: text.bodyMedium?.copyWith(color: AppColors.muted),
             ),
@@ -314,6 +352,78 @@ class _ComposerState extends State<_Composer> {
             onPressed: canSend ? () => widget.onSend() : null,
             icon: const Icon(Icons.send),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Elegir dónde responde el coach y, en el celular, el estado de sus documentos.
+class _ModeBar extends ConsumerWidget {
+  const _ModeBar({required this.mode});
+
+  final CoachMode mode;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = Theme.of(context).textTheme;
+    final knowledge = ref.watch(localKnowledgeControllerProvider).value;
+    final String? status = switch (knowledge) {
+      _ when mode != CoachMode.device => null,
+      null => null,
+      LocalKnowledgeState(syncing: true, :final done, :final total) =>
+        total == 0
+            ? 'Buscando documentos nuevos…'
+            : 'Preparando documentos $done de $total…',
+      LocalKnowledgeState(:final error?) when knowledge.status.documents == 0 =>
+        error,
+      LocalKnowledgeState(:final status) when status.documents == 0 =>
+        'Aún no hay documentos del CIE-U en tu celular.',
+      LocalKnowledgeState(:final status) =>
+        '${status.documents} documentos del CIE-U en tu celular',
+    };
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('En tu celular'),
+                avatar: const Icon(Icons.smartphone, size: 16),
+                selected: mode == CoachMode.device,
+                onSelected: (_) => ref
+                    .read(coachModePreferenceProvider.notifier)
+                    .choose(CoachMode.device),
+              ),
+              ChoiceChip(
+                label: const Text('En línea'),
+                avatar: const Icon(Icons.cloud_outlined, size: 16),
+                selected: mode == CoachMode.online,
+                onSelected: (_) => ref
+                    .read(coachModePreferenceProvider.notifier)
+                    .choose(CoachMode.online),
+              ),
+            ],
+          ),
+          if (status != null)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    status,
+                    style: text.bodySmall?.copyWith(color: AppColors.muted),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => context.push(AssistantRoutes.ownFiles),
+                  icon: const Icon(Icons.folder_special_outlined, size: 16),
+                  label: const Text('Tus archivos'),
+                ),
+              ],
+            ),
         ],
       ),
     );

@@ -11,7 +11,7 @@ export function ToggleSwitch({ label, className, ...props }: ToggleSwitchProps) 
     <Switch
       aria-label={label}
       className={cn(
-        "h-[26px] w-11 rounded-full border-0 bg-[#9aa6c4] data-checked:bg-primary data-unchecked:bg-[#9aa6c4]",
+        "h-[26px] w-11 rounded-full border-0 bg-switch-off data-checked:bg-primary data-unchecked:bg-switch-off",
         "after:-inset-x-1 after:-inset-y-2",
         "[&_[data-slot=switch-thumb]]:size-5 [&_[data-slot=switch-thumb]]:translate-x-[3px] [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:shadow-[0_1px_3px_rgba(0,0,0,.3)] [&_[data-slot=switch-thumb]]:data-checked:translate-x-[21px]",
         className,

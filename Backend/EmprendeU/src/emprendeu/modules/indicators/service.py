@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +16,7 @@ from emprendeu.modules.audit import AuditService
 from emprendeu.modules.entrepreneurs import EntrepreneurService
 from emprendeu.modules.indicators import schemas as s
 from emprendeu.modules.indicators.exceptions import IndicatorTypeNotFound, InvalidPeriod
+from emprendeu.modules.indicators.health import HealthSignals, score_venture
 from emprendeu.modules.indicators.models import TipoIndicador, ValorIndicador
 from emprendeu.modules.indicators.repository import IndicatorRepository
 from emprendeu.modules.mentoring import MentoringService
@@ -32,6 +33,8 @@ def _type_out(t: TipoIndicador) -> s.IndicatorTypeOut:
         unidad=t.unidad,
     )
 
+
+SENTIMENT_WINDOW = timedelta(days=28)
 
 # Reportes (CU21): titulo y columnas (clave, etiqueta). Las filas son diccionarios por clave.
 REPORTS: dict[str, tuple[str, list[tuple[str, str]]]] = {
@@ -102,6 +105,7 @@ class IndicatorService:
         self._ventures = VentureService(session)
         self._mentoring = MentoringService(session)
         self._alerts = AlertService(session)
+        self._assistant = AssistantService(session, llm)
         self._audit = AuditService(session)
 
     async def list_types(self) -> list[s.IndicatorTypeOut]:
@@ -267,6 +271,82 @@ class IndicatorService:
                 )
             ],
         )
+
+    # --- puntaje de salud --------------------------------------------------------
+
+    async def health(
+        self, actor: CurrentUser, etapa_id: int | None = None
+    ) -> s.HealthReport:
+        """Salud de los emprendimientos activos, del más al menos urgente.
+
+        Un asesor solo ve los que tiene asignados (como en las alertas).
+        """
+        moment = datetime.now(UTC)
+        scope = await self._ventures.active_ventures(etapa_id)
+        if actor.rol == "asesor":
+            assigned = {
+                a.emprendimiento_id
+                for a in await self._mentoring.list_assignments(actor.usuario_id, None)
+                if a.estado == "activa"
+            }
+            scope = [v for v in scope if v.id in assigned]
+        ids = [v.id for v in scope]
+        if not ids:
+            return s.HealthReport(generado_en=moment, emprendimientos=[])
+
+        activity = await self._mentoring.activity_by_venture(ids, None, None)
+        open_alerts = await self._alerts.open_by_venture(ids)
+        last = await self._alerts.last_activity_by_venture(ids)
+        idle_limit = await self._alerts.inactivity_days()
+        stage_since = await self._ventures.active_stage_since(ids)
+        members = await self._entrepreneurs.members_of_ventures(ids)
+
+        # Sentimiento anónimo de sus emprendedores: últimos 28 días vs. los 28 previos.
+        recent_from = moment - SENTIMENT_WINDOW
+        previous_from = recent_from - SENTIMENT_WINDOW
+        recent: dict[int, list[float]] = {}
+        previous: dict[int, list[float]] = {}
+        for eid, when, idx in await self._assistant.sentiment_points(previous_from):
+            (recent if when >= recent_from else previous).setdefault(eid, []).append(
+                idx
+            )
+
+        def _mean(bucket: dict[int, list[float]], eids: list[int]) -> float | None:
+            values = [v for e in eids for v in bucket.get(e, [])]
+            return round(sum(values) / len(values), 3) if values else None
+
+        rows: list[s.VentureHealth] = []
+        for v in scope:
+            eids = [m.emprendedor_id for m in members.get(v.id, [])]
+            when = last.get(v.id)
+            since = stage_since.get(v.id)
+            signals = HealthSignals(
+                open_alerts=open_alerts.get(v.id, 0),
+                overdue_commitments=activity[v.id].commitments_overdue,
+                idle_days=(moment - when).days if when else None,
+                idle_limit_days=idle_limit,
+                stage_days=(moment - since).days if since else None,
+                sentiment_recent=_mean(recent, eids),
+                sentiment_previous=_mean(previous, eids),
+            )
+            result = score_venture(signals)
+            rows.append(
+                s.VentureHealth(
+                    emprendimiento_id=v.id,
+                    nombre=v.nombre,
+                    etapa=v.stage.nombre if v.stage else None,
+                    puntaje=result.score,
+                    nivel=result.level,  # type: ignore[arg-type]
+                    motivos=result.reasons,
+                    alertas_abiertas=signals.open_alerts,
+                    compromisos_vencidos=signals.overdue_commitments,
+                    dias_sin_actividad=signals.idle_days,
+                    dias_en_etapa=signals.stage_days,
+                    sentimiento=signals.sentiment_recent,
+                )
+            )
+        rows.sort(key=lambda r: (r.puntaje, r.nombre))
+        return s.HealthReport(generado_en=moment, emprendimientos=rows)
 
     # --- reportes (CU21) -------------------------------------------------------------
 

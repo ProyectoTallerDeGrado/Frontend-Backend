@@ -9,6 +9,7 @@ from decimal import Decimal
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -77,6 +78,9 @@ class MensajeIa(Base):
     contenido: Mapped[str] = mapped_column(Text)
     fecha: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     tipo: Mapped[str | None] = mapped_column(String(60))
+    # Solo en respuestas del asistente: si se apoyó en algún documento de la base.
+    # `false` = respondió «no encontré información» (alimenta las brechas de la base).
+    con_fuente: Mapped[bool | None] = mapped_column(Boolean)
     mensaje_ia_id: Mapped[int] = mapped_column(
         "mensajes_iaid", BigInteger, Identity(always=False), primary_key=True
     )

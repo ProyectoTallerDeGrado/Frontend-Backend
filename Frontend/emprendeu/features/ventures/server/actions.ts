@@ -43,6 +43,7 @@ export async function advanceVentureStageAction(
     return { ok: false, message: "No se pudo cambiar la etapa. Intenta de nuevo." };
   }
   revalidatePath("/ventures");
+  revalidatePath("/ventures/[id]", "layout");
   return { ok: true, message: `Etapa actualizada: ${name}. Registrado en auditoría.` };
 }
 
@@ -92,6 +93,7 @@ export async function createVentureAction(
     return { ok: false, message: ventureMessage(error, "No se pudo crear el emprendimiento. Intenta de nuevo.") };
   }
   revalidatePath("/ventures");
+  revalidatePath("/ventures/[id]", "layout");
   return { ok: true, message: `Emprendimiento creado: ${parsed.data.name}.` };
 }
 
@@ -116,6 +118,7 @@ export async function updateVentureAction(
     return { ok: false, message: ventureMessage(error, "No se pudo guardar. Intenta de nuevo.") };
   }
   revalidatePath("/ventures");
+  revalidatePath("/ventures/[id]", "layout");
   return { ok: true, message: `Emprendimiento actualizado: ${parsed.data.name}.` };
 }
 
@@ -136,6 +139,7 @@ export async function addVentureMemberAction(
     return { ok: false, message: ventureMessage(error, "No se pudo agregar al integrante. Intenta de nuevo.") };
   }
   revalidatePath("/ventures");
+  revalidatePath("/ventures/[id]", "layout");
   return { ok: true, message: "Integrante agregado. Registrado en auditoría." };
 }
 
@@ -151,6 +155,7 @@ export async function removeVentureMemberAction(
     return { ok: false, message: ventureMessage(error, "No se pudo quitar al integrante. Intenta de nuevo.") };
   }
   revalidatePath("/ventures");
+  revalidatePath("/ventures/[id]", "layout");
   return { ok: true, message: `${name} ya no es parte del equipo.` };
 }
 

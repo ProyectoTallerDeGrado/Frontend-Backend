@@ -1,11 +1,13 @@
 """HTTP del coach IA (prefijo /ai)."""
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.config import get_settings
+from emprendeu.core.pagination import Page, PageParamsDep
 from emprendeu.db.session import get_session
 from emprendeu.modules.ai_assistant import schemas as s
 from emprendeu.modules.ai_assistant.llm import LLMClient, get_llm
@@ -94,6 +96,38 @@ async def upload_knowledge(
     return await service.ingest_file(
         actor, file.filename or "documento", data, titulo.strip(), descripcion, fuente
     )
+
+
+@router.get("/knowledge/gaps", response_model=s.KnowledgeGaps)
+async def knowledge_gaps(
+    service: Svc,
+    _: Annotated[CurrentUser, perm("config:consulta")],
+    desde: datetime | None = None,
+    hasta: datetime | None = None,
+) -> s.KnowledgeGaps:
+    """Preguntas sin respuesta del coach, agrupadas: qué documentos faltan."""
+    return await service.knowledge_gaps(desde, hasta)
+
+
+@router.get("/knowledge/index", response_model=s.KnowledgeIndex)
+async def knowledge_index(
+    service: Svc, _: Annotated[CurrentUser, perm("ia:consulta")]
+) -> s.KnowledgeIndex:
+    """Manifiesto de la base activa para el coach local del movil."""
+    return await service.knowledge_index()
+
+
+@router.get("/knowledge/{doc_id}/fragments", response_model=Page[s.FragmentOut])
+async def knowledge_fragments(
+    doc_id: int,
+    service: Svc,
+    params: PageParamsDep,
+    _: Annotated[CurrentUser, perm("ia:consulta")],
+    incluir_embedding: bool = True,
+) -> Page[s.FragmentOut]:
+    """Fragmentos de un documento activo; con `incluir_embedding=false` solo el texto
+    (el movil recalcula los vectores con su propio modelo)."""
+    return await service.knowledge_fragments(doc_id, params, incluir_embedding)
 
 
 @router.delete("/knowledge/{doc_id}", response_model=s.KnowledgeOut)

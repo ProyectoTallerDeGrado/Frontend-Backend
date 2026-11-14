@@ -47,6 +47,16 @@ async def overview(
     return await service.overview()
 
 
+@router.get("/health", response_model=s.HealthReport)
+async def health(
+    service: Svc,
+    user: Annotated[CurrentUser, staff("seguimiento:consulta")],
+    etapa_id: int | None = None,
+) -> s.HealthReport:
+    """Puntaje de salud por emprendimiento activo, del más urgente al menos."""
+    return await service.health(user, etapa_id)
+
+
 @router.get("/dashboard", response_model=s.Dashboard)
 async def dashboard(
     service: Svc,

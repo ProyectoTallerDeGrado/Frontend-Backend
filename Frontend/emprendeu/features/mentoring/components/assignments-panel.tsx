@@ -19,12 +19,12 @@ type Props = {
 };
 
 const card =
-  "rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-[0_14px_30px_-18px_rgba(10,26,68,.35)]";
+  "rounded-2xl border border-border bg-card p-6";
 
 function AdvisorRow({ advisor, canEdit }: { advisor: Mentor; canEdit: boolean }) {
   const { pending, run } = useRunner();
   return (
-    <li className="flex items-center gap-4 border-t border-[#eef2fa] py-3 first:border-t-0">
+    <li className="flex items-center gap-4 border-t border-muted py-3 first:border-t-0">
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15px] font-semibold">{advisor.nombre}</div>
         <div className="truncate text-[13px] text-muted-foreground">
@@ -109,7 +109,7 @@ function AssignmentRow({ assignment, canEdit }: { assignment: Assignment; canEdi
   const { pending, run } = useRunner();
   const active = assignment.estado === "activa";
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#eef2fa] py-3 first:border-t-0">
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-muted py-3 first:border-t-0">
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15px] font-semibold">
           {assignment.usuario ?? `Asesor ${assignment.usuario_id}`}

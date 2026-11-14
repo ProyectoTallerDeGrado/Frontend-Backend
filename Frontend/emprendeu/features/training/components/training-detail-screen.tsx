@@ -24,6 +24,7 @@ export async function TrainingDetailScreen({ id }: { id: number }) {
     <>
       <PageHeader
         title={training.titulo}
+        back={{ href: "/training", label: "Capacitaciones" }}
         subtitle={[formatDateTime(training.fecha), training.modalidad, training.estado].filter((v) => v && v !== "—").join(" · ")}
         actions={canEdit ? <TrainingFormSheet training={training} /> : undefined}
       />

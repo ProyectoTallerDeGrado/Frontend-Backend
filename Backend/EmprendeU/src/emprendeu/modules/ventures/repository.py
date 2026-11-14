@@ -120,6 +120,18 @@ class VentureRepository:
             stmt = stmt.where(Etapa.etapa_id == etapa_id)
         return [(r[0], r[1]) for r in (await self._session.execute(stmt)).all()]
 
+    async def active_stage_since(self, ids: list[int]) -> dict[int, datetime]:
+        if not ids:
+            return {}
+        stmt = select(
+            EmprendimientoEtapa.emprendimiento_id, EmprendimientoEtapa.fecha_inicio
+        ).where(
+            EmprendimientoEtapa.emprendimiento_id.in_(ids),
+            func.lower(EmprendimientoEtapa.estado) == "activa",
+            EmprendimientoEtapa.fecha_inicio.is_not(None),
+        )
+        return {r[0]: r[1] for r in (await self._session.execute(stmt)).all()}
+
     async def stage_counts(self) -> dict[int, int]:
         """Emprendimientos activos por etapa actual."""
         stmt = (

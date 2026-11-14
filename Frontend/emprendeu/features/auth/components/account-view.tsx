@@ -4,7 +4,7 @@ import { ROLE_LABELS, type SessionUser } from "../types";
 import { ChangePasswordForm } from "./change-password-form";
 
 const card =
-  "rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-[0_14px_30px_-18px_rgba(10,26,68,.35)]";
+  "rounded-2xl border border-border bg-card p-6";
 
 /** «Mi cuenta»: datos de la sesión y cambio de contraseña. */
 export function AccountView({ user }: { user: SessionUser }) {
@@ -27,7 +27,7 @@ export function AccountView({ user }: { user: SessionUser }) {
       </section>
 
       <aside className="min-w-[280px] flex-[0_1_340px] rounded-2xl bg-navy-900 p-6 text-white">
-        <div className="mb-4 text-[13px] font-bold tracking-[.06em] text-[#9fb4ee] uppercase">Tu cuenta</div>
+        <div className="mb-4 text-[13px] font-semibold text-on-navy-dim">Tu cuenta</div>
         <dl className="flex flex-col gap-3">
           {rows.map(([key, value]) => (
             <div key={key} className="flex justify-between gap-3 border-b border-white/[.12] pb-3 text-sm">

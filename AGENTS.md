@@ -54,7 +54,7 @@ Mentorías y el Perfil completo).
 - **Móvil**: tema, router con barra inferior, `core/` (red, errores, almacenamiento, conectividad) y
   las features `auth`, `ventures`, `gamification` (Camino), `mentoring` (compromisos y avances con cola
   sin conexión) y `home` (Inicio), todas **conectadas al backend**. Mentorías (agendar y ver las sesiones, con
-  filtros por estado y periodo), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia (`documents`) el Coach IA (chat con fuentes) cambio de contraseña, capacitaciones (inscribirse y ver la asistencia) y documentos del emprendimiento (ver, subir, eliminar; **sin descarga todavía**). Tiene tests de integración opt-in contra el backend real.
+  filtros por estado y periodo), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia (`documents`) el Coach IA (chat con fuentes; **también en el celular sin internet**: IA descargable desde Perfil con RAG local sobre los documentos del CIE-U y los archivos propios del emprendedor, que no salen del teléfono) cambio de contraseña, capacitaciones (inscribirse y ver la asistencia) y documentos del emprendimiento (ver, subir, abrir/descargar, eliminar). Tiene tests de integración opt-in contra el backend real.
 - **Diseño visual**: `Frontend/emprendeu/design.md` (panel de administración) y
   `Frontend/app_emprendeu/design.md` (app del emprendedor), basados en el mockup del CIE-U.
 

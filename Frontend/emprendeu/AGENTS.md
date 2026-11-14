@@ -78,6 +78,12 @@ consumidos desde componentes cliente.
   filtros de periodo y etapa en la URL, vista previa de 50 filas y CSV por `app/(app)/reports/export/route.ts`)
   y el **historial** (`HistoryScreen` en `features/mentoring`, página `/ventures/[id]/history`, con `?orden=desc`).
   Los componentes de formulario compartidos viven en `components/forms/form-bits.tsx`.
+- **Salud de emprendimientos**: `/health` (`HealthScreen` en `features/indicators`, grupo «Programa» del menú,
+  `seguimiento:consulta` y no ser emprendedor) lista `GET /indicators/health` del más urgente al que mejor va, con
+  semáforo (texto + color, `health-level.tsx`), barra de puntaje y los motivos. El Resumen (`/panel`) muestra
+  `HealthAttentionCard` con los rojos y ámbar.
+- **Preguntas sin respuesta**: en `/knowledge`, `KnowledgeGapsSection` (`features/ai_assistant`) muestra
+  `GET /ai/knowledge/gaps` (90 días, anónimas) para saber qué documentos faltan en la base del coach.
 - **Emprendedores y emprendimientos** (fase 4): `features/entrepreneurs` (`EntrepreneursScreen`, `/entrepreneurs`:
   lista con búsqueda por nombre, correo o documento; «Nuevo emprendedor» —solo con `emprendedores:registro`— crea
   usuario y perfil juntos y muestra la clave temporal una vez). `features/ventures` suma «Nuevo emprendimiento»
@@ -101,6 +107,25 @@ consumidos desde componentes cliente.
   actual incorrecta» llega como 400 `wrong_password` y se marca en el campo (no es un 401).
 - Cambiar el rol de un usuario existente (`PATCH /users/{id}/rol`) está en la tabla de
   usuarios: es lo que permite que una cuenta registrada desde la web llegue a usar el panel.
+- **Landing pública** (`/`, `app/(public)/page.tsx` → `features/landing`): presenta el programa a
+  estudiantes y lleva a `/apply`; «Ingresar» va a `/login` (o «Ir al panel» si hay sesión). Animaciones con
+  **anime.js 4** (`animejs`), siempre dentro de `useAnimeScope` (`features/landing/hooks/use-anime-scope.ts`:
+  `createScope` con media query de movimiento reducido, revierte al desmontar). Los estados iniciales se ponen
+  con `utils.set`; el CSS solo oculta `[data-reveal]` mientras la sección vale `data-anim="pending"`. Sin cifras:
+  el contenido está en `features/landing/content.ts`. `proxy.ts` deja pública solo la ruta exacta `/`.
+- **El Resumen del panel está en `/panel`** (antes `/`): login y registro redirigen ahí.
+- **Menú agrupado** (`app/(app)/layout.tsx` → `NAV`): Inicio, Programa, Acompañamiento y
+  Configuración; cada ítem declara su permiso y los grupos vacíos no se muestran. «Mi cuenta» es la
+  tarjeta del usuario al pie. En `< lg` el menú es una hoja izquierda (`components/layout/mobile-nav.tsx`).
+- **Ficha del emprendimiento** (`app/(app)/ventures/[id]/layout.tsx` → `VentureHeader` de `ventures`):
+  datos, acciones (Equipo, Editar, Pasar a…), trayecto de etapas animado (`StageTrack`) y pestañas
+  (`TabNav`: Progreso, Seguimiento, Etapas —con `seguimiento:consulta`—, Documentos, Historial). Las
+  pantallas de cada pestaña pintan un `SectionHeader` (h2), no un `PageHeader`. `/ventures/{id}` redirige a
+  la primera pestaña visible. Las acciones de `ventures` revalidan también `/ventures/[id]` (layout).
+- **Transición entre páginas**: `components/layout/page-transition.tsx` envuelve el contenido en el
+  `<ViewTransition>` de React con la ruta como `key` (clase `.page` en `globals.css`).
+- **Tokens**: no hay hex en crudo en `features/` ni `components/` (`grep -rnE '\[#[0-9a-fA-F]{3,6}\]'`
+  debe salir vacío). Los pares de estado son `danger-*`, `warning-*`, `success*`, `info-foreground`.
 
 ### Autenticación (cómo funciona hoy)
 
@@ -149,7 +174,10 @@ features/
     └── index.ts              # API PÚBLICA: único import permitido desde fuera
 components/
 ├── ui/                       # primitivas shadcn — generadas, sin lógica de negocio
-└── layout/                   # header, sidebar, shells compartidos
+├── layout/                   # shell, sidebar agrupado, menú móvil, PageHeader, SectionHeader, transición de página
+├── forms/                    # piezas de formulario en hojas laterales (form-bits)
+└── data/                     # presentación de datos sin negocio: DataTable, SearchBar, FilterPills,
+                              # StatusPill, EmptyState, TabNav, CountUp
 lib/                          # api-client ✅, env ✅, constants, utils (sin negocio)
 hooks/                        # hooks genéricos reutilizables
 proxy.ts                   ✅ # (Next 16) antiguo middleware: protege rutas privadas
@@ -157,7 +185,7 @@ proxy.ts                   ✅ # (Next 16) antiguo middleware: protege rutas pri
 
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
-`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅, `ai_assistant` ✅ (todas conectadas al backend); `training` ✅ (`/training`, `/training/[id]`), `documents` ✅ (`/ventures/[id]/documents`, con descarga por `route.ts`) — los
+`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅, `ai_assistant` ✅ (todas conectadas al backend); `training` ✅ (`/training`, `/training/[id]`), `landing` ✅ (`/`, página pública; no es un módulo del backend), `documents` ✅ (`/ventures/[id]/documents`, con descarga por `route.ts`) — los
 mismos nombres que los módulos del backend (regla global §4.6). Registra aquí cada feature nueva.
 
 ## 4. Reglas de la web

@@ -37,29 +37,28 @@ export function ChallengesTable({ challenges, canEdit }: { challenges: Challenge
     });
 
   const btn =
-    "flex size-11 items-center justify-center rounded-[10px] bg-[#f4f6fb] outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30 disabled:opacity-50";
+    "flex size-11 items-center justify-center rounded-[10px] bg-background outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30 disabled:opacity-50";
 
   return (
     <>
-      <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-border bg-card">
+      <div className="relative overflow-x-auto overflow-y-hidden rounded-2xl border border-border bg-card">
         <div className="min-w-[740px]">
           <div
-            className={`grid ${COLS} gap-4 border-b border-border bg-[#f8fafe] px-6 py-3.5 text-[13px] font-bold tracking-[.04em] text-muted-foreground uppercase`}
+            className={`grid ${COLS} gap-4 border-b border-border bg-surface-head px-6 py-3.5 text-[13px] font-semibold text-muted-foreground`}
           >
             <span>Reto</span>
             <span>Etapa</span>
             <span>Recompensa (XP)</span>
             <span>Evidencia</span>
           </div>
-          {rows.map((c, i) => (
+          {rows.map((c) => (
             <div
               key={c.reto_id}
-              className={`grid ${COLS} animate-[fade-up_.45s_ease_both] items-center gap-4 border-b border-[#eef2fa] px-6 py-2.5 transition-colors hover:bg-[#f4f7ff]`}
-              style={{ animationDelay: `${i * 50}ms` }}
+              className={`grid ${COLS} items-center gap-4 border-b border-muted px-6 py-2.5 transition-colors hover:bg-row-hover`}
             >
               <span className="text-[15px] font-semibold">{c.titulo}</span>
               <span>
-                <span className="inline-block rounded-full bg-blue-50 px-3 py-1 text-[13px] font-bold text-[#12308a]">
+                <span className="inline-block rounded-full bg-blue-50 px-3 py-1 text-[13px] font-bold text-info-foreground">
                   {c.etapa}
                 </span>
               </span>

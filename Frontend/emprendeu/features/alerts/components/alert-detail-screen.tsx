@@ -25,15 +25,12 @@ export async function AlertDetailScreen({ alertId }: { alertId: number }) {
   const state = alert.estado ?? "";
   const unresolved = state === "abierta" || state === "revisada";
   const canManage = hasPermission(user, "seguimiento:registro");
-  const row = "flex flex-col gap-1 border-t border-[#eef2fa] py-3.5 sm:flex-row sm:gap-6";
-  const label = "text-[13px] font-bold tracking-[.06em] text-muted-foreground uppercase sm:w-44 sm:shrink-0";
+  const row = "flex flex-col gap-1 border-t border-muted py-3.5 sm:flex-row sm:gap-6";
+  const label = "text-[13px] font-semibold text-muted-foreground sm:w-44 sm:shrink-0";
 
   return (
     <>
-      <PageHeader title={alert.titulo} subtitle="Detalle de la alerta de seguimiento." />
-      <Link href="/alerts" className="mb-5 inline-flex min-h-11 items-center text-sm font-semibold text-primary">
-        ← Volver a alertas
-      </Link>
+      <PageHeader title={alert.titulo} back={{ href: "/alerts", label: "Alertas" }} subtitle="Detalle de la alerta de seguimiento." />
       <section aria-label="Detalle" className="rounded-2xl border border-border bg-card px-6 py-2">
         <div className={`${row} border-t-0`}>
           <div className={label}>Emprendimiento</div>

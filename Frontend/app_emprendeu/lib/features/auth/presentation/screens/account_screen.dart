@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../ai_assistant/index.dart';
 import '../../../documents/index.dart';
 import '../../../gamification/index.dart';
 import '../../../needs/index.dart';
@@ -92,6 +93,8 @@ class AccountScreen extends ConsumerWidget {
               const MyVentureCard(),
               const SizedBox(height: 14),
               const XpBadgesSection(),
+              const SizedBox(height: 14),
+              const LocalAiSection(),
               const SizedBox(height: 14),
               if (ref.watch(myVentureProvider).value != null) ...[
                 SizedBox(

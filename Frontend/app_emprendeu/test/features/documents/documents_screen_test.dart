@@ -1,3 +1,4 @@
+import 'package:app_emprendeu/core/error/failure.dart';
 import 'package:app_emprendeu/features/documents/domain/entities/evidence.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -5,12 +6,17 @@ import '../../support/test_app.dart';
 import '../auth/fake_auth_repository.dart';
 import 'fake_documents.dart';
 
-Future<void> _open(WidgetTester tester, FakeDocumentsRepository docs) async {
+Future<void> _open(
+  WidgetTester tester,
+  FakeDocumentsRepository docs, {
+  FakeFileOpener? opener,
+}) async {
   await pumpApp(
     tester,
     TestWorld(
       auth: FakeAuthRepository(token: 'tok-1'),
       documents: docs,
+      opener: opener,
     ),
     height: 1600,
   );
@@ -34,5 +40,29 @@ void main() {
     await settle(tester);
     expect(docs.uploadCalls, 1);
     expect(find.text('prototipo.pdf'), findsOneWidget);
+  });
+
+  testWidgets('CU30: abrir descarga el documento y lo abre', (tester) async {
+    final docs = FakeDocumentsRepository();
+    docs.files.add(const Evidence(id: 7, name: 'plan.pdf'));
+    final opener = FakeFileOpener();
+    await _open(tester, docs, opener: opener);
+    await tester.tap(find.byTooltip('Abrir plan.pdf'));
+    await settle(tester);
+    expect(docs.downloaded, [7]);
+    expect(opener.opened, ['/tmp/plan.pdf']);
+  });
+
+  testWidgets('CU30: sin app para abrirlo, se explica', (tester) async {
+    final docs = FakeDocumentsRepository();
+    docs.files.add(const Evidence(id: 7, name: 'plan.pdf'));
+    final opener = FakeFileOpener()
+      ..failure = const UnknownFailure(
+        'No tienes una app para abrir este tipo de archivo.',
+      );
+    await _open(tester, docs, opener: opener);
+    await tester.tap(find.byTooltip('Abrir plan.pdf'));
+    await settle(tester);
+    expect(find.textContaining('No tienes una app'), findsOneWidget);
   });
 }
