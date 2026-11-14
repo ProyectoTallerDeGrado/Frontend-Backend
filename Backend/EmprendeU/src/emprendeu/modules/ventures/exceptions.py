@@ -73,3 +73,59 @@ class ReservedFields(Forbidden):
             "Esos campos solo los cambia la coordinacion.",
             details={"campos": fields},
         )
+
+
+class EntrepreneurNotFoundForVenture(DomainError):
+    code = "entrepreneur_not_found"
+    status_code = 422
+
+    def __init__(self, emprendedor_id: int) -> None:
+        super().__init__(
+            "Ese emprendedor no existe.", details={"emprendedor_id": emprendedor_id}
+        )
+
+
+class DuplicateMember(DomainError):
+    code = "duplicate_member"
+    status_code = 422
+
+    def __init__(self, emprendedor_id: int) -> None:
+        super().__init__(
+            "Un emprendedor aparece dos veces en el equipo.",
+            details={"emprendedor_id": emprendedor_id},
+        )
+
+
+class AlreadyMember(ConflictError):
+    code = "already_member"
+
+    def __init__(self) -> None:
+        super().__init__("El emprendedor ya es integrante de este emprendimiento.")
+
+
+class MemberNotFound(NotFoundError):
+    code = "member_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("El emprendedor no es integrante de este emprendimiento.")
+
+
+class LastMember(ConflictError):
+    code = "last_member"
+
+    def __init__(self) -> None:
+        super().__init__("El emprendimiento debe quedar con al menos un integrante.")
+
+
+class MilestoneDuplicate(ConflictError):
+    code = "milestone_duplicate"
+
+    def __init__(self) -> None:
+        super().__init__("El emprendimiento ya tiene un hito con ese titulo.")
+
+
+class NeedAlreadyRegistered(ConflictError):
+    code = "need_already_registered"
+
+    def __init__(self) -> None:
+        super().__init__("Esa necesidad ya esta registrada en el emprendimiento.")

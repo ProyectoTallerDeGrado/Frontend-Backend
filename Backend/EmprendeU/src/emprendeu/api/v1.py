@@ -9,6 +9,7 @@ from emprendeu.modules.ai_assistant.router import router as ai_router
 from emprendeu.modules.alerts.router import router as alerts_router
 from emprendeu.modules.audit.router import router as audit_router
 from emprendeu.modules.documents.router import router as documents_router
+from emprendeu.modules.entrepreneurs.router import admissions_router
 from emprendeu.modules.entrepreneurs.router import router as entrepreneurs_router
 from emprendeu.modules.gamification.router import router as gamification_router
 from emprendeu.modules.indicators.router import router as indicators_router
@@ -22,6 +23,7 @@ api_router = APIRouter()
 api_router.include_router(users_router)
 api_router.include_router(audit_router)
 api_router.include_router(entrepreneurs_router)
+api_router.include_router(admissions_router)
 api_router.include_router(ventures_router)
 api_router.include_router(gamification_router)
 api_router.include_router(mentoring_router)

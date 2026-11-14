@@ -58,6 +58,11 @@ class DocumentService:
             return True
         return await self._entrepreneurs.is_member(user.usuario_id, venture_id)
 
+    async def is_evidence_of(self, documento_id: int, emprendimiento_id: int) -> bool:
+        """True si el documento existe y pertenece a ese emprendimiento (CU07)."""
+        doc = await self._repo.get(documento_id)
+        return doc is not None and doc.emprendimiento_id == emprendimiento_id
+
     async def upload(
         self,
         user: CurrentUser,

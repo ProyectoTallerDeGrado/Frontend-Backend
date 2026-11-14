@@ -31,6 +31,16 @@ class ChallengeAlreadyCompleted(ConflictError):
         super().__init__("Este reto ya fue cumplido; el XP se otorga una sola vez.")
 
 
+class ChallengeCriteriaNotMet(DomainError):
+    code = "criteria_not_met"
+    status_code = 422
+
+    def __init__(
+        self, message: str, *, details: dict[str, object] | None = None
+    ) -> None:
+        super().__init__(message, details=details)
+
+
 class NoVenture(ConflictError):
     code = "no_venture"
 

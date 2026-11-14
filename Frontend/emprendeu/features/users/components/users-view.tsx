@@ -1,6 +1,6 @@
 import { Pagination } from "@/components/layout/pagination";
 
-import { USERS_PAGE_SIZE, listUsers } from "../server/queries";
+import { USERS_PAGE_SIZE, listRoles, listUsers } from "../server/queries";
 import { UserFilters } from "./user-filters";
 import { UsersTable } from "./users-table";
 
@@ -14,7 +14,7 @@ type UsersViewProps = {
 };
 
 export async function UsersView({ q, rol, page, currentUserId, canToggle, canChangeRole }: UsersViewProps) {
-  const data = await listUsers({ q, rol, page });
+  const [data, roles] = await Promise.all([listUsers({ q, rol, page }), listRoles()]);
   const hrefFor = (p: number) => {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
@@ -25,9 +25,10 @@ export async function UsersView({ q, rol, page, currentUserId, canToggle, canCha
   };
   return (
     <div className="flex flex-col gap-[18px]">
-      <UserFilters q={q} rol={rol} />
+      <UserFilters q={q} rol={rol} roles={roles} />
       <UsersTable
         users={data.items}
+        roles={roles}
         currentUserId={currentUserId}
         canToggle={canToggle}
         canChangeRole={canChangeRole}

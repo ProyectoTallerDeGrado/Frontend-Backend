@@ -2,9 +2,13 @@ import "server-only";
 
 import { authedFetch } from "@/features/auth";
 
-import { entrepreneurPageSchema } from "../schemas/entrepreneurs-schemas";
+import { ApiError } from "@/lib/api-client";
+
+import { admissionPageSchema, admissionSchema, entrepreneurPageSchema } from "../schemas/entrepreneurs-schemas";
+import type { Admission, AdmissionFilters } from "../types";
 
 export const ENTREPRENEURS_PAGE_SIZE = 20;
+export const ADMISSIONS_PAGE_SIZE = 20;
 
 export async function listEntrepreneurs(params: { q?: string; page?: number }) {
   const search = new URLSearchParams({
@@ -22,4 +26,21 @@ export async function listEntrepreneurOptions(): Promise<{ id: number; name: str
     id: e.emprendedor_id,
     name: `${e.nombre ?? ""} ${e.apellido ?? ""}`.trim() + (e.documento_identidad ? ` · ${e.documento_identidad}` : ""),
   }));
+}
+
+/** CU26 · Postulaciones al programa; las pendientes aparecen primero. */
+export async function listAdmissions(filters: AdmissionFilters) {
+  const search = new URLSearchParams({ page: String(filters.page ?? 1), page_size: String(ADMISSIONS_PAGE_SIZE) });
+  if (filters.estado) search.set("estado", filters.estado);
+  if (filters.q) search.set("q", filters.q);
+  return admissionPageSchema.parse(await authedFetch(`/admissions?${search}`));
+}
+
+export async function getAdmission(id: number): Promise<Admission | null> {
+  try {
+    return admissionSchema.parse(await authedFetch(`/admissions/${id}`));
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
 }

@@ -61,10 +61,17 @@ class FakeConnectivity implements ConnectivitySource {
 }
 
 class FakeVenturesRepository implements VenturesRepository {
-  FakeVenturesRepository({this.venture, List<Milestone>? milestones})
-    : milestones = milestones ?? [];
+  FakeVenturesRepository({
+    this.venture,
+    this.ventures,
+    List<Milestone>? milestones,
+  }) : milestones = milestones ?? [];
 
+  /// Emprendimiento único (lo que usaban las pruebas antes de CU05).
   Venture? venture;
+
+  /// Varios emprendimientos; si se indica, manda sobre [venture].
+  List<Venture>? ventures;
   int createCalls = 0;
   int updateCalls = 0;
   String? lastUpdatedName;
@@ -131,7 +138,8 @@ class FakeVenturesRepository implements VenturesRepository {
   }
 
   @override
-  Future<Result<Venture?>> getMine() async => Result.ok(venture);
+  Future<Result<List<Venture>>> getMine() async =>
+      Result.ok(ventures ?? [?venture]);
 
   @override
   Future<Result<Venture>> create(String name) async {
@@ -147,7 +155,7 @@ const sampleStages = [
   JourneyStage(id: 3, name: 'Crecimiento', status: StageStatus.locked),
 ];
 
-Journey sampleJourney({int done = 2}) {
+Journey sampleJourney({int done = 2, bool evidence = false}) {
   const titles = [
     'Definir la propuesta de valor',
     'Entrevistar a 5 clientes potenciales',
@@ -168,6 +176,8 @@ Journey sampleJourney({int done = 2}) {
           description: 'Descripción de ${titles[i]}',
           stageName: i < 2 ? 'Preincubación' : 'Incubación',
           xp: 100 + i * 25,
+          criterion: evidence ? 'Sube tu avance' : null,
+          requiresEvidence: evidence,
           status: i < done
               ? ChallengeStatus.done
               : (i == done ? ChallengeStatus.current : ChallengeStatus.locked),
@@ -181,33 +191,52 @@ class FakeGamificationRepository implements GamificationRepository {
     Journey? journey,
     this.profile,
     this.journeyFailure,
+    this.profileFailure,
   }) : journey = journey ?? sampleJourney();
 
   Journey journey;
   GamificationProfile? profile;
   Failure? journeyFailure;
+  Failure? profileFailure;
   int completeCalls = 0;
   Failure? completeFailure;
+  String? lastEvidenceText;
+
+  /// Último emprendimiento pedido (para verificar el selector).
+  int? lastVentureId;
 
   @override
-  Future<Result<Journey>> getJourney() async =>
-      journeyFailure != null ? Result.err(journeyFailure!) : Result.ok(journey);
+  Future<Result<Journey>> getJourney({int? ventureId}) async {
+    lastVentureId = ventureId;
+    return journeyFailure != null
+        ? Result.err(journeyFailure!)
+        : Result.ok(journey);
+  }
 
   @override
-  Future<Result<GamificationProfile>> getProfile() async => Result.ok(
-    profile ??
-        const GamificationProfile(
-          xp: 295,
-          level: 2,
-          nextLevelXp: 400,
-          missingXp: 105,
-          progressPct: 47.5,
-        ),
-  );
+  Future<Result<GamificationProfile>> getProfile() async =>
+      profileFailure != null
+      ? Result.err(profileFailure!)
+      : Result.ok(
+          profile ??
+              const GamificationProfile(
+                xp: 295,
+                level: 2,
+                nextLevelXp: 400,
+                missingXp: 105,
+                progressPct: 47.5,
+              ),
+        );
 
   @override
-  Future<Result<CompletionResult>> completeChallenge(int challengeId) async {
+  Future<Result<CompletionResult>> completeChallenge(
+    int challengeId, {
+    int? ventureId,
+    String? evidenceText,
+    int? documentId,
+  }) async {
     completeCalls++;
+    lastEvidenceText = evidenceText;
     if (completeFailure != null) return Result.err(completeFailure!);
     final updated = [
       for (final c in journey.challenges)
@@ -309,11 +338,11 @@ class FakeMentoringRepository implements MentoringRepository {
   }
 
   @override
-  Future<Result<List<ProgressLog>>> getProgressLogs() async =>
+  Future<Result<List<ProgressLog>>> getProgressLogs({int? ventureId}) async =>
       Result.ok(List.of(logs));
 
   @override
-  Future<Result<ProgressLog>> logProgress(String text) async {
+  Future<Result<ProgressLog>> logProgress(String text, {int? ventureId}) async {
     final log = ProgressLog(
       id: offline ? null : logs.length + 1,
       text: text,

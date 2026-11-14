@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.config import get_settings
-from emprendeu.core.errors import PayloadTooLarge
+from emprendeu.core.errors import Forbidden, PayloadTooLarge
 from emprendeu.modules.ai_assistant import schemas as s
 from emprendeu.modules.ai_assistant.chunking import chunk_text
 from emprendeu.modules.ai_assistant.exceptions import (
@@ -40,6 +40,7 @@ FALLBACK = (
 )
 # Estados de un documento de conocimiento (columna `estado`, sin CHECK en la base).
 PROCESSING, ACTIVE, FAILED, INACTIVE = "procesando", "activo", "error", "inactivo"
+HISTORY_TURNS = 6  # mensajes previos que se envian al modelo
 HANDOFF_KEYWORDS = ("financ", "credito", "inversi", "legal", "contrato", "demanda")
 SYSTEM_PROMPT = (
     "Eres el coach virtual del CIE-U (Centro de Innovacion y Emprendimiento "
@@ -275,9 +276,12 @@ class AssistantService:
         if ref is None:
             raise NotEntrepreneur
         if body.conversacion_id is None:
+            venture_id = body.emprendimiento_id or ref.primary_venture_id
+            if venture_id is not None and venture_id not in ref.emprendimiento_ids:
+                raise Forbidden("No tienes acceso a este emprendimiento.")
             conversation = ConversacionIa(
                 emprendedor_id=ref.emprendedor_id,
-                emprendimiento_id=ref.primary_venture_id,
+                emprendimiento_id=venture_id,
                 fecha_inicio=now(),
             )
             await self._repo.add(conversation)
@@ -286,6 +290,13 @@ class AssistantService:
             if found is None or found.emprendedor_id != ref.emprendedor_id:
                 raise ConversationNotFound
             conversation = found
+        # Turnos previos de la misma conversacion, para que el modelo no responda "en frio".
+        history = [
+            ("user" if m.tipo == "usuario" else "assistant", m.contenido)
+            for m in (await self._repo.messages(conversation.conversacion_ia_id))[
+                -HISTORY_TURNS:
+            ]
+        ]
         question = MensajeIa(
             conversacion_ia_id=conversation.conversacion_ia_id,
             tipo="usuario",
@@ -308,7 +319,7 @@ class AssistantService:
             if sources:
                 context = "\n\n".join(f"[{title}] {text}" for text, title in sources)
                 answer = await self._llm.chat(
-                    SYSTEM_PROMPT.format(context=context), body.mensaje
+                    SYSTEM_PROMPT.format(context=context), body.mensaje, history
                 )
                 titles = list(dict.fromkeys(title for _, title in sources))
             else:

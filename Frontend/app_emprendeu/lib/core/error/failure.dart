@@ -74,6 +74,21 @@ final class AssistantUnavailableFailure extends Failure {
       );
 }
 
+/// La mentoría ya no admite cambios, p. ej. cancelarla (el backend responde `session_closed`).
+final class SessionClosedFailure extends Failure {
+  const SessionClosedFailure()
+    : super('Esta mentoría ya no se puede cancelar.');
+}
+
+/// Esa necesidad ya está abierta en el emprendimiento (`need_already_registered`).
+final class NeedAlreadyRegisteredFailure extends Failure {
+  const NeedAlreadyRegisteredFailure()
+    : super(
+        'Ya reportaste esa necesidad y sigue abierta. '
+        'Cuando se resuelva podrás reportarla otra vez.',
+      );
+}
+
 /// El usuario aún no registró su emprendimiento (el backend responde `no_venture`).
 final class NoVentureFailure extends Failure {
   const NoVentureFailure() : super('Primero registra tu emprendimiento.');

@@ -86,9 +86,66 @@ void main() {
     expect(find.text('295 XP · Nivel 2'), findsOneWidget);
     expect(find.text('Te faltan 105 XP para el nivel 3.'), findsOneWidget);
     expect(find.text('Insignias · 1 de 2'), findsOneWidget);
-    expect(find.text('Primer paso'), findsOneWidget);
-    expect(find.text('Constancia'), findsOneWidget);
-    expect(find.text('+75 XP'), findsOneWidget);
+    // El detalle (insignias y movimientos) vive en la pantalla `/xp`.
+    expect(find.text('Ver experiencia e insignias'), findsOneWidget);
+  });
+
+  testWidgets(
+    'CU05: el Perfil muestra el equipo y, con varios emprendimientos, permite elegir',
+    (tester) async {
+      const team = [
+        VentureMember(entrepreneurId: 7, name: 'Rosa Quispe', role: 'fundador'),
+        VentureMember(
+          entrepreneurId: 8,
+          name: 'Luis Mamani',
+          role: 'cofundador',
+        ),
+      ];
+      final gamification = FakeGamificationRepository();
+      final ventures = FakeVenturesRepository(
+        ventures: const [
+          Venture(
+            id: 1,
+            name: 'Sabores del Oriente',
+            stageName: 'Incubación',
+            members: team,
+          ),
+          Venture(id: 2, name: 'Café de altura', stageName: 'Preincubación'),
+        ],
+      );
+      await _openPerfil(
+        tester,
+        TestWorld(
+          auth: FakeAuthRepository(token: 'tok-1'),
+          ventures: ventures,
+          gamification: gamification,
+        ),
+      );
+
+      // equipo en solo lectura
+      expect(find.text('Equipo'), findsOneWidget);
+      expect(find.text('Rosa Quispe'), findsOneWidget);
+      expect(find.text('Cofundador'), findsOneWidget);
+
+      // elegir el segundo emprendimiento
+      await _tap(tester, find.byType(DropdownButtonFormField<int>));
+      await tester.tap(find.text('Café de altura').last);
+      await settle(tester);
+      expect(find.text('Preincubación'), findsOneWidget);
+      expect(find.text('Rosa Quispe'), findsNothing);
+
+      // Inicio y Camino piden los datos del emprendimiento elegido
+      await tester.tap(find.text('Inicio'));
+      await settle(tester);
+      expect(gamification.lastVentureId, 2);
+    },
+  );
+
+  testWidgets('CU05: con un solo emprendimiento no aparece el selector', (
+    tester,
+  ) async {
+    await _openPerfil(tester, _world());
+    expect(find.byType(DropdownButtonFormField<int>), findsNothing);
   });
 
   testWidgets('CU05: edita el emprendimiento propio y guarda', (tester) async {

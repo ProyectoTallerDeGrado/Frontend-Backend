@@ -27,7 +27,7 @@ class UploadEvidenceUseCase {
 
   Future<Result<Evidence>> call({
     required int ventureId,
-    required int milestoneId,
+    int? milestoneId,
     required PickedFile file,
   }) {
     final dot = file.name.lastIndexOf('.');
@@ -56,4 +56,11 @@ class GetVentureEvidenceUseCase {
 
   Future<Result<List<Evidence>>> call(int ventureId) =>
       _repository.listForVenture(ventureId);
+}
+
+class DeleteDocumentUseCase {
+  const DeleteDocumentUseCase(this._repository);
+  final DocumentsRepository _repository;
+
+  Future<Result<void>> call(int documentId) => _repository.delete(documentId);
 }

@@ -171,3 +171,113 @@ async def test_matriz_rechaza_permisos_desconocidos_y_bloqueo_del_admin(
         f"{API}/roles/999999/permissions", json={"permisos": {}}, headers=headers
     )
     assert only_admin_can.status_code == 404
+
+
+async def test_admin_no_puede_perder_usuarios_consulta(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    await make_user(rol="administrador", email="admin@test.com")
+    headers = await login("admin@test.com")
+    roles = {
+        r["nombre"]: r
+        for r in (await client.get(f"{API}/roles", headers=headers)).json()
+    }
+    response = await client.put(
+        f"{API}/roles/{roles['administrador']['rol_id']}/permissions",
+        json={"permisos": {"usuarios": ["administrativo"]}},
+        headers=headers,
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "admin_lockout"
+
+
+async def test_crud_de_roles_personalizados(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    await make_user(rol="administrador", email="admin@test.com")
+    headers = await login("admin@test.com")
+    roles = {
+        r["nombre"]: r
+        for r in (await client.get(f"{API}/roles", headers=headers)).json()
+    }
+
+    created = await client.post(
+        f"{API}/roles",
+        json={
+            "nombre": "Auditor Lectura",
+            "descripcion": "Solo consulta",
+            "clonar_de": roles["asesor"]["rol_id"],
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["nombre"] == "auditor lectura"
+    matrix = (
+        await client.get(f"{API}/roles/{body['rol_id']}/permissions", headers=headers)
+    ).json()
+    assert matrix["permisos"]["asesorias"] == ["consulta", "registro", "modificacion"]
+
+    duplicate = await client.post(
+        f"{API}/roles", json={"nombre": "auditor lectura"}, headers=headers
+    )
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"]["code"] == "role_name_taken"
+
+    edited = await client.patch(
+        f"{API}/roles/{body['rol_id']}",
+        json={"descripcion": "Revisa sin editar"},
+        headers=headers,
+    )
+    assert edited.status_code == 200
+    assert edited.json()["descripcion"] == "Revisa sin editar"
+
+    system = await client.delete(
+        f"{API}/roles/{roles['asesor']['rol_id']}", headers=headers
+    )
+    assert system.status_code == 409
+    assert system.json()["error"]["code"] == "system_role_protected"
+
+    deleted = await client.delete(f"{API}/roles/{body['rol_id']}", headers=headers)
+    assert deleted.status_code == 204
+    gone = await client.get(
+        f"{API}/roles/{body['rol_id']}/permissions", headers=headers
+    )
+    assert gone.status_code == 404
+
+
+async def test_rol_con_usuarios_no_se_elimina_y_rol_solo_lectura_no_escribe(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    await make_user(rol="administrador", email="admin@test.com")
+    headers = await login("admin@test.com")
+    created = await client.post(
+        f"{API}/roles", json={"nombre": "solo lectura"}, headers=headers
+    )
+    role_id = created.json()["rol_id"]
+    await client.put(
+        f"{API}/roles/{role_id}/permissions",
+        json={"permisos": {"usuarios": ["consulta"]}},
+        headers=headers,
+    )
+    await make_user(rol="solo lectura", email="lector@test.com")
+    in_use = await client.delete(f"{API}/roles/{role_id}", headers=headers)
+    assert in_use.status_code == 409
+    assert in_use.json()["error"]["code"] == "role_in_use"
+
+    reader = await login("lector@test.com")
+    assert (await client.get(f"{API}/users", headers=reader)).status_code == 200
+    forbidden = await client.post(
+        f"{API}/users",
+        json={
+            "nombre_completo": "Nuevo Usuario",
+            "email": "n@test.com",
+            "rol": "asesor",
+        },
+        headers=reader,
+    )
+    assert forbidden.status_code == 403
+    other = await client.post(
+        f"{API}/roles", json={"nombre": "otro rol"}, headers=reader
+    )
+    assert other.status_code == 403

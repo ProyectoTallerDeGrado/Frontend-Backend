@@ -56,6 +56,13 @@ async def my_trainings(service: Svc, user: CurrentUserDep) -> list[s.TrainingOut
     return await service.mine(user)
 
 
+@router.get("/{capacitacion_id}", response_model=s.TrainingOut)
+async def get_training(
+    capacitacion_id: int, service: Svc, _: CurrentUserDep
+) -> s.TrainingOut:
+    return await service.get(capacitacion_id)
+
+
 @router.patch("/{capacitacion_id}", response_model=s.TrainingOut)
 async def update_training(
     capacitacion_id: int,

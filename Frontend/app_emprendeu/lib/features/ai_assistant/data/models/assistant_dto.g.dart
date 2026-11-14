@@ -25,6 +25,12 @@ _ConversationSummaryDto _$ConversationSummaryDtoFromJson(
 ) => _ConversationSummaryDto(
   conversacionId: (json['conversacion_id'] as num).toInt(),
   totalMensajes: (json['total_mensajes'] as num?)?.toInt() ?? 0,
+  fechaInicio: json['fecha_inicio'] == null
+      ? null
+      : DateTime.parse(json['fecha_inicio'] as String),
+  fechaFin: json['fecha_fin'] == null
+      ? null
+      : DateTime.parse(json['fecha_fin'] as String),
 );
 
 Map<String, dynamic> _$ConversationSummaryDtoToJson(
@@ -32,6 +38,8 @@ Map<String, dynamic> _$ConversationSummaryDtoToJson(
 ) => <String, dynamic>{
   'conversacion_id': instance.conversacionId,
   'total_mensajes': instance.totalMensajes,
+  'fecha_inicio': instance.fechaInicio?.toIso8601String(),
+  'fecha_fin': instance.fechaFin?.toIso8601String(),
 };
 
 _ChatReplyDto _$ChatReplyDtoFromJson(

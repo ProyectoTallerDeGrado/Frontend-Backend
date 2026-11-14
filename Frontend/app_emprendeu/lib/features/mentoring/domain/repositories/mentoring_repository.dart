@@ -15,10 +15,11 @@ abstract interface class MentoringRepository {
     bool done,
   );
 
-  Future<Result<List<ProgressLog>>> getProgressLogs();
+  /// Avances de [ventureId] (sin indicarlo, del primer emprendimiento).
+  Future<Result<List<ProgressLog>>> getProgressLogs({int? ventureId});
 
   /// Registra un avance. Sin red lo guarda en el dispositivo para enviarlo después.
-  Future<Result<ProgressLog>> logProgress(String text);
+  Future<Result<ProgressLog>> logProgress(String text, {int? ventureId});
 
   /// Cambios guardados en el dispositivo que aún no llegaron al servidor.
   Future<int> pendingCount();

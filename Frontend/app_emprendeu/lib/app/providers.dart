@@ -5,6 +5,8 @@ import '../features/auth/index.dart';
 import '../features/documents/index.dart';
 import '../features/gamification/index.dart';
 import '../features/mentoring/index.dart';
+import '../features/needs/index.dart';
+import '../features/training/index.dart';
 import '../features/ventures/index.dart';
 
 /// Raíz de composición: reúne las implementaciones de `data` de cada feature.
@@ -14,5 +16,7 @@ final List<Override> appOverrides = [
   ...documentsDataOverrides,
   ...gamificationDataOverrides,
   ...mentoringDataOverrides,
+  ...needsDataOverrides,
+  ...trainingDataOverrides,
   ...assistantDataOverrides,
 ];

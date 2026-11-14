@@ -2,8 +2,10 @@ import '../../../../core/error/failure.dart';
 import '../../../../core/error/result.dart';
 import '../entities/booking_status.dart';
 import '../entities/history_event.dart';
+import '../entities/history_filter.dart';
 import '../entities/mentor.dart';
 import '../entities/mentoring_session.dart';
+import '../entities/task.dart';
 import '../entities/time_slot.dart';
 import '../repositories/booking_repository.dart';
 
@@ -11,14 +13,16 @@ class GetBookingStatusUseCase {
   const GetBookingStatusUseCase(this._repository);
   final BookingRepository _repository;
 
-  Future<Result<BookingStatus>> call() => _repository.getBookingStatus();
+  Future<Result<BookingStatus>> call({int? ventureId}) =>
+      _repository.getBookingStatus(ventureId: ventureId);
 }
 
 class GetMentorsUseCase {
   const GetMentorsUseCase(this._repository);
   final BookingRepository _repository;
 
-  Future<Result<List<Mentor>>> call() => _repository.getMentors();
+  Future<Result<List<Mentor>>> call({int? ventureId}) =>
+      _repository.getMentors(ventureId: ventureId);
 }
 
 class GetSlotsUseCase {
@@ -51,6 +55,7 @@ class BookSessionUseCase {
     required DateTime day,
     required TimeSlot slot,
     String? topic,
+    int? ventureId,
   }) async {
     final fresh = await _repository.getSlots(mentorId, day);
     switch (fresh) {
@@ -67,6 +72,7 @@ class BookSessionUseCase {
       mentorId: mentorId,
       start: slot.start,
       topic: (cleaned == null || cleaned.isEmpty) ? null : cleaned,
+      ventureId: ventureId,
     );
   }
 }
@@ -76,6 +82,34 @@ class GetHistoryUseCase {
   const GetHistoryUseCase(this._repository);
   final BookingRepository _repository;
 
-  Future<Result<List<HistoryEvent>>> call({bool newestFirst = true}) =>
-      _repository.getHistory(newestFirst: newestFirst);
+  Future<Result<List<HistoryEvent>>> call({
+    HistoryFilter filter = const HistoryFilter(),
+    int? ventureId,
+  }) => _repository.getHistory(filter: filter, ventureId: ventureId);
+}
+
+/// Detalle de una mentoría propia (CU23).
+class GetSessionUseCase {
+  const GetSessionUseCase(this._repository);
+  final BookingRepository _repository;
+
+  Future<Result<MentoringSession>> call(int id) => _repository.getSession(id);
+}
+
+/// Cancela una mentoría programada y libera el horario (CU23).
+class CancelSessionUseCase {
+  const CancelSessionUseCase(this._repository);
+  final BookingRepository _repository;
+
+  Future<Result<MentoringSession>> call(int id) =>
+      _repository.cancelSession(id);
+}
+
+/// Compromisos e hitos del emprendedor con sus filtros (CU22).
+class GetTasksUseCase {
+  const GetTasksUseCase(this._repository);
+  final BookingRepository _repository;
+
+  Future<Result<List<Task>>> call(TaskFilter filter) =>
+      _repository.getTasks(filter);
 }

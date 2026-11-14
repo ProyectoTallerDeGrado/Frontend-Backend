@@ -7,6 +7,6 @@
 abstract final class AppConfig {
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.0.137:8000/api/v1',
+    defaultValue: 'http://192.168.137.39:8000/api/v1',
   );
 }

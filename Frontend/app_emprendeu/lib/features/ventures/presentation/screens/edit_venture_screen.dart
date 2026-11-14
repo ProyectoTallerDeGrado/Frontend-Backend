@@ -79,7 +79,7 @@ class _EditFormState extends ConsumerState<_EditForm> {
     if (!mounted) return;
     switch (result) {
       case Ok():
-        ref.invalidate(myVentureProvider);
+        ref.invalidate(myVenturesProvider);
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Cambios guardados.')));
         context.pop();

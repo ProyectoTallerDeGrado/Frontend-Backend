@@ -244,6 +244,28 @@ class AlertService:
         )
         return await self._out(rows), total
 
+    async def _ensure_assigned(
+        self, actor: CurrentUser, emprendimiento_id: int
+    ) -> None:
+        """Un asesor solo ve y gestiona alertas de los emprendimientos que tiene asignados."""
+        if actor.rol != "asesor":
+            return
+        assigned = [
+            a.emprendimiento_id
+            for a in await self._mentoring.list_assignments(actor.usuario_id, None)
+            if a.estado == "activa"
+        ]
+        if emprendimiento_id not in assigned:
+            raise AlertNotAssigned
+
+    async def get(self, actor: CurrentUser, alerta_id: int) -> s.AlertOut:
+        """Detalle de una alerta: emprendimiento, motivo, fecha y estado (CU13)."""
+        alert = await self._repo.get(alerta_id)
+        if alert is None:
+            raise AlertNotFound
+        await self._ensure_assigned(actor, alert.emprendimiento_id)
+        return (await self._out([alert]))[0]
+
     async def update(
         self, actor: CurrentUser, alerta_id: int, body: s.AlertUpdate
     ) -> s.AlertOut:
@@ -251,15 +273,7 @@ class AlertService:
         alert = await self._repo.get(alerta_id)
         if alert is None:
             raise AlertNotFound
-        # Un asesor solo gestiona alertas de los emprendimientos que tiene asignados.
-        if actor.rol == "asesor":
-            assigned = [
-                a.emprendimiento_id
-                for a in await self._mentoring.list_assignments(actor.usuario_id, None)
-                if a.estado == "activa"
-            ]
-            if alert.emprendimiento_id not in assigned:
-                raise AlertNotAssigned
+        await self._ensure_assigned(actor, alert.emprendimiento_id)
         if alert.estado in CLOSED_STATES:
             raise AlertClosed
         before = alert.estado

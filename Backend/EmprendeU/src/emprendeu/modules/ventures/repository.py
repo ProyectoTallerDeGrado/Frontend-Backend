@@ -28,6 +28,9 @@ class VentureRepository:
     async def commit(self) -> None:
         await self._session.commit()
 
+    async def rollback(self) -> None:
+        await self._session.rollback()
+
     async def flush(self) -> None:
         await self._session.flush()
 
@@ -179,6 +182,23 @@ class VentureRepository:
         )
         return list((await self._session.execute(stmt)).scalars().all())
 
+    async def milestone_title_exists(self, emprendimiento_id: int, titulo: str) -> bool:
+        stmt = select(Hito.hito_id).where(
+            Hito.emprendimiento_id == emprendimiento_id,
+            func.lower(func.trim(Hito.titulo)) == titulo.strip().lower(),
+        )
+        return (await self._session.execute(stmt)).first() is not None
+
+    async def venture_need_exists(
+        self, emprendimiento_id: int, necesidad_id: int
+    ) -> bool:
+        stmt = select(EmprendimientoNecesidad.emprendimiento_necesidad_id).where(
+            EmprendimientoNecesidad.emprendimiento_id == emprendimiento_id,
+            EmprendimientoNecesidad.necesidad_id == necesidad_id,
+            EmprendimientoNecesidad.estado == "detectada",
+        )
+        return (await self._session.execute(stmt)).first() is not None
+
     async def get_milestone(self, hito_id: int) -> Hito | None:
         return await self._session.get(Hito, hito_id)
 
@@ -204,6 +224,53 @@ class VentureRepository:
             .order_by(EmprendimientoNecesidad.emprendimiento_necesidad_id)
         )
         return [(r[0], r[1]) for r in (await self._session.execute(stmt)).all()]
+
+    async def list_venture_needs_all(
+        self,
+        *,
+        estado: str | None,
+        tipo: str | None,
+        emprendimiento_id: int | None,
+        offset: int,
+        limit: int,
+    ) -> tuple[list[tuple[EmprendimientoNecesidad, str, str]], int]:
+        """Bandeja del personal: necesidades de todos los emprendimientos."""
+        base = (
+            select(EmprendimientoNecesidad, Necesidad.nombre, Emprendimiento.nombre)
+            .join(
+                Necesidad,
+                Necesidad.necesidad_id == EmprendimientoNecesidad.necesidad_id,
+            )
+            .join(
+                Emprendimiento,
+                Emprendimiento.emprendimiento_id
+                == EmprendimientoNecesidad.emprendimiento_id,
+            )
+        )
+        if estado:
+            base = base.where(EmprendimientoNecesidad.estado == estado)
+        if tipo:
+            base = base.where(EmprendimientoNecesidad.tipo == tipo)
+        if emprendimiento_id is not None:
+            base = base.where(
+                EmprendimientoNecesidad.emprendimiento_id == emprendimiento_id
+            )
+        total = (
+            await self._session.execute(
+                select(func.count()).select_from(base.subquery())
+            )
+        ).scalar_one()
+        rows = (
+            await self._session.execute(
+                base.order_by(
+                    EmprendimientoNecesidad.estado.asc(),
+                    EmprendimientoNecesidad.fecha_detectada.desc(),
+                )
+                .offset(offset)
+                .limit(limit)
+            )
+        ).all()
+        return [(r[0], r[1], r[2]) for r in rows], total
 
     async def get_venture_need(self, row_id: int) -> EmprendimientoNecesidad | None:
         return await self._session.get(EmprendimientoNecesidad, row_id)

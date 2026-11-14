@@ -7,9 +7,10 @@ import { Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 
-import { ROLE_META } from "../roles";
+import { roleLabel } from "../roles";
+import type { Role } from "../types";
 
-type UserFiltersProps = { q: string; rol: string };
+type UserFiltersProps = { q: string; rol: string; roles: Role[] };
 
 function href(q: string, rol: string): string {
   const params = new URLSearchParams();
@@ -19,7 +20,7 @@ function href(q: string, rol: string): string {
   return query ? `/users?${query}` : "/users";
 }
 
-export function UserFilters({ q, rol }: UserFiltersProps) {
+export function UserFilters({ q, rol, roles }: UserFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [value, setValue] = useState(q);
@@ -58,14 +59,14 @@ export function UserFilters({ q, rol }: UserFiltersProps) {
         <Link href={href(value.trim(), "")} aria-current={rol === "" ? "true" : undefined} className={pill(rol === "")}>
           Todos
         </Link>
-        {Object.entries(ROLE_META).map(([key, meta]) => (
+        {roles.map((r) => (
           <Link
-            key={key}
-            href={href(value.trim(), key)}
-            aria-current={rol === key ? "true" : undefined}
-            className={pill(rol === key)}
+            key={r.rol_id}
+            href={href(value.trim(), r.nombre)}
+            aria-current={rol === r.nombre ? "true" : undefined}
+            className={pill(rol === r.nombre)}
           >
-            {meta.label}
+            {roleLabel(r.nombre)}
           </Link>
         ))}
       </div>

@@ -611,7 +611,14 @@ async def test_emprendedor_solo_ve_y_agenda_con_asesores_asignados(
     h, vid, mentor_id, *_ = await _world(client, make_user, login, ready=False)
     await _enable_booking(client, h, vid)
     day = _future_day()
+    # El horario se publica con el mentor habilitado y luego se le quita la habilitacion.
+    await _enable(client, h, mentor_id)
     await _set_availability(client, h, mentor_id, day)
+    await client.put(
+        f"{API}/mentoring/mentors/{mentor_id}/enabled",
+        json={"habilitado": False},
+        headers=h["coord"],
+    )
     slot = (
         await client.get(
             f"{API}/mentoring/mentors/{mentor_id}/slots?fecha={day}", headers=h["e"]

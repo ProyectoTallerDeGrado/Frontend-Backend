@@ -292,7 +292,7 @@ as String,
 /// @nodoc
 mixin _$JourneyChallengeDto {
 
-@JsonKey(name: 'reto_id') int get retoId; String get titulo; String? get descripcion; String? get etapa;@JsonKey(name: 'xp_recompensa') int get xpRecompensa; String get estado;@JsonKey(name: 'fecha_completado') DateTime? get fechaCompletado;
+@JsonKey(name: 'reto_id') int get retoId; String get titulo; String? get descripcion; String? get etapa;@JsonKey(name: 'xp_recompensa') int get xpRecompensa; String get estado;@JsonKey(name: 'fecha_completado') DateTime? get fechaCompletado;@JsonKey(name: 'criterio_completado') String? get criterioCompletado;@JsonKey(name: 'requiere_evidencia') bool get requiereEvidencia;
 /// Create a copy of JourneyChallengeDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -306,20 +306,20 @@ $JourneyChallengeDtoCopyWith<JourneyChallengeDto> get copyWith => _$JourneyChall
 @override
 bool operator ==(Object other) {
   final _this = this as JourneyChallengeDto;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is JourneyChallengeDto&&(identical(other.retoId, _this.retoId) || other.retoId == _this.retoId)&&(identical(other.titulo, _this.titulo) || other.titulo == _this.titulo)&&(identical(other.descripcion, _this.descripcion) || other.descripcion == _this.descripcion)&&(identical(other.etapa, _this.etapa) || other.etapa == _this.etapa)&&(identical(other.xpRecompensa, _this.xpRecompensa) || other.xpRecompensa == _this.xpRecompensa)&&(identical(other.estado, _this.estado) || other.estado == _this.estado)&&(identical(other.fechaCompletado, _this.fechaCompletado) || other.fechaCompletado == _this.fechaCompletado));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is JourneyChallengeDto&&(identical(other.retoId, _this.retoId) || other.retoId == _this.retoId)&&(identical(other.titulo, _this.titulo) || other.titulo == _this.titulo)&&(identical(other.descripcion, _this.descripcion) || other.descripcion == _this.descripcion)&&(identical(other.etapa, _this.etapa) || other.etapa == _this.etapa)&&(identical(other.xpRecompensa, _this.xpRecompensa) || other.xpRecompensa == _this.xpRecompensa)&&(identical(other.estado, _this.estado) || other.estado == _this.estado)&&(identical(other.fechaCompletado, _this.fechaCompletado) || other.fechaCompletado == _this.fechaCompletado)&&(identical(other.criterioCompletado, _this.criterioCompletado) || other.criterioCompletado == _this.criterioCompletado)&&(identical(other.requiereEvidencia, _this.requiereEvidencia) || other.requiereEvidencia == _this.requiereEvidencia));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as JourneyChallengeDto;
-  return Object.hash(runtimeType,_this.retoId,_this.titulo,_this.descripcion,_this.etapa,_this.xpRecompensa,_this.estado,_this.fechaCompletado);
+  return Object.hash(runtimeType,_this.retoId,_this.titulo,_this.descripcion,_this.etapa,_this.xpRecompensa,_this.estado,_this.fechaCompletado,_this.criterioCompletado,_this.requiereEvidencia);
 }
 
 @override
 String toString() {
   final _this = this as JourneyChallengeDto;
-  return 'JourneyChallengeDto(retoId: ${_this.retoId}, titulo: ${_this.titulo}, descripcion: ${_this.descripcion}, etapa: ${_this.etapa}, xpRecompensa: ${_this.xpRecompensa}, estado: ${_this.estado}, fechaCompletado: ${_this.fechaCompletado})';
+  return 'JourneyChallengeDto(retoId: ${_this.retoId}, titulo: ${_this.titulo}, descripcion: ${_this.descripcion}, etapa: ${_this.etapa}, xpRecompensa: ${_this.xpRecompensa}, estado: ${_this.estado}, fechaCompletado: ${_this.fechaCompletado}, criterioCompletado: ${_this.criterioCompletado}, requiereEvidencia: ${_this.requiereEvidencia})';
 }
 
 
@@ -330,7 +330,7 @@ abstract mixin class $JourneyChallengeDtoCopyWith<$Res>  {
   factory $JourneyChallengeDtoCopyWith(JourneyChallengeDto value, $Res Function(JourneyChallengeDto) _then) = _$JourneyChallengeDtoCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'reto_id') int retoId, String titulo, String? descripcion, String? etapa,@JsonKey(name: 'xp_recompensa') int xpRecompensa, String estado,@JsonKey(name: 'fecha_completado') DateTime? fechaCompletado
+@JsonKey(name: 'reto_id') int retoId, String titulo, String? descripcion, String? etapa,@JsonKey(name: 'xp_recompensa') int xpRecompensa, String estado,@JsonKey(name: 'fecha_completado') DateTime? fechaCompletado,@JsonKey(name: 'criterio_completado') String? criterioCompletado,@JsonKey(name: 'requiere_evidencia') bool requiereEvidencia
 });
 
 
@@ -347,7 +347,7 @@ class _$JourneyChallengeDtoCopyWithImpl<$Res>
 
 /// Create a copy of JourneyChallengeDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? retoId = null,Object? titulo = null,Object? descripcion = freezed,Object? etapa = freezed,Object? xpRecompensa = null,Object? estado = null,Object? fechaCompletado = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? retoId = null,Object? titulo = null,Object? descripcion = freezed,Object? etapa = freezed,Object? xpRecompensa = null,Object? estado = null,Object? fechaCompletado = freezed,Object? criterioCompletado = freezed,Object? requiereEvidencia = null,}) {
   return _then(JourneyChallengeDto(
 retoId: null == retoId ? _self.retoId : retoId // ignore: cast_nullable_to_non_nullable
 as int,titulo: null == titulo ? _self.titulo : titulo // ignore: cast_nullable_to_non_nullable
@@ -356,7 +356,9 @@ as String?,etapa: freezed == etapa ? _self.etapa : etapa // ignore: cast_nullabl
 as String?,xpRecompensa: null == xpRecompensa ? _self.xpRecompensa : xpRecompensa // ignore: cast_nullable_to_non_nullable
 as int,estado: null == estado ? _self.estado : estado // ignore: cast_nullable_to_non_nullable
 as String,fechaCompletado: freezed == fechaCompletado ? _self.fechaCompletado : fechaCompletado // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,criterioCompletado: freezed == criterioCompletado ? _self.criterioCompletado : criterioCompletado // ignore: cast_nullable_to_non_nullable
+as String?,requiereEvidencia: null == requiereEvidencia ? _self.requiereEvidencia : requiereEvidencia // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -441,10 +443,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'reto_id')  int retoId,  String titulo,  String? descripcion,  String? etapa, @JsonKey(name: 'xp_recompensa')  int xpRecompensa,  String estado, @JsonKey(name: 'fecha_completado')  DateTime? fechaCompletado)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'reto_id')  int retoId,  String titulo,  String? descripcion,  String? etapa, @JsonKey(name: 'xp_recompensa')  int xpRecompensa,  String estado, @JsonKey(name: 'fecha_completado')  DateTime? fechaCompletado, @JsonKey(name: 'criterio_completado')  String? criterioCompletado, @JsonKey(name: 'requiere_evidencia')  bool requiereEvidencia)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _JourneyChallengeDto() when $default != null:
-return $default(_that.retoId,_that.titulo,_that.descripcion,_that.etapa,_that.xpRecompensa,_that.estado,_that.fechaCompletado);case _:
+return $default(_that.retoId,_that.titulo,_that.descripcion,_that.etapa,_that.xpRecompensa,_that.estado,_that.fechaCompletado,_that.criterioCompletado,_that.requiereEvidencia);case _:
   return orElse();
 
 }
@@ -462,10 +464,10 @@ return $default(_that.retoId,_that.titulo,_that.descripcion,_that.etapa,_that.xp
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'reto_id')  int retoId,  String titulo,  String? descripcion,  String? etapa, @JsonKey(name: 'xp_recompensa')  int xpRecompensa,  String estado, @JsonKey(name: 'fecha_completado')  DateTime? fechaCompletado)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'reto_id')  int retoId,  String titulo,  String? descripcion,  String? etapa, @JsonKey(name: 'xp_recompensa')  int xpRecompensa,  String estado, @JsonKey(name: 'fecha_completado')  DateTime? fechaCompletado, @JsonKey(name: 'criterio_completado')  String? criterioCompletado, @JsonKey(name: 'requiere_evidencia')  bool requiereEvidencia)  $default,) {final _that = this;
 switch (_that) {
 case _JourneyChallengeDto():
-return $default(_that.retoId,_that.titulo,_that.descripcion,_that.etapa,_that.xpRecompensa,_that.estado,_that.fechaCompletado);case _:
+return $default(_that.retoId,_that.titulo,_that.descripcion,_that.etapa,_that.xpRecompensa,_that.estado,_that.fechaCompletado,_that.criterioCompletado,_that.requiereEvidencia);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -482,10 +484,10 @@ return $default(_that.retoId,_that.titulo,_that.descripcion,_that.etapa,_that.xp
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'reto_id')  int retoId,  String titulo,  String? descripcion,  String? etapa, @JsonKey(name: 'xp_recompensa')  int xpRecompensa,  String estado, @JsonKey(name: 'fecha_completado')  DateTime? fechaCompletado)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'reto_id')  int retoId,  String titulo,  String? descripcion,  String? etapa, @JsonKey(name: 'xp_recompensa')  int xpRecompensa,  String estado, @JsonKey(name: 'fecha_completado')  DateTime? fechaCompletado, @JsonKey(name: 'criterio_completado')  String? criterioCompletado, @JsonKey(name: 'requiere_evidencia')  bool requiereEvidencia)?  $default,) {final _that = this;
 switch (_that) {
 case _JourneyChallengeDto() when $default != null:
-return $default(_that.retoId,_that.titulo,_that.descripcion,_that.etapa,_that.xpRecompensa,_that.estado,_that.fechaCompletado);case _:
+return $default(_that.retoId,_that.titulo,_that.descripcion,_that.etapa,_that.xpRecompensa,_that.estado,_that.fechaCompletado,_that.criterioCompletado,_that.requiereEvidencia);case _:
   return null;
 
 }
@@ -497,7 +499,7 @@ return $default(_that.retoId,_that.titulo,_that.descripcion,_that.etapa,_that.xp
 @JsonSerializable()
 
 class _JourneyChallengeDto implements JourneyChallengeDto {
-  const _JourneyChallengeDto({@JsonKey(name: 'reto_id') required this.retoId, required this.titulo, this.descripcion, this.etapa, @JsonKey(name: 'xp_recompensa') required this.xpRecompensa, required this.estado, @JsonKey(name: 'fecha_completado') this.fechaCompletado});
+  const _JourneyChallengeDto({@JsonKey(name: 'reto_id') required this.retoId, required this.titulo, this.descripcion, this.etapa, @JsonKey(name: 'xp_recompensa') required this.xpRecompensa, required this.estado, @JsonKey(name: 'fecha_completado') this.fechaCompletado, @JsonKey(name: 'criterio_completado') this.criterioCompletado, @JsonKey(name: 'requiere_evidencia') this.requiereEvidencia = false});
   factory _JourneyChallengeDto.fromJson(Map<String, dynamic> json) => _$JourneyChallengeDtoFromJson(json);
 
 @override@JsonKey(name: 'reto_id') final  int retoId;
@@ -507,6 +509,8 @@ class _JourneyChallengeDto implements JourneyChallengeDto {
 @override@JsonKey(name: 'xp_recompensa') final  int xpRecompensa;
 @override final  String estado;
 @override@JsonKey(name: 'fecha_completado') final  DateTime? fechaCompletado;
+@override@JsonKey(name: 'criterio_completado') final  String? criterioCompletado;
+@override@JsonKey(name: 'requiere_evidencia') final  bool requiereEvidencia;
 
 /// Create a copy of JourneyChallengeDto
 /// with the given fields replaced by the non-null parameter values.
@@ -521,18 +525,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _JourneyChallengeDto&&(identical(other.retoId, retoId) || other.retoId == retoId)&&(identical(other.titulo, titulo) || other.titulo == titulo)&&(identical(other.descripcion, descripcion) || other.descripcion == descripcion)&&(identical(other.etapa, etapa) || other.etapa == etapa)&&(identical(other.xpRecompensa, xpRecompensa) || other.xpRecompensa == xpRecompensa)&&(identical(other.estado, estado) || other.estado == estado)&&(identical(other.fechaCompletado, fechaCompletado) || other.fechaCompletado == fechaCompletado));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _JourneyChallengeDto&&(identical(other.retoId, retoId) || other.retoId == retoId)&&(identical(other.titulo, titulo) || other.titulo == titulo)&&(identical(other.descripcion, descripcion) || other.descripcion == descripcion)&&(identical(other.etapa, etapa) || other.etapa == etapa)&&(identical(other.xpRecompensa, xpRecompensa) || other.xpRecompensa == xpRecompensa)&&(identical(other.estado, estado) || other.estado == estado)&&(identical(other.fechaCompletado, fechaCompletado) || other.fechaCompletado == fechaCompletado)&&(identical(other.criterioCompletado, criterioCompletado) || other.criterioCompletado == criterioCompletado)&&(identical(other.requiereEvidencia, requiereEvidencia) || other.requiereEvidencia == requiereEvidencia));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,retoId,titulo,descripcion,etapa,xpRecompensa,estado,fechaCompletado);
+    return Object.hash(runtimeType,retoId,titulo,descripcion,etapa,xpRecompensa,estado,fechaCompletado,criterioCompletado,requiereEvidencia);
 }
 
 @override
 String toString() {
-    return 'JourneyChallengeDto(retoId: $retoId, titulo: $titulo, descripcion: $descripcion, etapa: $etapa, xpRecompensa: $xpRecompensa, estado: $estado, fechaCompletado: $fechaCompletado)';
+    return 'JourneyChallengeDto(retoId: $retoId, titulo: $titulo, descripcion: $descripcion, etapa: $etapa, xpRecompensa: $xpRecompensa, estado: $estado, fechaCompletado: $fechaCompletado, criterioCompletado: $criterioCompletado, requiereEvidencia: $requiereEvidencia)';
 }
 
 
@@ -543,7 +547,7 @@ abstract mixin class _$JourneyChallengeDtoCopyWith<$Res> implements $JourneyChal
   factory _$JourneyChallengeDtoCopyWith(_JourneyChallengeDto value, $Res Function(_JourneyChallengeDto) _then) = __$JourneyChallengeDtoCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'reto_id') int retoId, String titulo, String? descripcion, String? etapa,@JsonKey(name: 'xp_recompensa') int xpRecompensa, String estado,@JsonKey(name: 'fecha_completado') DateTime? fechaCompletado
+@JsonKey(name: 'reto_id') int retoId, String titulo, String? descripcion, String? etapa,@JsonKey(name: 'xp_recompensa') int xpRecompensa, String estado,@JsonKey(name: 'fecha_completado') DateTime? fechaCompletado,@JsonKey(name: 'criterio_completado') String? criterioCompletado,@JsonKey(name: 'requiere_evidencia') bool requiereEvidencia
 });
 
 
@@ -560,7 +564,7 @@ class __$JourneyChallengeDtoCopyWithImpl<$Res>
 
 /// Create a copy of JourneyChallengeDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? retoId = null,Object? titulo = null,Object? descripcion = freezed,Object? etapa = freezed,Object? xpRecompensa = null,Object? estado = null,Object? fechaCompletado = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? retoId = null,Object? titulo = null,Object? descripcion = freezed,Object? etapa = freezed,Object? xpRecompensa = null,Object? estado = null,Object? fechaCompletado = freezed,Object? criterioCompletado = freezed,Object? requiereEvidencia = null,}) {
   return _then(_JourneyChallengeDto(
 retoId: null == retoId ? _self.retoId : retoId // ignore: cast_nullable_to_non_nullable
 as int,titulo: null == titulo ? _self.titulo : titulo // ignore: cast_nullable_to_non_nullable
@@ -569,7 +573,9 @@ as String?,etapa: freezed == etapa ? _self.etapa : etapa // ignore: cast_nullabl
 as String?,xpRecompensa: null == xpRecompensa ? _self.xpRecompensa : xpRecompensa // ignore: cast_nullable_to_non_nullable
 as int,estado: null == estado ? _self.estado : estado // ignore: cast_nullable_to_non_nullable
 as String,fechaCompletado: freezed == fechaCompletado ? _self.fechaCompletado : fechaCompletado // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,criterioCompletado: freezed == criterioCompletado ? _self.criterioCompletado : criterioCompletado // ignore: cast_nullable_to_non_nullable
+as String?,requiereEvidencia: null == requiereEvidencia ? _self.requiereEvidencia : requiereEvidencia // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

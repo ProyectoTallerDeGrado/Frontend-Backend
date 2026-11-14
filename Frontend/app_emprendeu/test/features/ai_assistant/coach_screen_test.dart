@@ -1,6 +1,7 @@
 import 'package:app_emprendeu/core/error/failure.dart';
 import 'package:app_emprendeu/features/ai_assistant/domain/entities/chat_message.dart';
 import 'package:app_emprendeu/features/ai_assistant/domain/entities/coach_conversation.dart';
+import 'package:app_emprendeu/features/ai_assistant/domain/entities/conversation_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -148,5 +149,88 @@ void main() {
     expect(find.text('Hazme una pregunta'), findsOneWidget);
     await _ask(tester, 'Tema distinto');
     expect(assistant.lastConversationId, isNull);
+  });
+
+  group('CU11: conversaciones anteriores', () {
+    final older = CoachConversation(
+      id: 5,
+      messages: const [
+        ChatMessage(id: 1, isUser: true, text: '¿Cómo valido mi idea?'),
+        ChatMessage(id: 2, isUser: false, text: 'Habla con 10 clientes.'),
+      ],
+    );
+    final latest = CoachConversation(
+      id: 9,
+      messages: const [
+        ChatMessage(id: 3, isUser: true, text: 'Costos fijos'),
+        ChatMessage(id: 4, isUser: false, text: 'Son los que no cambian.'),
+      ],
+    );
+
+    FakeAssistantRepository twoConversations() =>
+        FakeAssistantRepository(conversation: latest)
+          ..byId = {5: older, 9: latest}
+          ..summaries = [
+            ConversationSummary(
+              id: 9,
+              messageCount: 2,
+              startedAt: DateTime.utc(2030, 1, 15, 13),
+            ),
+            ConversationSummary(
+              id: 5,
+              messageCount: 2,
+              startedAt: DateTime.utc(2030, 1, 10, 13),
+            ),
+          ];
+
+    testWidgets('lista las conversaciones y reabre una anterior', (
+      tester,
+    ) async {
+      final assistant = twoConversations();
+      await _openCoach(tester, assistant);
+      expect(find.text('Son los que no cambian.'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Conversaciones anteriores'));
+      await settle(tester);
+      expect(find.text('Conversaciones'), findsOneWidget);
+      expect(find.text('2 mensajes · abierta'), findsOneWidget);
+
+      // la más antigua
+      await tester.tap(find.text('2 mensajes').last);
+      await settle(tester);
+      expect(assistant.lastOpenedId, 5);
+      expect(find.text('Habla con 10 clientes.'), findsOneWidget);
+      expect(find.text('Son los que no cambian.'), findsNothing);
+    });
+
+    testWidgets('al continuar la conversación reabierta se usa su id', (
+      tester,
+    ) async {
+      final assistant = twoConversations();
+      await _openCoach(tester, assistant);
+      await tester.tap(find.byTooltip('Conversaciones anteriores'));
+      await settle(tester);
+      await tester.tap(find.text('2 mensajes').last);
+      await settle(tester);
+
+      await _ask(tester, 'Y si no tengo clientes aún');
+      expect(assistant.lastConversationId, 5);
+    });
+
+    testWidgets('sin conversaciones lo dice', (tester) async {
+      await _openCoach(tester, FakeAssistantRepository());
+      await tester.tap(find.byTooltip('Conversaciones anteriores'));
+      await settle(tester);
+      expect(find.text('Todavía no has hablado con el coach.'), findsOneWidget);
+    });
+
+    testWidgets('si no carga, ofrece reintentar', (tester) async {
+      final assistant = twoConversations();
+      await _openCoach(tester, assistant);
+      assistant.failure = const NetworkFailure();
+      await tester.tap(find.byTooltip('Conversaciones anteriores'));
+      await settle(tester);
+      expect(find.text('Reintentar'), findsOneWidget);
+    });
   });
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/connectivity/online_controller.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/error/result.dart';
+import '../../../ventures/index.dart';
 import '../../domain/entities/commitment.dart';
 import '../../domain/entities/progress_log.dart';
 import '../../domain/repositories/mentoring_repository.dart';
@@ -177,14 +178,23 @@ final commitmentsProvider =
 
 // --- avances -----------------------------------------------------------------------
 
+/// Avances del emprendimiento activo (el elegido si el usuario tiene varios).
 class ProgressLogsController extends AsyncNotifier<List<ProgressLog>> {
   @override
-  Future<List<ProgressLog>> build() async =>
-      (await ref.watch(getProgressLogsUseCaseProvider)()).getOrThrow();
+  Future<List<ProgressLog>> build() async {
+    final ventureId = await ref.watch(currentVentureIdProvider.future);
+    return (await ref.watch(getProgressLogsUseCaseProvider)(
+      ventureId: ventureId,
+    )).getOrThrow();
+  }
 
   /// Registra un avance; sin red queda guardado en el dispositivo. Devuelve el [Failure] si no se pudo.
   Future<Failure?> add(String text) async {
-    final result = await ref.read(logProgressUseCaseProvider)(text);
+    final ventureId = await ref.read(currentVentureIdProvider.future);
+    final result = await ref.read(logProgressUseCaseProvider)(
+      text,
+      ventureId: ventureId,
+    );
     switch (result) {
       case Ok(:final value):
         state = AsyncData([value, ...state.value ?? const <ProgressLog>[]]);

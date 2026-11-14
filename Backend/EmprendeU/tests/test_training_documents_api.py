@@ -48,7 +48,13 @@ async def test_capacitaciones_inscripcion_y_asistencia(
     assert (await client.post(f"{API}/training/{cid}/enroll", headers=h["e"])).json()[
         "error"
     ]["code"] == "already_enrolled"
-    assert len((await client.get(f"{API}/training/me", headers=h["e"])).json()) == 1
+    mine = (await client.get(f"{API}/training/me", headers=h["e"])).json()
+    assert len(mine) == 1 and mine[0]["asistencia"] is None
+    one = await client.get(f"{API}/training/{cid}", headers=h["e"])
+    assert one.status_code == 200 and one.json()["titulo"] == "Finanzas basicas"
+    assert (
+        await client.get(f"{API}/training/999999", headers=h["e"])
+    ).status_code == 404
     assert (await client.get(f"{API}/training/me", headers=h["otro"])).json() == []
 
     listing = (await client.get(f"{API}/training", headers=h["e"])).json()
@@ -68,6 +74,8 @@ async def test_capacitaciones_inscripcion_y_asistencia(
         headers=h["m"],
     )
     assert marked.json()["asistencia"] is True
+    mine = (await client.get(f"{API}/training/me", headers=h["e"])).json()
+    assert mine[0]["asistencia"] is True
     assert (
         await client.patch(
             f"{API}/training/{cid}/participants/999999",

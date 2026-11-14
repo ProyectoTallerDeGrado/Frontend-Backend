@@ -81,10 +81,13 @@ consumidos desde componentes cliente.
 - **Emprendedores y emprendimientos** (fase 4): `features/entrepreneurs` (`EntrepreneursScreen`, `/entrepreneurs`:
   lista con búsqueda por nombre, correo o documento; «Nuevo emprendedor» —solo con `emprendedores:registro`— crea
   usuario y perfil juntos y muestra la clave temporal una vez). `features/ventures` suma «Nuevo emprendimiento»
-  (se elige el emprendedor; lista de `listEntrepreneurOptions` por el barrel de `entrepreneurs`), «Editar»
+  (se arma el **equipo**: uno o más emprendedores con rol, `team-picker.tsx`; lista de `listEntrepreneurOptions` por el
+  barrel de `entrepreneurs`), la columna y el botón **Equipo** (`team-sheet.tsx`: ver, agregar y quitar integrantes;
+  nunca deja el emprendimiento vacío), «Editar»
   (nombre, sector, descripción y estado, solo `emprendedores:modificacion`) y los enlaces «Progreso» e «Historial».
   El **progreso** (`JourneyScreen` en `features/gamification`, `/ventures/[id]/progress`) muestra XP, nivel, etapas
-  completadas/actual/pendientes y los retos del emprendimiento; es de solo lectura.
+  completadas/actual/pendientes, la barra hacia el siguiente nivel, las insignias del equipo, el historial de XP y los retos
+  del emprendimiento; es de solo lectura.
 - **Base de conocimiento** (fase 5): `features/ai_assistant` (`KnowledgeScreen`, `/knowledge`, permiso `config:consulta`;
   subir y desactivar con `config:modificacion`, es decir coordinación y administración). Muestra si Ollama responde,
   los documentos activos y la tabla con el **estado de procesamiento** (Procesando, Activo, Error, Inactivo) y los
@@ -154,7 +157,7 @@ proxy.ts                   ✅ # (Next 16) antiguo middleware: protege rutas pri
 
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
-`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅, `ai_assistant` ✅ (todas conectadas al backend); pendientes `training`, `documents` — los
+`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅, `ai_assistant` ✅ (todas conectadas al backend); `training` ✅ (`/training`, `/training/[id]`), `documents` ✅ (`/ventures/[id]/documents`, con descarga por `route.ts`) — los
 mismos nombres que los módulos del backend (regla global §4.6). Registra aquí cada feature nueva.
 
 ## 4. Reglas de la web
@@ -172,7 +175,11 @@ mismos nombres que los módulos del backend (regla global §4.6). Registra aquí
 5. **Frontera servidor/cliente explícita.** Server Component por defecto.
    `'use client'` solo en la hoja del árbol que realmente necesita interactividad,
    nunca en un layout o página completa "por comodidad". Los archivos de
-   `features/<f>/server/` llevan `import 'server-only'`.
+   `features/<f>/server/` llevan `import 'server-only'`. Las funciones o constantes que
+   usan a la vez Server y Client Components (etiquetas, formateadores, como
+   `features/users/roles.ts` o `features/ventures/roles.ts`) van en un módulo **sin**
+   `'use client'`: un Server Component no puede llamar a una función exportada desde un
+   archivo de cliente (da `Attempted to call X() from the server`).
 6. **Acceso a datos**: desde Server Components y server actions en
    `features/<f>/server/`, usando el cliente de `lib/api-client.ts`. Un componente
    cliente no hace `fetch` directo al backend; recibe props o llama a una server action.

@@ -5,6 +5,7 @@ import '../../../../core/error/result.dart';
 import '../../../../core/network/api_error_mapper.dart';
 import '../../domain/entities/coach_conversation.dart';
 import '../../domain/entities/coach_reply.dart';
+import '../../domain/entities/conversation_summary.dart';
 import '../../domain/repositories/assistant_repository.dart';
 import '../datasources/assistant_remote_data_source.dart';
 import '../models/assistant_dto.dart';
@@ -40,11 +41,24 @@ class AssistantRepositoryImpl implements AssistantRepository {
       });
 
   @override
-  Future<Result<CoachReply>> ask(String message, {int? conversationId}) =>
-      _guard(
-        () async => (await _remote.chat(
-          message,
-          conversationId: conversationId,
-        )).toEntity(),
-      );
+  Future<Result<List<ConversationSummary>>> getConversations() => _guard(
+    () async => [for (final c in await _remote.conversations()) c.toEntity()],
+  );
+
+  @override
+  Future<Result<CoachConversation>> getConversation(int id) =>
+      _guard(() async => conversationFrom(id, await _remote.messages(id)));
+
+  @override
+  Future<Result<CoachReply>> ask(
+    String message, {
+    int? conversationId,
+    int? ventureId,
+  }) => _guard(
+    () async => (await _remote.chat(
+      message,
+      conversationId: conversationId,
+      ventureId: ventureId,
+    )).toEntity(),
+  );
 }

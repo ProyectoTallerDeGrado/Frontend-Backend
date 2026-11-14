@@ -8,14 +8,24 @@ class GamificationRemoteDataSource {
 
   final Dio _dio;
 
-  Future<JourneyDto> journey() async {
-    final response = await _dio.get<Map<String, dynamic>>('/journey');
+  Future<JourneyDto> journey({int? ventureId}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/journey',
+      queryParameters: {'emprendimiento_id': ?ventureId},
+    );
     return JourneyDto.fromJson(response.data!);
   }
 
-  Future<CompletionDto> complete(int challengeId) async {
+  Future<CompletionDto> complete(
+    int challengeId, {
+    int? ventureId,
+    String? evidenceText,
+    int? documentId,
+  }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/journey/challenges/$challengeId/complete',
+      data: {'evidencia_texto': ?evidenceText, 'documento_id': ?documentId},
+      queryParameters: {'emprendimiento_id': ?ventureId},
     );
     return CompletionDto.fromJson(response.data!);
   }

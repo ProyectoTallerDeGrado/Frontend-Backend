@@ -20,7 +20,12 @@ from emprendeu.modules.training.repository import TrainingRepository
 from emprendeu.modules.users import CurrentUser
 
 
-def _out(c: Capacitacion, total: int, enrolled: bool | None = None) -> s.TrainingOut:
+def _out(
+    c: Capacitacion,
+    total: int,
+    enrolled: bool | None = None,
+    attended: bool | None = None,
+) -> s.TrainingOut:
     return s.TrainingOut(
         capacitacion_id=c.capacitacion_id,
         titulo=c.titulo,
@@ -31,6 +36,7 @@ def _out(c: Capacitacion, total: int, enrolled: bool | None = None) -> s.Trainin
         estado=c.estado,
         total_inscritos=total,
         inscrito=enrolled,
+        asistencia=attended,
     )
 
 
@@ -70,13 +76,17 @@ class TrainingService:
         )
         return [_out(c, n) for c, n in rows], total
 
+    async def get(self, capacitacion_id: int) -> s.TrainingOut:
+        row = await self._training(capacitacion_id)
+        return _out(row, await self._repo.count_participants(capacitacion_id))
+
     async def mine(self, user: CurrentUser) -> list[s.TrainingOut]:
         ref = await self._entrepreneurs.ref_for_user(user.usuario_id)
         if ref is None:
             return []
         return [
-            _out(c, n, True)
-            for c, n in await self._repo.for_entrepreneur(ref.emprendedor_id)
+            _out(c, n, True, attended)
+            for c, n, attended in await self._repo.for_entrepreneur(ref.emprendedor_id)
         ]
 
     async def enroll(self, user: CurrentUser, capacitacion_id: int) -> s.TrainingOut:

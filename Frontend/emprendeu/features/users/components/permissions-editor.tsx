@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Trash2 } from "lucide-react";
 
 import { toast } from "@/components/layout/toast-store";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
-import { PERMISSION_ACTIONS, PERMISSION_MODULES, ROLE_META } from "../roles";
-import { savePermissionsAction } from "../server/actions";
+import { PERMISSION_ACTIONS, PERMISSION_MODULES, SYSTEM_ROLES, roleLabel } from "../roles";
+import { deleteRoleAction, savePermissionsAction } from "../server/actions";
 import type { PermissionMatrix, Role } from "../types";
+import { NewRoleDrawer } from "./new-role-drawer";
 
 type Props = { roles: Role[]; matrices: Record<number, PermissionMatrix>; canEdit: boolean };
 
@@ -25,7 +26,8 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
   const role = roles.find((r) => r.rol_id === selected);
   if (!role) return null;
   const draft = drafts[selected] ?? {};
-  const roleName = ROLE_META[role.nombre]?.label ?? role.nombre;
+  const roleName = roleLabel(role.nombre);
+  const isCustom = !SYSTEM_ROLES.includes(role.nombre);
   const dirty = normalize(draft) !== normalize(saved[selected] ?? {});
 
   const toggle = (module: string, action: string) => {
@@ -34,6 +36,15 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
       const current = prev[selected]?.[module] ?? [];
       const next = current.includes(action) ? current.filter((a) => a !== action) : [...current, action];
       return { ...prev, [selected]: { ...prev[selected], [module]: next } };
+    });
+  };
+
+  const remove = () => {
+    if (!window.confirm(`¿Eliminar el rol ${roleName}? Esta acción no se puede deshacer.`)) return;
+    startTransition(async () => {
+      const result = await deleteRoleAction(selected, roleName);
+      if (result.ok) toast.success(result.message);
+      else toast.error(result.message);
     });
   };
 
@@ -51,6 +62,7 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
   return (
     <div className="flex flex-wrap items-start gap-6">
       <section className="flex min-w-[240px] flex-[0_1_300px] flex-col gap-2.5" aria-label="Roles">
+        {canEdit && <NewRoleDrawer roles={roles} />}
         {roles.map((r, i) => {
           const on = r.rol_id === selected;
           return (
@@ -63,7 +75,7 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
               className={`animate-[fade-up_.5s_ease_both] rounded-2xl border-2 px-[18px] py-4 text-left outline-none transition-shadow hover:shadow-[0_14px_30px_-18px_rgba(10,26,68,.35)] focus-visible:ring-3 focus-visible:ring-primary/30 ${on ? "border-primary bg-blue-50" : "border-border bg-card"}`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-heading text-base font-semibold">{ROLE_META[r.nombre]?.label ?? r.nombre}</span>
+                <span className="font-heading text-base font-semibold">{roleLabel(r.nombre)}</span>
                 <span className="text-[13px] font-bold text-muted-foreground">{r.total_usuarios} {r.total_usuarios === 1 ? "usuario" : "usuarios"}</span>
               </div>
               <div className="mt-1.5 text-[13px] leading-snug text-muted-foreground">{r.descripcion}</div>
@@ -73,11 +85,26 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
       </section>
 
       <section className="relative min-w-0 flex-[1_1_560px] overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="border-b border-border px-6 py-5">
-          <h2 className="font-heading text-lg font-semibold">Permisos · {roleName}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Se aplican en el siguiente acceso de los usuarios con este rol.
-          </p>
+        <div className="flex items-start justify-between gap-3 border-b border-border px-6 py-5">
+          <div>
+            <h2 className="font-heading text-lg font-semibold">Permisos · {roleName}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Se aplican de inmediato a los usuarios con este rol.
+            </p>
+          </div>
+          {canEdit && isCustom && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending || role.total_usuarios > 0}
+              title={role.total_usuarios > 0 ? "Reasigna a sus usuarios antes de eliminarlo" : undefined}
+              onClick={remove}
+              className="h-11 gap-2 rounded-xl border-border-strong px-4 text-sm font-semibold"
+            >
+              <Trash2 aria-hidden="true" className="size-4" />
+              Eliminar rol
+            </Button>
+          )}
         </div>
         <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full min-w-[640px] border-collapse">

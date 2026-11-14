@@ -5,8 +5,10 @@ import '../../../../core/error/result.dart';
 import '../../../../core/network/api_error_mapper.dart';
 import '../../domain/entities/booking_status.dart';
 import '../../domain/entities/history_event.dart';
+import '../../domain/entities/history_filter.dart';
 import '../../domain/entities/mentor.dart';
 import '../../domain/entities/mentoring_session.dart';
+import '../../domain/entities/task.dart';
 import '../../domain/entities/time_slot.dart';
 import '../../domain/repositories/booking_repository.dart';
 import '../datasources/booking_remote_data_source.dart';
@@ -33,12 +35,15 @@ class BookingRepositoryImpl implements BookingRepository {
   }
 
   @override
-  Future<Result<BookingStatus>> getBookingStatus() =>
-      _guard(() async => (await _remote.bookingStatus()).toEntity());
+  Future<Result<BookingStatus>> getBookingStatus({int? ventureId}) => _guard(
+    () async => (await _remote.bookingStatus(ventureId: ventureId)).toEntity(),
+  );
 
   @override
-  Future<Result<List<Mentor>>> getMentors() => _guard(
-    () async => [for (final m in await _remote.mentors()) m.toEntity()],
+  Future<Result<List<Mentor>>> getMentors({int? ventureId}) => _guard(
+    () async => [
+      for (final m in await _remote.mentors(ventureId: ventureId)) m.toEntity(),
+    ],
   );
 
   @override
@@ -53,22 +58,42 @@ class BookingRepositoryImpl implements BookingRepository {
     required int mentorId,
     required DateTime start,
     String? topic,
+    int? ventureId,
   }) => _guard(
     () async => (await _remote.book(
       mentorId: mentorId,
       start: start,
       topic: topic,
+      ventureId: ventureId,
     )).toEntity(),
   );
 
   @override
-  Future<Result<List<HistoryEvent>>> getHistory({bool newestFirst = true}) =>
-      _guard(
-        () async => [
-          for (final e in await _remote.history(newestFirst: newestFirst))
-            e.toEntity(),
-        ],
-      );
+  Future<Result<List<HistoryEvent>>> getHistory({
+    HistoryFilter filter = const HistoryFilter(),
+    int? ventureId,
+  }) => _guard(
+    () async => [
+      for (final e in await _remote.history(
+        filter: filter,
+        ventureId: ventureId,
+      ))
+        e.toEntity(),
+    ],
+  );
+
+  @override
+  Future<Result<MentoringSession>> getSession(int id) =>
+      _guard(() async => (await _remote.session(id)).toEntity());
+
+  @override
+  Future<Result<MentoringSession>> cancelSession(int id) =>
+      _guard(() async => (await _remote.cancel(id)).toEntity());
+
+  @override
+  Future<Result<List<Task>>> getTasks(TaskFilter filter) => _guard(
+    () async => [for (final t in await _remote.tasks(filter)) t.toEntity()],
+  );
 
   @override
   Future<Result<List<MentoringSession>>> getMySessions(

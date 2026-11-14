@@ -5,12 +5,15 @@ import { usePathname } from "next/navigation";
 import {
   Award,
   Bell,
+  LifeBuoy,
   BookOpen,
   CalendarClock,
+  ClipboardCheck,
   ChartColumn,
   FileSpreadsheet,
   CalendarDays,
   ClipboardList,
+  GraduationCap,
   LayoutDashboard,
   Rocket,
   ShieldCheck,
@@ -22,7 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type NavItem = { href: string; label: string; icon: keyof typeof ICONS };
+export type NavItem = { href: string; label: string; icon: keyof typeof ICONS; badge?: number };
 
 const ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -36,11 +39,14 @@ const ICONS: Record<string, LucideIcon> = {
   entrepreneurs: UserPlus,
   ventures: Rocket,
   alerts: Bell,
+  needs: LifeBuoy,
+  admissions: ClipboardCheck,
   dashboard2: ChartColumn,
   reports: FileSpreadsheet,
   assignments: UserCheck,
   availability: CalendarClock,
   sessions: CalendarDays,
+  training: GraduationCap,
 };
 
 export function SidebarNav({ items }: { items: NavItem[] }) {
@@ -60,6 +66,14 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
           >
             <Icon aria-hidden="true" className="size-5" />
             <span className="flex-1">{item.label}</span>
+            {item.badge ? (
+              <span
+                aria-label={`${item.badge} abiertas`}
+                className="min-w-6 rounded-full bg-[#ffe3e8] px-2 py-0.5 text-center text-[12px] font-bold text-[#8f0f25]"
+              >
+                {item.badge > 99 ? "99+" : item.badge}
+              </span>
+            ) : null}
             <span
               className={`size-1.5 rounded-full bg-accent-bright ${active ? "opacity-100" : "opacity-0"}`}
             />

@@ -89,6 +89,18 @@ class _MentoringScreenState extends ConsumerState<MentoringScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => context.push(MentoringRoutes.tasks),
+                icon: const Icon(Icons.checklist, size: 20),
+                label: const Text('Tareas y compromisos'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
               const SizedBox(height: 20),
               Wrap(
                 spacing: 8,
@@ -143,7 +155,11 @@ class _MentoringScreenState extends ConsumerState<MentoringScreen> {
                     : Column(
                         children: [
                           for (final s in items) ...[
-                            SessionCard(session: s),
+                            SessionCard(
+                              session: s,
+                              onTap: () =>
+                                  context.push(MentoringRoutes.session(s.id)),
+                            ),
                             const SizedBox(height: 12),
                           ],
                         ],

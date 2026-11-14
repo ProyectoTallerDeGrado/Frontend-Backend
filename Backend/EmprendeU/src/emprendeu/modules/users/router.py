@@ -24,6 +24,8 @@ from emprendeu.modules.users.schemas import (
     PasswordChange,
     PermissionMatrix,
     RegisterRequest,
+    RoleCreate,
+    RoleEdit,
     RoleOut,
     RoleUpdate,
     TokenResponse,
@@ -170,6 +172,49 @@ async def put_permissions(
 ) -> PermissionMatrix:
     matrix = await service.set_role_matrix(actor, rol_id, body.permisos)  # type: ignore[arg-type]
     return PermissionMatrix(permisos=matrix)  # type: ignore[arg-type]
+
+
+@roles_router.post("", response_model=RoleOut, status_code=status.HTTP_201_CREATED)
+async def create_role(
+    body: RoleCreate,
+    service: UserServiceDep,
+    actor: Annotated[CurrentUser, Depends(require_permission(USERS_ADMIN))],
+) -> RoleOut:
+    role = await service.create_role(
+        actor, body.nombre, body.descripcion, body.clonar_de
+    )
+    return RoleOut(
+        rol_id=role.rol_id,
+        nombre=role.nombre,
+        descripcion=role.descripcion,
+        total_usuarios=0,
+    )
+
+
+@roles_router.patch("/{rol_id}", response_model=RoleOut)
+async def edit_role(
+    rol_id: int,
+    body: RoleEdit,
+    service: UserServiceDep,
+    actor: Annotated[CurrentUser, Depends(require_permission(USERS_ADMIN))],
+) -> RoleOut:
+    role = await service.edit_role(actor, rol_id, body.nombre, body.descripcion)
+    counts = {r.rol_id: c for r, c in await service.list_roles()}
+    return RoleOut(
+        rol_id=role.rol_id,
+        nombre=role.nombre,
+        descripcion=role.descripcion,
+        total_usuarios=counts.get(role.rol_id, 0),
+    )
+
+
+@roles_router.delete("/{rol_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_role(
+    rol_id: int,
+    service: UserServiceDep,
+    actor: Annotated[CurrentUser, Depends(require_permission(USERS_ADMIN))],
+) -> None:
+    await service.delete_role(actor, rol_id)
 
 
 router.include_router(auth_router)

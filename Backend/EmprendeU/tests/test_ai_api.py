@@ -107,6 +107,10 @@ async def test_chat_con_fuente_sin_fuente_y_derivacion(
     assert (
         data["respuesta"]["contenido"] == "Respuesta del coach basada en el contexto."
     )
+    # el modelo recibe los turnos previos de la misma conversacion (CU11)
+    fake = client._transport.app.state.fake_llm  # type: ignore[attr-defined]
+    assert [role for role, _ in fake.last_history] == ["user", "assistant"]
+    assert fake.last_history[0][1] == "Como calculo mis costos?"
 
     # pregunta fuera del conocimiento
     off = (

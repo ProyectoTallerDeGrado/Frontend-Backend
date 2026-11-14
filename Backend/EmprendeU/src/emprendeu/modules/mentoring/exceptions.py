@@ -137,3 +137,19 @@ class NoVenture(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("Primero registra tu emprendimiento.")
+
+
+class SessionConflict(ConflictError):
+    code = "session_conflict"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Ese horario tiene una mentoría programada; cancélala antes de modificarlo."
+        )
+
+
+class SessionDuplicate(ConflictError):
+    code = "session_duplicate"
+
+    def __init__(self) -> None:
+        super().__init__("Ya existe una sesión de este emprendimiento en ese horario.")

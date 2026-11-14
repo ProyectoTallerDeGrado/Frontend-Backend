@@ -19,7 +19,7 @@ export default async function RolesPage() {
         title="Roles y permisos"
         subtitle="Define qué puede consultar, registrar, modificar y administrar cada rol."
       />
-      <PermissionsEditor roles={roles} matrices={matrices} canEdit={hasPermission(user, "usuarios:administrativo")} />
+      <PermissionsEditor key={roles.map((r) => r.rol_id).join("-")} roles={roles} matrices={matrices} canEdit={hasPermission(user, "usuarios:administrativo")} />
     </>
   );
 }

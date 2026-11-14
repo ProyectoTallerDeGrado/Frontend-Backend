@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from emprendeu.modules.entrepreneurs.models import (
     Emprendedor,
     EmprendimientoEmprendedor,
+    Postulacion,
 )
 
 # Lectura de nombre/correo sin importar el modelo del modulo users.
@@ -175,3 +176,106 @@ class EntrepreneurRepository:
             EmprendimientoEmprendedor.emprendedor_id == emprendedor_id
         )
         return list((await self._session.execute(stmt)).scalars().all())
+
+    async def members_of_ventures(
+        self, emprendimiento_ids: list[int]
+    ) -> list[tuple[EmprendimientoEmprendedor, Emprendedor]]:
+        """Integrantes (vinculo + perfil) de varios emprendimientos, por antiguedad."""
+        if not emprendimiento_ids:
+            return []
+        stmt = (
+            select(EmprendimientoEmprendedor, Emprendedor)
+            .join(
+                Emprendedor,
+                Emprendedor.emprendedor_id == EmprendimientoEmprendedor.emprendedor_id,
+            )
+            .where(EmprendimientoEmprendedor.emprendimiento_id.in_(emprendimiento_ids))
+            .order_by(
+                EmprendimientoEmprendedor.emprendimiento_id,
+                EmprendimientoEmprendedor.emprendimiento_emprendedor_id,
+            )
+        )
+        return [(r[0], r[1]) for r in (await self._session.execute(stmt)).all()]
+
+    async def unlink(self, emprendedor_id: int, emprendimiento_id: int) -> bool:
+        stmt = select(EmprendimientoEmprendedor).where(
+            EmprendimientoEmprendedor.emprendedor_id == emprendedor_id,
+            EmprendimientoEmprendedor.emprendimiento_id == emprendimiento_id,
+        )
+        found = (await self._session.execute(stmt)).scalar_one_or_none()
+        if found is None:
+            return False
+        await self._session.delete(found)
+        await self._session.flush()
+        return True
+
+
+class AdmissionRepository:
+    """Postulaciones al programa (CU26)."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def commit(self) -> None:
+        await self._session.commit()
+
+    async def rollback(self) -> None:
+        await self._session.rollback()
+
+    async def add(self, row: Postulacion) -> Postulacion:
+        self._session.add(row)
+        await self._session.flush()
+        return row
+
+    async def get(
+        self, postulacion_id: int, *, lock: bool = False
+    ) -> Postulacion | None:
+        stmt = select(Postulacion).where(Postulacion.postulacion_id == postulacion_id)
+        if lock:
+            stmt = stmt.with_for_update()
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def pending_email_exists(self, email: str) -> bool:
+        stmt = select(Postulacion.postulacion_id).where(
+            func.lower(Postulacion.email) == email.lower(),
+            Postulacion.estado == "pendiente",
+        )
+        return (await self._session.execute(stmt.limit(1))).first() is not None
+
+    async def list(
+        self, *, estado: str | None, q: str | None, offset: int, limit: int
+    ) -> tuple[list[Postulacion], int]:
+        stmt = select(Postulacion)
+        if estado:
+            stmt = stmt.where(Postulacion.estado == estado)
+        if q:
+            like = f"%{q.strip().lower()}%"
+            stmt = stmt.where(
+                or_(
+                    func.lower(Postulacion.nombre).like(like),
+                    func.lower(Postulacion.apellido).like(like),
+                    func.lower(Postulacion.email).like(like),
+                    func.lower(Postulacion.nombre_emprendimiento).like(like),
+                )
+            )
+        total = (
+            await self._session.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )
+        ).scalar_one()
+        rows = (
+            (
+                await self._session.execute(
+                    stmt.order_by(
+                        # pendientes primero, y dentro de cada grupo la mas reciente
+                        (Postulacion.estado != "pendiente"),
+                        Postulacion.fecha_postulacion.desc(),
+                    )
+                    .offset(offset)
+                    .limit(limit)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return list(rows), total

@@ -14,11 +14,19 @@ abstract class EvidenceDto with _$EvidenceDto {
     required String nombre,
     String? tipo,
     @JsonKey(name: 'hito_id') int? hitoId,
+    @JsonKey(name: 'usuario_id') int? usuarioId,
+    @JsonKey(name: 'fecha_subida') DateTime? fechaSubida,
   }) = _EvidenceDto;
 
   factory EvidenceDto.fromJson(Map<String, dynamic> json) =>
       _$EvidenceDtoFromJson(json);
 
-  Evidence toEntity() =>
-      Evidence(id: documentoId, name: nombre, milestoneId: hitoId, type: tipo);
+  Evidence toEntity() => Evidence(
+    id: documentoId,
+    name: nombre,
+    milestoneId: hitoId,
+    type: tipo,
+    uploadedBy: usuarioId,
+    uploadedAt: fechaSubida,
+  );
 }

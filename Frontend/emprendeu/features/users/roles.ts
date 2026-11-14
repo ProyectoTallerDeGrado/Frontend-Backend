@@ -6,8 +6,25 @@ export const ROLE_META: Record<string, { label: string; bg: string; fg: string; 
   emprendedor: { label: "Emprendedor", bg: "#DDF3E7", fg: "#0A5C39", bar: "#0E7A4F" },
 };
 
+/** Roles que vienen del sistema: no se renombran ni se eliminan (espejo de `SYSTEM_ROLES` del backend). */
+export const SYSTEM_ROLES: readonly string[] = ["administrador", "coordinador", "asesor", "emprendedor"];
+
+/** Color de los roles personalizados. */
+const CUSTOM_ROLE_META = { bg: "#FFF0CC", fg: "#6B4700", bar: "#B77900" };
+
+const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
 export const roleLabel = (name: string | null): string =>
-  (name && ROLE_META[name]?.label) || name || "Sin rol";
+  (name && (ROLE_META[name]?.label ?? capitalize(name))) || "Sin rol";
+
+export const roleMeta = (name: string | null) =>
+  (name && ROLE_META[name]) || (name ? { label: roleLabel(name), ...CUSTOM_ROLE_META } : undefined);
+
+/** Plantillas al crear un rol: qué acciones se marcan en cada módulo. */
+export const ROLE_TEMPLATES = [
+  { key: "vacio", label: "Sin permisos" },
+  { key: "lectura", label: "Solo lectura (consulta en todos los módulos)" },
+] as const;
 
 export const PERMISSION_MODULES = [
   { key: "usuarios", label: "Usuarios y roles" },

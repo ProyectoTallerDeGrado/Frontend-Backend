@@ -27,20 +27,24 @@ from emprendeu.modules.users.exceptions import (
     InvalidCredentials,
     InvalidFullName,
     InvalidPermissions,
+    RoleInUse,
+    RoleNameTaken,
     RoleNotFound,
+    SystemRoleProtected,
     UserNotFound,
     WrongCurrentPassword,
 )
 from emprendeu.modules.users.models import Rol, Usuario
 from emprendeu.modules.users.permissions import (
     ACTIONS,
+    ADMIN_REQUIRED,
     ADMIN_ROLE,
     ALL_PERMISSIONS,
     DEFAULT_ROLE,
     DISABLED,
     ENABLED,
     MODULES,
-    USERS_ADMIN,
+    SYSTEM_ROLES,
     permission_name,
 )
 from emprendeu.modules.users.repository import UserRepository
@@ -225,10 +229,14 @@ class UserService:
         email: str,
         documento_identidad: str,
         password: str | None,
+        *,
+        commit: bool = True,
     ) -> tuple[Usuario, str | None]:
         """CU04: cuenta + perfil de emprendedor + documento, todo o nada.
 
         El documento se comprueba antes de crear nada; el commit es uno solo.
+        Con `commit=False` solo hace flush: quien llama cierra la transaccion
+        (lo usa la admision, CU26, para crear cuenta y emprendimiento juntos).
         """
         await self._entrepreneurs.ensure_document_free(documento_identidad)
         temporary = None if password else secrets.token_urlsafe(9)
@@ -244,7 +252,10 @@ class UserService:
             id_registro=user.usuario_id,
             despues={"rol": DEFAULT_ROLE, "origen": "registro de emprendedor"},
         )
-        await self._repo.commit()
+        if commit:
+            await self._repo.commit()
+        else:
+            await self._repo.flush()
         return user, temporary
 
     async def change_role(
@@ -377,7 +388,7 @@ class UserService:
             raise InvalidPermissions(
                 "Permisos desconocidos.", details={"desconocidos": sorted(unknown)}
             )
-        if role.nombre == ADMIN_ROLE and USERS_ADMIN not in names:
+        if role.nombre == ADMIN_ROLE and not ADMIN_REQUIRED <= names:
             raise AdminLockout
         before = sorted(await self._repo.permission_names_for_role(rol_id))
         await self._repo.replace_role_permissions(rol_id, frozenset(names))
@@ -392,3 +403,88 @@ class UserService:
         )
         await self._repo.commit()
         return await self.get_role_matrix(rol_id)
+
+    # --- CRUD de roles ------------------------------------------------------
+
+    async def create_role(
+        self,
+        actor: CurrentUser,
+        nombre: str,
+        descripcion: str | None,
+        clonar_de: int | None,
+    ) -> Rol:
+        if await self._repo.get_role_by_name(nombre) is not None:
+            raise RoleNameTaken
+        names: frozenset[str] = frozenset()
+        if clonar_de is not None:
+            if await self._repo.get_role(clonar_de) is None:
+                raise RoleNotFound
+            names = await self._repo.permission_names_for_role(clonar_de)
+        try:
+            role = await self._repo.create_role(nombre, descripcion)
+        except IntegrityError as exc:  # carrera con otra creacion del mismo nombre
+            await self._repo.rollback()
+            raise RoleNameTaken from exc
+        await self._repo.replace_role_permissions(role.rol_id, names)
+        await self._audit.record(
+            actor.usuario_id,
+            "roles.crear",
+            f"Rol {nombre}",
+            tabla="rol",
+            id_registro=role.rol_id,
+            antes=None,
+            despues={"permisos": sorted(names), "clonar_de": clonar_de},
+        )
+        await self._repo.commit()
+        return role
+
+    async def edit_role(
+        self,
+        actor: CurrentUser,
+        rol_id: int,
+        nombre: str | None,
+        descripcion: str | None,
+    ) -> Rol:
+        role = await self._repo.get_role(rol_id)
+        if role is None:
+            raise RoleNotFound
+        if role.nombre in SYSTEM_ROLES:
+            raise SystemRoleProtected
+        if nombre is not None and nombre != role.nombre:
+            if await self._repo.get_role_by_name(nombre) is not None:
+                raise RoleNameTaken
+        before = {"nombre": role.nombre, "descripcion": role.descripcion}
+        await self._repo.update_role(role, nombre, descripcion)
+        await self._audit.record(
+            actor.usuario_id,
+            "roles.editar",
+            f"Rol {role.nombre}",
+            tabla="rol",
+            id_registro=rol_id,
+            antes=before,
+            despues={"nombre": role.nombre, "descripcion": role.descripcion},
+        )
+        await self._repo.commit()
+        return role
+
+    async def delete_role(self, actor: CurrentUser, rol_id: int) -> None:
+        role = await self._repo.get_role(rol_id)
+        if role is None:
+            raise RoleNotFound
+        if role.nombre in SYSTEM_ROLES:
+            raise SystemRoleProtected
+        if await self._repo.count_role_users(rol_id) > 0:
+            raise RoleInUse
+        name = role.nombre
+        before = sorted(await self._repo.permission_names_for_role(rol_id))
+        await self._repo.delete_role(role)
+        await self._audit.record(
+            actor.usuario_id,
+            "roles.eliminar",
+            f"Rol {name}",
+            tabla="rol",
+            id_registro=rol_id,
+            antes={"nombre": name, "permisos": before},
+            despues=None,
+        )
+        await self._repo.commit()

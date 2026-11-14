@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { ApiError } from "@/lib/api-client";
 import { authedFetch } from "@/features/auth";
 
-import { ventureFormSchema } from "../schemas/ventures-schemas";
+import { MEMBER_ROLES, teamSchema, ventureFormSchema, type MemberRole } from "../schemas/ventures-schemas";
 
 export async function setStageStateAction(
   etapaId: number,
@@ -50,24 +50,34 @@ type VentureInput = {
   name: string;
   description: string;
   sector: string;
-  entrepreneurId: number | null;
   estado: string;
 };
 
+export type TeamMemberInput = { entrepreneurId: number; role: MemberRole };
+
 function ventureMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
-    if (error.code === "entrepreneur_required") return "Elige al emprendedor al que pertenece el emprendimiento.";
+    if (error.code === "entrepreneur_required") return "Agrega al menos un emprendedor al equipo.";
+    if (error.code === "entrepreneur_not_found") return "Uno de los emprendedores elegidos ya no existe.";
+    if (error.code === "duplicate_member") return "Un emprendedor aparece dos veces en el equipo.";
+    if (error.code === "already_member") return "Ese emprendedor ya es parte del equipo.";
+    if (error.code === "member_not_found") return "Ese emprendedor ya no es parte del equipo.";
+    if (error.code === "last_member") return "El emprendimiento debe quedar con al menos un integrante.";
     if (error.code === "reserved_fields") return "Ese campo solo lo cambia la coordinación.";
     if (error.status === 403) return "No tienes permiso para esta acción.";
   }
   return fallback;
 }
 
-/** CU05: la coordinación crea el emprendimiento de un emprendedor concreto. */
-export async function createVentureAction(input: VentureInput): Promise<{ ok: boolean; message: string }> {
+/** CU05: la coordinación crea el emprendimiento con su equipo (uno o más emprendedores). */
+export async function createVentureAction(
+  input: VentureInput,
+  team: TeamMemberInput[],
+): Promise<{ ok: boolean; message: string }> {
   const parsed = ventureFormSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Revisa los datos." };
-  if (parsed.data.entrepreneurId === null) return { ok: false, message: "Elige al emprendedor." };
+  const members = teamSchema.safeParse(team);
+  if (!members.success) return { ok: false, message: members.error.issues[0]?.message ?? "Revisa el equipo." };
   try {
     await authedFetch("/ventures", {
       method: "POST",
@@ -75,7 +85,7 @@ export async function createVentureAction(input: VentureInput): Promise<{ ok: bo
         nombre: parsed.data.name,
         descripcion: parsed.data.description || null,
         sector: parsed.data.sector || null,
-        emprendedor_id: parsed.data.entrepreneurId,
+        integrantes: members.data.map((m) => ({ emprendedor_id: m.entrepreneurId, rol_en_emprendimiento: m.role })),
       },
     });
   } catch (error) {
@@ -107,4 +117,53 @@ export async function updateVentureAction(
   }
   revalidatePath("/ventures");
   return { ok: true, message: `Emprendimiento actualizado: ${parsed.data.name}.` };
+}
+
+/** CU05: suma un emprendedor al equipo del emprendimiento. */
+export async function addVentureMemberAction(
+  ventureId: number,
+  entrepreneurId: number | null,
+  role: string,
+): Promise<{ ok: boolean; message: string }> {
+  if (!entrepreneurId) return { ok: false, message: "Elige al emprendedor." };
+  if (!(MEMBER_ROLES as readonly string[]).includes(role)) return { ok: false, message: "Elige un rol válido." };
+  try {
+    await authedFetch(`/ventures/${ventureId}/members`, {
+      method: "POST",
+      body: { emprendedor_id: entrepreneurId, rol_en_emprendimiento: role },
+    });
+  } catch (error) {
+    return { ok: false, message: ventureMessage(error, "No se pudo agregar al integrante. Intenta de nuevo.") };
+  }
+  revalidatePath("/ventures");
+  return { ok: true, message: "Integrante agregado. Registrado en auditoría." };
+}
+
+/** CU05: quita a un emprendedor del equipo (el backend impide dejarlo vacío). */
+export async function removeVentureMemberAction(
+  ventureId: number,
+  entrepreneurId: number,
+  name: string,
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    await authedFetch(`/ventures/${ventureId}/members/${entrepreneurId}`, { method: "DELETE" });
+  } catch (error) {
+    return { ok: false, message: ventureMessage(error, "No se pudo quitar al integrante. Intenta de nuevo.") };
+  }
+  revalidatePath("/ventures");
+  return { ok: true, message: `${name} ya no es parte del equipo.` };
+}
+
+/** CU24: marca una necesidad o dificultad como resuelta (queda en auditoría). */
+export async function resolveNeedAction(rowId: number, name: string): Promise<{ ok: boolean; message: string }> {
+  try {
+    await authedFetch(`/venture-needs/${rowId}/resolve`, { method: "PATCH" });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      return { ok: false, message: "No tienes permiso para resolver esta necesidad." };
+    }
+    return { ok: false, message: "No se pudo marcar como resuelta. Intenta de nuevo." };
+  }
+  revalidatePath("/needs");
+  return { ok: true, message: `Resuelta: ${name}. Registrado en auditoría.` };
 }

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/result.dart';
+import '../../../documents/index.dart';
+import '../../../ventures/index.dart';
 import '../../domain/entities/completion_result.dart';
 import '../../domain/entities/journey.dart';
 import '../controllers/gamification_providers.dart';
@@ -35,16 +37,51 @@ class _ChallengeSheet extends ConsumerStatefulWidget {
 }
 
 class _ChallengeSheetState extends ConsumerState<_ChallengeSheet> {
+  final _evidenceText = TextEditingController();
+  PickedFile? _file;
   bool _saving = false;
   String? _error;
+
+  @override
+  void dispose() {
+    _evidenceText.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickFile() async {
+    final file = await ref.read(evidencePickerProvider).pick();
+    if (file != null && mounted) setState(() => _file = file);
+  }
 
   Future<void> _complete() async {
     setState(() {
       _saving = true;
       _error = null;
     });
+    final ventureId = await ref.read(currentVentureIdProvider.future);
+    int? documentId;
+    if (_file != null && ventureId != null) {
+      final upload = await ref.read(uploadEvidenceUseCaseProvider)(
+        ventureId: ventureId,
+        file: _file!,
+      );
+      if (!mounted) return;
+      switch (upload) {
+        case Ok(:final value):
+          documentId = value.id;
+        case Err(:final failure):
+          setState(() {
+            _saving = false;
+            _error = failure.message;
+          });
+          return;
+      }
+    }
     final result = await ref.read(completeChallengeUseCaseProvider)(
       widget.challenge.id,
+      ventureId: ventureId,
+      evidenceText: _evidenceText.text,
+      documentId: documentId,
     );
     if (!mounted) return;
     switch (result) {
@@ -178,6 +215,35 @@ class _ChallengeSheetState extends ConsumerState<_ChallengeSheet> {
                 height: 1.5,
                 color: AppColors.ink2,
               ),
+            ),
+          ],
+          if (c.criterion != null && c.criterion!.trim().isNotEmpty) ...[
+            const SizedBox(height: 14),
+            notice(
+              Icons.checklist,
+              'Requisitos: ${c.criterion}',
+              AppColors.background,
+              AppColors.ink2,
+            ),
+          ],
+          if (c.status == ChallengeStatus.current && c.requiresEvidence) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: _evidenceText,
+              enabled: !_saving,
+              minLines: 3,
+              maxLines: 6,
+              maxLength: 2000,
+              decoration: const InputDecoration(
+                labelText: 'Evidencia (describe lo que hiciste)',
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _pickFile,
+              icon: const Icon(Icons.attach_file, size: 20),
+              label: Text(_file?.name ?? 'Adjuntar archivo (opcional)'),
             ),
           ],
           const SizedBox(height: 16),

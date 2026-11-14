@@ -125,7 +125,9 @@ export async function AlertsScreen({ filters }: { filters: AlertFilters }) {
                   <td className="px-5 py-3.5 whitespace-nowrap text-muted-foreground">{formatWhen(a.fecha_generacion)}</td>
                   <td className="px-5 py-3.5 font-semibold">{a.emprendimiento ?? `#${a.emprendimiento_id}`}</td>
                   <td className="max-w-[340px] px-5 py-3.5">
-                    <div className="font-semibold">{a.titulo}</div>
+                    <Link href={`/alerts/${a.alerta_id}`} className="font-semibold text-primary hover:underline">
+                      {a.titulo}
+                    </Link>
                     <div className="text-[13px] text-muted-foreground">
                       {TYPE_LABEL[a.tipo ?? ""] ?? a.tipo}
                       {a.descripcion ? ` · ${a.descripcion}` : ""}

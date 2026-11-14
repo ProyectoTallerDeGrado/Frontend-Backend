@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
-import { ROLE_META } from "../roles";
+import { roleLabel } from "../roles";
 import { createUserAction } from "../server/actions";
 import type { NewUserState, Role } from "../types";
 
@@ -112,7 +112,7 @@ function Form({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
                 >
                   <span className={`size-2.5 rounded-full bg-primary transition-transform ${on ? "scale-100" : "scale-0"}`} />
                 </span>
-                <span className="text-[15px] font-semibold">{ROLE_META[r.nombre]?.label ?? r.nombre}</span>
+                <span className="text-[15px] font-semibold">{roleLabel(r.nombre)}</span>
               </button>
             );
           })}

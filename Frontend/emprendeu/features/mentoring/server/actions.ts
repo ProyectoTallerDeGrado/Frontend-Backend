@@ -84,7 +84,7 @@ export async function assignAdvisorAction(mentorId: number, ventureId: number): 
         method: "POST",
         body: { usuario_id: mentorId, emprendimiento_id: ventureId },
       }),
-    ["/mentoring/assignments"],
+    ["/mentoring/assignments", "/ventures"],
     "Asesor asignado. Registrado en auditoría.",
   );
 }
@@ -92,7 +92,7 @@ export async function assignAdvisorAction(mentorId: number, ventureId: number): 
 export async function endAssignmentAction(assignmentId: number): Promise<ActionResult> {
   return run(
     () => authedFetch(`/mentoring/assignments/${assignmentId}/end`, { method: "PATCH" }),
-    ["/mentoring/assignments"],
+    ["/mentoring/assignments", "/ventures"],
     "Asignación finalizada.",
   );
 }
@@ -241,5 +241,18 @@ export async function commitAction(input: {
       }),
     ["/mentoring/sessions"],
     "Compromiso registrado.",
+  );
+}
+
+/** CU18: marca un compromiso como cumplido (o lo devuelve a pendiente). */
+export async function setCommitmentDoneAction(
+  commitmentId: number,
+  ventureId: number,
+  done: boolean,
+): Promise<ActionResult> {
+  return run(
+    () => authedFetch(`/mentoring/commitments/${commitmentId}`, { method: "PATCH", body: { completado: done } }),
+    [`/ventures/${ventureId}/follow-up`],
+    done ? "Compromiso marcado como cumplido." : "Compromiso devuelto a pendiente.",
   );
 }

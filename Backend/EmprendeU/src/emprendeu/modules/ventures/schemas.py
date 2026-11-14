@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints
 
 Name = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)
@@ -28,11 +28,32 @@ class StageUpdate(BaseModel):
     estado: Literal["activa", "inactiva"]
 
 
+# Rol dentro del equipo del emprendimiento (columna rol_en_emprendimiento).
+MemberRole = Literal["fundador", "cofundador", "miembro"]
+
+
+class MemberIn(BaseModel):
+    emprendedor_id: int
+    rol_en_emprendimiento: MemberRole = "miembro"
+
+
+class MemberOut(BaseModel):
+    emprendedor_id: int
+    usuario_id: int
+    nombre: str | None
+    apellido: str | None
+    email: str | None
+    rol_en_emprendimiento: str | None
+    fecha_ingreso: datetime | None
+
+
 class VentureCreate(BaseModel):
     nombre: Name
     descripcion: str | None = None
     sector: Annotated[str | None, StringConstraints(max_length=120)] = None
-    # Solo el personal lo indica: de quien es el emprendimiento. Un emprendedor crea el suyo.
+    # Solo el personal indica el equipo (uno o mas emprendedores). `emprendedor_id` es
+    # el atajo de un solo integrante (queda como fundador). Un emprendedor crea el suyo.
+    integrantes: list[MemberIn] = Field(default_factory=list, max_length=20)
     emprendedor_id: int | None = None
 
 
@@ -51,6 +72,7 @@ class VentureOut(BaseModel):
     estado: str | None
     fecha_creacion: datetime | None
     etapa_actual: StageOut | None = None
+    integrantes: list[MemberOut] = Field(default_factory=list)
 
 
 class StageChange(BaseModel):
@@ -102,6 +124,8 @@ class NeedOut(BaseModel):
 class VentureNeedCreate(BaseModel):
     necesidad_id: int
     prioridad: Literal["baja", "media", "alta"] = "media"
+    tipo: Literal["necesidad", "dificultad"] = "necesidad"
+    descripcion: str | None = Field(default=None, max_length=2000)
 
 
 class VentureNeedOut(BaseModel):
@@ -110,5 +134,14 @@ class VentureNeedOut(BaseModel):
     necesidad: str
     estado: str | None
     prioridad: str | None
+    tipo: str = "necesidad"
+    descripcion: str | None = None
     fecha_detectada: datetime | None
     fecha_resuelta: datetime | None
+
+
+class VentureNeedInboxItem(VentureNeedOut):
+    """Fila de la bandeja del personal: la necesidad con su emprendimiento."""
+
+    emprendimiento_id: int
+    emprendimiento: str

@@ -34,6 +34,9 @@ class ChatRequest(BaseModel):
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)
     ]
     conversacion_id: int | None = None
+    # Emprendimiento al que se asocia una conversacion nueva (si el emprendedor
+    # tiene varios). Sin indicarlo, el primero.
+    emprendimiento_id: int | None = None
 
 
 class MessageOut(BaseModel):

@@ -7,5 +7,6 @@ class GetJourneyUseCase {
 
   final GamificationRepository _repository;
 
-  Future<Result<Journey>> call() => _repository.getJourney();
+  Future<Result<Journey>> call({int? ventureId}) =>
+      _repository.getJourney(ventureId: ventureId);
 }

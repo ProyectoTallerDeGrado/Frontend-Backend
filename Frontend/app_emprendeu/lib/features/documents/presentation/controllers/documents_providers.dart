@@ -24,6 +24,10 @@ final getVentureEvidenceUseCaseProvider = Provider(
   (ref) => GetVentureEvidenceUseCase(ref.watch(documentsRepositoryProvider)),
 );
 
+final deleteDocumentUseCaseProvider = Provider(
+  (ref) => DeleteDocumentUseCase(ref.watch(documentsRepositoryProvider)),
+);
+
 /// Archivos de un emprendimiento (la evidencia se agrupa por `milestoneId`).
 final ventureEvidenceProvider = FutureProvider.autoDispose
     .family<List<Evidence>, int>(

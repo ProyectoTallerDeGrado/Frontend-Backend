@@ -109,6 +109,32 @@ class RoleOut(BaseModel):
     total_usuarios: int
 
 
+RoleName = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        to_lower=True,
+        min_length=3,
+        max_length=60,
+        pattern=r"(?i)^[a-z0-9][a-z0-9 _-]*$",
+    ),
+]
+RoleDescription = Annotated[
+    str, StringConstraints(strip_whitespace=True, max_length=300)
+]
+
+
+class RoleCreate(BaseModel):
+    nombre: RoleName
+    descripcion: RoleDescription | None = None
+    clonar_de: int | None = None
+
+
+class RoleEdit(BaseModel):
+    nombre: RoleName | None = None
+    descripcion: RoleDescription | None = None
+
+
 class PermissionMatrix(BaseModel):
     """`{"usuarios": ["consulta", "registro"], "ia": []}`; lo omitido es sin acceso."""
 

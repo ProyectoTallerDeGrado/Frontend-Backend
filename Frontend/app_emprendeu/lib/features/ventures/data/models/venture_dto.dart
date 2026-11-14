@@ -13,6 +13,32 @@ abstract class StageDto with _$StageDto {
       _$StageDtoFromJson(json);
 }
 
+/// Integrante tal como lo entrega `/ventures` (`integrantes`).
+@freezed
+abstract class MemberDto with _$MemberDto {
+  const MemberDto._();
+
+  const factory MemberDto({
+    @JsonKey(name: 'emprendedor_id') required int emprendedorId,
+    String? nombre,
+    String? apellido,
+    String? email,
+    @JsonKey(name: 'rol_en_emprendimiento') String? rolEnEmprendimiento,
+  }) = _MemberDto;
+
+  factory MemberDto.fromJson(Map<String, dynamic> json) =>
+      _$MemberDtoFromJson(json);
+
+  VentureMember toEntity() {
+    final full = '${nombre ?? ''} ${apellido ?? ''}'.trim();
+    return VentureMember(
+      entrepreneurId: emprendedorId,
+      name: full.isNotEmpty ? full : (email ?? 'Emprendedor'),
+      role: rolEnEmprendimiento,
+    );
+  }
+}
+
 /// Emprendimiento tal como lo entrega `/ventures`.
 @freezed
 abstract class VentureDto with _$VentureDto {
@@ -25,6 +51,7 @@ abstract class VentureDto with _$VentureDto {
     String? descripcion,
     String? sector,
     String? estado,
+    @Default(<MemberDto>[]) List<MemberDto> integrantes,
   }) = _VentureDto;
 
   factory VentureDto.fromJson(Map<String, dynamic> json) =>
@@ -37,5 +64,6 @@ abstract class VentureDto with _$VentureDto {
     description: descripcion,
     sector: sector,
     status: estado,
+    members: [for (final m in integrantes) m.toEntity()],
   );
 }

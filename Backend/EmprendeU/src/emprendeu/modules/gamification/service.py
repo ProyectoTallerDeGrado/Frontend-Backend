@@ -2,26 +2,27 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.errors import Forbidden
 from emprendeu.modules.audit import AuditService
+from emprendeu.modules.documents import DocumentService
 from emprendeu.modules.entrepreneurs import EntrepreneurRef, EntrepreneurService
 from emprendeu.modules.gamification import schemas as s
 from emprendeu.modules.gamification.exceptions import (
     BadgeNotFound,
     ChallengeAlreadyCompleted,
+    ChallengeCriteriaNotMet,
     ChallengeLocked,
     ChallengeNotFound,
     InvalidStage,
     NoVenture,
 )
 from emprendeu.modules.gamification.levels import (
-    LEVEL_THRESHOLDS,
     level_for,
-    next_threshold,
+    progress_for,
 )
 from emprendeu.modules.gamification.models import (
     EmprendedorInsignia,
@@ -35,6 +36,7 @@ from emprendeu.modules.ventures import VentureService
 
 STREAK_DAYS = 7
 HISTORY_LIMIT = 20
+MIN_EVIDENCE_CHARS = 10
 
 # Nombres de insignia (los siembra la migracion de catalogos).
 FIRST_STEP = "Primer paso"
@@ -61,6 +63,7 @@ class GamificationService:
         self._audit = AuditService(session)
         self._entrepreneurs = EntrepreneurService(session)
         self._ventures = VentureService(session)
+        self._documents = DocumentService(session)
 
     # --- API publica para otros modulos --------------------------------------
 
@@ -110,6 +113,8 @@ class GamificationService:
             orden=r.orden,
             xp_recompensa=r.xp_recompensa or 0,
             estado=r.estado,
+            criterio_completado=r.criterio_completado,
+            requiere_evidencia=bool(r.requiere_evidencia),
         )
 
     async def list_challenges(self) -> list[s.ChallengeOut]:
@@ -131,6 +136,8 @@ class GamificationService:
             etapa_id=body.etapa_id,
             orden=body.orden or (await self._repo.max_order()) + 1,
             xp_recompensa=body.xp_recompensa,
+            criterio_completado=body.criterio_completado,
+            requiere_evidencia=body.requiere_evidencia,
             estado="activo",
         )
         await self._repo.add(reto)
@@ -258,6 +265,8 @@ class GamificationService:
                     xp_recompensa=r.xp_recompensa or 0,
                     estado=state,  # type: ignore[arg-type]
                     fecha_completado=row.fecha_completado if row else None,
+                    criterio_completado=r.criterio_completado,
+                    requiere_evidencia=bool(r.requiere_evidencia),
                 )
             )
         journey_stages: list[s.JourneyStage] = []
@@ -276,17 +285,84 @@ class GamificationService:
             journey_stages.append(
                 s.JourneyStage(etapa_id=etapa.etapa_id, nombre=etapa.nombre, estado=st)  # type: ignore[arg-type]
             )
+        member_ids = await self._entrepreneurs.entrepreneur_ids_of_venture(venture_id)
         xp = await self._venture_xp(venture_id)
+        target, progress = progress_for(xp)
+        earned: dict[int, datetime | None] = {}
+        movements: list[MovimientoXp] = []
+        for eid in member_ids:
+            for badge_id, when in (await self._repo.earned_badges(eid)).items():
+                prev = earned.get(badge_id)
+                if badge_id not in earned or (
+                    when is not None and (prev is None or when < prev)
+                ):
+                    earned[badge_id] = when
+            movements.extend(await self._repo.history(eid, HISTORY_LIMIT))
+        movements.sort(key=lambda m: (m.fecha is not None, m.fecha), reverse=True)
         return s.JourneyOut(
             emprendimiento_id=venture_id,
             xp_total=xp,
             nivel=level_for(xp),
+            xp_siguiente_nivel=target,
+            xp_faltante=None if target is None else target - xp,
+            progreso_pct=progress,
             etapas=journey_stages,
             retos=items,
+            insignias=await self._badge_progress(earned),
+            historial=[
+                s.XpMovement(motivo=m.motivo, cantidad=m.cantidad or 0, fecha=m.fecha)
+                for m in movements[:HISTORY_LIMIT]
+            ],
         )
 
+    async def _badge_progress(
+        self, earned: dict[int, datetime | None]
+    ) -> list[s.BadgeProgress]:
+        return [
+            s.BadgeProgress(
+                insignia_id=b.insignia_id,
+                nombre=b.nombre,
+                criterio=b.criterio,
+                xp_recompensa=b.xp_recompensa or 0,
+                obtenida=b.insignia_id in earned,
+                fecha_obtenida=earned.get(b.insignia_id),
+            )
+            for b in await self._repo.list_badges()
+            if b.estado == "activa"
+        ]
+
+    async def _check_evidence(
+        self, reto: Reto, venture_id: int, body: s.CompleteChallengeIn | None
+    ) -> tuple[str | None, int | None]:
+        """Verifica los criterios del reto (CU07) y devuelve la evidencia a guardar."""
+        text = (body.evidencia_texto or None) if body else None
+        document_id = body.documento_id if body else None
+        if document_id is not None and not await self._documents.is_evidence_of(
+            document_id, venture_id
+        ):
+            raise ChallengeCriteriaNotMet(
+                "El documento no existe o no es de tu emprendimiento.",
+                details={"faltante": "documento_id"},
+            )
+        if reto.requiere_evidencia and document_id is None:
+            if text is None:
+                raise ChallengeCriteriaNotMet(
+                    "Este reto exige evidencia: un texto o un documento.",
+                    details={"faltante": "evidencia"},
+                )
+            if len(text) < MIN_EVIDENCE_CHARS:
+                raise ChallengeCriteriaNotMet(
+                    f"Describe la evidencia con al menos {MIN_EVIDENCE_CHARS} caracteres.",
+                    details={"faltante": "evidencia_texto"},
+                )
+        return text, document_id
+
     async def complete_challenge(
-        self, user: CurrentUser, reto_id: int, emprendimiento_id: int | None
+        self,
+        user: CurrentUser,
+        reto_id: int,
+        emprendimiento_id: int | None,
+        body: s.CompleteChallengeIn | None = None,
     ) -> s.CompletionOut:
         venture_id, ref = await self._resolve_venture(user, emprendimiento_id)
         if ref is None or venture_id not in ref.emprendimiento_ids:
@@ -306,6 +382,9 @@ class GamificationService:
             if other.reto_id != reto_id:
                 raise ChallengeLocked
             break
+        evidence_text, evidence_document = await self._check_evidence(
+            reto, venture_id, body
+        )
 
         before_xp = await self._repo.xp_total(ref.emprendedor_id)
         if row is None:
@@ -314,6 +393,8 @@ class GamificationService:
             )
         row.estado = "completado"
         row.fecha_completado = now()
+        row.evidencia_texto = evidence_text
+        row.documento_id = evidence_document
         await self._repo.add(row)
         awarded = reto.xp_recompensa or 0
         await self._repo.add(
@@ -408,12 +489,8 @@ class GamificationService:
             if await self._grant(ref.emprendedor_id, CONSTANCY):
                 await self._repo.commit()
         xp = await self._repo.xp_total(ref.emprendedor_id)
-        target = next_threshold(xp)
         level = level_for(xp)
-        floor = max((t for n, t in LEVEL_THRESHOLDS if n == level), default=0)
-        progress = (
-            100.0 if target is None else round((xp - floor) / (target - floor) * 100, 1)
-        )
+        target, progress = progress_for(xp)
         earned = await self._repo.earned_badges(ref.emprendedor_id)
         return s.ProfileOut(
             xp_total=xp,
@@ -421,18 +498,7 @@ class GamificationService:
             xp_siguiente_nivel=target,
             xp_faltante=None if target is None else target - xp,
             progreso_pct=progress,
-            insignias=[
-                s.BadgeProgress(
-                    insignia_id=b.insignia_id,
-                    nombre=b.nombre,
-                    criterio=b.criterio,
-                    xp_recompensa=b.xp_recompensa or 0,
-                    obtenida=b.insignia_id in earned,
-                    fecha_obtenida=earned.get(b.insignia_id),
-                )
-                for b in await self._repo.list_badges()
-                if b.estado == "activa"
-            ],
+            insignias=await self._badge_progress(earned),
             historial=[
                 s.XpMovement(motivo=m.motivo, cantidad=m.cantidad or 0, fecha=m.fecha)
                 for m in await self._repo.history(ref.emprendedor_id, HISTORY_LIMIT)

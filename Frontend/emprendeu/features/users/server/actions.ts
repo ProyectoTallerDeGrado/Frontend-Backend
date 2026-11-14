@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { ApiError } from "@/lib/api-client";
 import { authedFetch } from "@/features/auth";
 
-import { createdUserSchema, newUserSchema } from "../schemas/users-schemas";
+import { createdUserSchema, newUserSchema, roleSchema } from "../schemas/users-schemas";
+import { PERMISSION_MODULES } from "../roles";
 import type { ActionResult, NewUserState, PermissionMatrix } from "../types";
 
 function fail(error: unknown): ActionResult {
@@ -14,7 +15,13 @@ function fail(error: unknown): ActionResult {
       error.code === "cannot_disable_self"
         ? "No puedes deshabilitar tu propia cuenta."
         : error.code === "admin_lockout"
-          ? "El rol administrador no puede perder el permiso de administración de usuarios."
+          ? "El rol administrador debe conservar la consulta y la administración de usuarios."
+          : error.code === "role_name_taken"
+            ? "Ya existe un rol con ese nombre."
+            : error.code === "role_in_use"
+              ? "El rol tiene usuarios asignados: reasígnalos antes de eliminarlo."
+              : error.code === "system_role_protected"
+                ? "Los roles del sistema no se pueden renombrar ni eliminar."
           : error.status === 403
             ? "No tienes permiso para esta acción."
             : error.status >= 500 || error.status === 0
@@ -68,7 +75,7 @@ export async function savePermissionsAction(
     return fail(error);
   }
   revalidatePath("/roles");
-  return { ok: true, message: `Permisos de ${roleName} guardados. Se aplicarán en el siguiente acceso.` };
+  return { ok: true, message: `Permisos de ${roleName} guardados. Los cambios rigen de inmediato.` };
 }
 
 export async function createUserAction(_prev: NewUserState, formData: FormData): Promise<NewUserState> {
@@ -104,4 +111,47 @@ export async function createUserAction(_prev: NewUserState, formData: FormData):
     }
     return { message: fail(error).message, values: raw };
   }
+}
+
+export async function createRoleAction(input: {
+  nombre: string;
+  descripcion: string;
+  plantilla: "vacio" | "lectura";
+  clonarDe: number | null;
+}): Promise<ActionResult> {
+  const nombre = input.nombre.trim();
+  if (nombre.length < 3) return { ok: false, message: "El nombre debe tener al menos 3 caracteres." };
+  try {
+    const created = roleSchema.parse(await authedFetch("/roles", {
+      method: "POST",
+      body: {
+        nombre,
+        descripcion: input.descripcion.trim() || null,
+        clonar_de: input.clonarDe,
+      },
+    }));
+    if (input.plantilla === "lectura" && input.clonarDe === null) {
+      const permisos = Object.fromEntries(PERMISSION_MODULES.map((m) => [m.key, ["consulta"]]));
+      await authedFetch(`/roles/${created.rol_id}/permissions`, { method: "PUT", body: { permisos } });
+    }
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 422) {
+      return { ok: false, message: "Usa solo letras, números, espacios, guiones y guion bajo en el nombre." };
+    }
+    return fail(error);
+  }
+  revalidatePath("/roles");
+  revalidatePath("/users");
+  return { ok: true, message: `Rol creado: ${nombre}. Registrado en auditoría.` };
+}
+
+export async function deleteRoleAction(roleId: number, roleName: string): Promise<ActionResult> {
+  try {
+    await authedFetch(`/roles/${roleId}`, { method: "DELETE" });
+  } catch (error) {
+    return fail(error);
+  }
+  revalidatePath("/roles");
+  revalidatePath("/users");
+  return { ok: true, message: `Rol eliminado: ${roleName}. Registrado en auditoría.` };
 }

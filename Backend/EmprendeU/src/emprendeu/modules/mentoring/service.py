@@ -32,6 +32,8 @@ from emprendeu.modules.mentoring.exceptions import (
     NotAssigned,
     NoVenture,
     ResponsibleNotMember,
+    SessionConflict,
+    SessionDuplicate,
     SessionMismatch,
     SessionNotEditable,
     SessionNotFound,
@@ -296,6 +298,14 @@ class MentoringService:
         profile.especialidad = body.especialidad
         profile.reto_requerido_id = body.reto_requerido_id
         await self._repo.add(profile)
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.perfil_asesor",
+            body.especialidad,
+            tabla="perfil_mentor",
+            id_registro=profile.perfil_mentor_id,
+            despues={"mentor_id": mentor_id, "especialidad": body.especialidad},
+        )
         await self._repo.commit()
         for m in await self.list_mentors(user, None):
             if m.usuario_id == mentor_id:
@@ -315,6 +325,46 @@ class MentoringService:
             estado=a.estado,  # type: ignore[arg-type]
         )
 
+    async def _require_enabled(self, mentor_id: int) -> None:
+        """CU15: un mentor inhabilitado no gestiona ni publica horarios."""
+        profile = await self._repo.profile(mentor_id)
+        if profile is None or not profile.habilitado:
+            raise MentorNotEnabled
+
+    @staticmethod
+    def _covers(items: list[tuple[datetime, datetime]], begin: datetime) -> bool:
+        step = timedelta(minutes=SLOT_MINUTES)
+        return any(a <= begin and begin + step <= b for a, b in items)
+
+    async def _ensure_no_conflict(
+        self,
+        mentor_id: int,
+        start: datetime,
+        end: datetime,
+        keep: list[tuple[datetime, datetime]],
+    ) -> None:
+        """409 si una sesion programada del mentor cae en `[start, end)` y ningun
+        horario `disponible` de `keep` la sigue cubriendo."""
+        for row in await self._repo.mentor_sessions_overlapping(
+            mentor_id, start, end, SLOT_MINUTES
+        ):
+            if row.fecha_programada is None:
+                continue
+            if not self._covers(keep, self._aware(row.fecha_programada)):
+                raise SessionConflict
+
+    async def _audit_availability(
+        self, user: CurrentUser, mentor_id: int, accion: str, row_id: int | None
+    ) -> None:
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.disponibilidad",
+            None,
+            tabla="disponibilidad_mentor",
+            id_registro=row_id,
+            despues={"accion": accion, "mentor_id": mentor_id},
+        )
+
     async def get_availability(self, mentor_id: int) -> list[s.AvailabilityOut]:
         await self._mentor(mentor_id)
         return [
@@ -328,10 +378,20 @@ class MentoringService:
         if not self._can_manage_mentor(user, mentor_id):
             raise Forbidden("No puedes editar esta disponibilidad.")
         await self._mentor(mentor_id)
+        await self._require_enabled(mentor_id)
         ordered = sorted(items, key=lambda i: self._aware(i.fecha_inicio))
         for before, after in zip(ordered, ordered[1:], strict=False):
             if self._aware(after.fecha_inicio) < self._aware(before.fecha_fin):
                 raise AvailabilityOverlap
+        await self._repo.lock_mentor(mentor_id)
+        keep = [
+            (self._aware(i.fecha_inicio), self._aware(i.fecha_fin))
+            for i in ordered
+            if i.estado == "disponible"
+        ]
+        await self._ensure_no_conflict(
+            mentor_id, now(), datetime(2100, 1, 1, tzinfo=UTC), keep
+        )
         try:
             await self._repo.replace_availability(
                 mentor_id,
@@ -345,6 +405,7 @@ class MentoringService:
                     for i in ordered
                 ],
             )
+            await self._audit_availability(user, mentor_id, "reemplazar", None)
             await self._repo.commit()
         except IntegrityError as exc:  # la base tambien impide los solapamientos
             await self._repo.rollback()
@@ -358,14 +419,23 @@ class MentoringService:
         if not self._can_manage_mentor(user, mentor_id):
             raise Forbidden("No puedes editar esta disponibilidad.")
         await self._mentor(mentor_id)
+        await self._require_enabled(mentor_id)
         row = DisponibilidadMentor(
             usuario_id=mentor_id,
             fecha_inicio=self._aware(item.fecha_inicio),
             fecha_fin=self._aware(item.fecha_fin),
             estado=item.estado,
         )
+        await self._repo.lock_mentor(mentor_id)
+        if item.estado != "disponible":
+            await self._ensure_no_conflict(
+                mentor_id, row.fecha_inicio, row.fecha_fin, []
+            )
         try:
             await self._repo.add(row)
+            await self._audit_availability(
+                user, mentor_id, "registrar", row.disponibilidad_mentor_id
+            )
             await self._repo.commit()
         except IntegrityError as exc:
             await self._repo.rollback()
@@ -389,17 +459,27 @@ class MentoringService:
         body: s.AvailabilityUpdate,
     ) -> s.AvailabilityOut:
         row = await self._availability_row(user, disponibilidad_id)
+        await self._require_enabled(row.usuario_id)
+        old_start, old_end = row.fecha_inicio, row.fecha_fin
         start = (
             self._aware(body.fecha_inicio) if body.fecha_inicio else row.fecha_inicio
         )
         end = self._aware(body.fecha_fin) if body.fecha_fin else row.fecha_fin
         if end <= start:
             raise DomainError("fecha_fin debe ser posterior a fecha_inicio.")
-        row.fecha_inicio, row.fecha_fin = start, end
-        if body.estado is not None:
-            row.estado = body.estado
+        estado = body.estado if body.estado is not None else row.estado
+        await self._repo.lock_mentor(row.usuario_id)
+        # Lo que ya tenia sesiones solo puede seguir como horario disponible que las cubra.
+        keep = [(start, end)] if estado == "disponible" else []
+        await self._ensure_no_conflict(row.usuario_id, old_start, old_end, keep)
+        if estado != "disponible":
+            await self._ensure_no_conflict(row.usuario_id, start, end, [])
+        row.fecha_inicio, row.fecha_fin, row.estado = start, end, estado
         try:
             await self._repo.add(row)
+            await self._audit_availability(
+                user, row.usuario_id, "modificar", disponibilidad_id
+            )
             await self._repo.commit()
         except IntegrityError as exc:
             await self._repo.rollback()
@@ -410,7 +490,13 @@ class MentoringService:
         self, user: CurrentUser, disponibilidad_id: int
     ) -> None:
         row = await self._availability_row(user, disponibilidad_id)
+        await self._repo.lock_mentor(row.usuario_id)
+        await self._ensure_no_conflict(
+            row.usuario_id, row.fecha_inicio, row.fecha_fin, []
+        )
+        mentor_id = row.usuario_id
         await self._repo.delete_availability_row(row)
+        await self._audit_availability(user, mentor_id, "eliminar", disponibilidad_id)
         await self._repo.commit()
 
     async def _slot_starts(self, mentor_id: int, day: date) -> list[datetime]:
@@ -513,6 +599,9 @@ class MentoringService:
             raise InvalidSlot
         if start <= now():
             raise InvalidSlot
+        # Serializa las reservas del mismo mentor: dos peticiones simultaneas no
+        # pueden pasar ambas la comprobacion de horario libre.
+        await self._repo.lock_mentor(body.mentor_id)
         busy = await self._repo.mentor_sessions_between(
             body.mentor_id, start, start + timedelta(minutes=SLOT_MINUTES)
         )
@@ -547,8 +636,21 @@ class MentoringService:
                     rol_participante=LEARNER_ROLE,
                 )
             )
+            await self._audit.record(
+                user.usuario_id,
+                "negocio.sesion",
+                session.tema,
+                tabla="sesiones_acompanamiento",
+                id_registro=session.sesion_acompanamiento_id,
+                despues={
+                    "accion": "agendar",
+                    "emprendimiento_id": venture_id,
+                    "mentor_id": body.mentor_id,
+                },
+            )
             await self._repo.commit()
         except IntegrityError as exc:
+            await self._repo.rollback()
             raise SlotUnavailable from exc
         return (await self._sessions_out([session]))[0]
 
@@ -727,6 +829,11 @@ class MentoringService:
             raise DomainError("Emprendimiento inexistente.")
         await self._require_work_on(user, body.emprendimiento_id, "asesorias:registro")
         when = self._not_future(body.fecha_realizada)
+        step = timedelta(minutes=SLOT_MINUTES)
+        if await self._repo.venture_sessions_overlapping(
+            body.emprendimiento_id, when - step + timedelta(seconds=1), when + step
+        ):
+            raise SessionDuplicate
         tipo = await self._repo.tipo_by_name(SESSION_TYPE)
         if tipo is None:
             raise DomainError(
@@ -787,6 +894,14 @@ class MentoringService:
         if row.estado != "programada":
             raise SessionNotEditable
         row.estado = "cancelada"
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.sesion",
+            row.tema,
+            tabla="sesiones_acompanamiento",
+            id_registro=sesion_id,
+            despues={"accion": "cancelar"},
+        )
         await self._repo.commit()
         return (await self._sessions_out([row]))[0]
 
@@ -827,6 +942,18 @@ class MentoringService:
             estado="pendiente",
         )
         await self._repo.add(commitment)
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.compromiso",
+            description[:80],
+            tabla="compromisos",
+            id_registro=commitment.compromiso_id,
+            despues={
+                "accion": "registrar",
+                "emprendimiento_id": venture_id,
+                "responsable_id": responsible,
+            },
+        )
         await self._repo.commit()
         return self._commitment_out(commitment)
 
@@ -898,6 +1025,14 @@ class MentoringService:
         else:
             c.estado = "pendiente"
             c.fecha_completado = None
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.compromiso",
+            c.descripcion[:80] if c.descripcion else None,
+            tabla="compromisos",
+            id_registro=compromiso_id,
+            despues={"accion": "estado", "estado": c.estado},
+        )
         return c
 
     async def update_commitment(
@@ -940,8 +1075,24 @@ class MentoringService:
             fecha=now(),
         )
         await self._repo.add(rec)
+        await self._audit_recommendation(user, rec)
         await self._repo.commit()
         return self._recommendation_out(rec)
+
+    async def _audit_recommendation(
+        self, user: CurrentUser, rec: Recomendacion
+    ) -> None:
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.recomendacion",
+            rec.titulo,
+            tabla="recomendaciones",
+            id_registro=rec.recomendacion_id,
+            despues={
+                "accion": "registrar",
+                "emprendimiento_id": rec.emprendimiento_id,
+            },
+        )
 
     async def register_recommendation(
         self, user: CurrentUser, body: s.RecommendationRegister
@@ -961,6 +1112,7 @@ class MentoringService:
             fecha=now(),
         )
         await self._repo.add(rec)
+        await self._audit_recommendation(user, rec)
         await self._repo.commit()
         return self._recommendation_out(rec)
 
@@ -1012,6 +1164,14 @@ class MentoringService:
             estado="registrado",
         )
         await self._repo.add(row)
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.avance",
+            None,
+            tabla="seguimientos",
+            id_registro=row.seguimiento_id,
+            despues={"emprendimiento_id": venture_id},
+        )
         if await self._weekly_streak(user.usuario_id):
             await self._gamification.award_event(user.usuario_id, "log_streak")
         return self._progress_out(row)
@@ -1122,7 +1282,11 @@ class MentoringService:
             estado="activa",
             fecha_inicio=now(),
         )
-        await self._repo.add(row)
+        try:
+            await self._repo.add(row)
+        except IntegrityError as exc:  # peticion simultanea: gano la otra
+            await self._repo.rollback()
+            raise AssignmentExists from exc
         await self._audit.record(
             actor.usuario_id,
             "negocio.asignacion",
@@ -1163,20 +1327,33 @@ class MentoringService:
 
     # --- historial del emprendimiento (CU19) -------------------------------------------
 
-    async def history(
-        self, user: CurrentUser, emprendimiento_id: int | None, orden: str = "asc"
-    ) -> list[s.HistoryEvent]:
-        """Sesiones, avances, hitos, recomendaciones, compromisos y cambios de etapa.
-
-        Permisos por emprendimiento: un emprendedor ve el suyo, el personal con
-        `seguimiento:consulta` los de todos y un asesor solo los que tiene asignados.
-        """
+    async def _authorized_venture(
+        self, user: CurrentUser, emprendimiento_id: int | None
+    ) -> int:
+        """Emprendimiento que `user` puede consultar (miembro, personal o asesor asignado)."""
         venture_id, _ = await self._venture_for(user, emprendimiento_id)
         if (
             user.rol == ADVISOR_ROLE
             and await self._repo.active_assignment(user.usuario_id, venture_id) is None
         ):
             raise NotAssigned
+        return venture_id
+
+    async def history(
+        self,
+        user: CurrentUser,
+        emprendimiento_id: int | None,
+        orden: str = "asc",
+        tipos: list[str] | None = None,
+        desde: date | None = None,
+        hasta: date | None = None,
+    ) -> list[s.HistoryEvent]:
+        """Sesiones, avances, hitos, recomendaciones, compromisos y cambios de etapa.
+
+        Permisos por emprendimiento: un emprendedor ve el suyo, el personal con
+        `seguimiento:consulta` los de todos y un asesor solo los que tiene asignados.
+        """
+        venture_id = await self._authorized_venture(user, emprendimiento_id)
         events: list[s.HistoryEvent] = []
 
         for x in await self._sessions_out(
@@ -1267,9 +1444,161 @@ class MentoringService:
                 )
             )
 
+        if tipos:
+            events = [e for e in events if e.tipo in tipos]
+        if desde or hasta:
+            # Con periodo, un evento sin fecha no se puede ubicar: queda fuera.
+            start, end = self._range(desde, hasta)
+            events = [
+                e
+                for e in events
+                if e.fecha is not None
+                and (start is None or e.fecha >= start)
+                and (end is None or e.fecha < end)
+            ]
         dated = sorted(
             (e for e in events if e.fecha is not None),
             key=lambda e: e.fecha or datetime.min.replace(tzinfo=UTC),
             reverse=orden == "desc",
         )
         return dated + [e for e in events if e.fecha is None]
+
+    # --- progreso derivado (CU20) --------------------------------------------------
+
+    async def progress_summary(
+        self, user: CurrentUser, emprendimiento_id: int | None
+    ) -> s.ProgressSummary:
+        venture_id = await self._authorized_venture(user, emprendimiento_id)
+        milestones = await self._ventures.list_milestones(user, venture_id)
+        done = sum(1 for h in milestones if h.estado == "cumplido")
+        last = next(
+            (
+                p
+                for p in await self._repo.progress_for_venture(venture_id, 50)
+                if p.porcentaje_avance is not None
+            ),
+            None,
+        )
+        if milestones:
+            percent = round(done * 100 / len(milestones))
+        elif last is not None and last.porcentaje_avance is not None:
+            percent = round(last.porcentaje_avance)
+        else:
+            percent = 0
+        return s.ProgressSummary(
+            emprendimiento_id=venture_id,
+            hitos_total=len(milestones),
+            hitos_cumplidos=done,
+            ultimo_avance=last.porcentaje_avance if last else None,
+            fecha_ultimo_avance=last.fecha if last else None,
+            porcentaje=percent,
+        )
+
+    # --- listados por emprendimiento (CU17, CU18) ----------------------------------
+
+    async def venture_recommendations(
+        self, user: CurrentUser, emprendimiento_id: int
+    ) -> list[s.RecommendationOut]:
+        """Recomendaciones de un emprendimiento para quien puede consultarlo."""
+        venture_id = await self._authorized_venture(user, emprendimiento_id)
+        return [
+            self._recommendation_out(r)
+            for r in await self._repo.recommendations_for_ventures([venture_id])
+        ]
+
+    async def venture_commitments(
+        self, user: CurrentUser, emprendimiento_id: int, estado: str | None
+    ) -> list[s.CommitmentOut]:
+        """Compromisos de un emprendimiento con el nombre del responsable."""
+        venture_id = await self._authorized_venture(user, emprendimiento_id)
+        rows = [
+            c
+            for c in await self._repo.commitments_of_venture(venture_id)
+            if estado is None or c.estado == estado
+        ]
+        rows.sort(
+            key=lambda c: (c.fecha_limite is None, c.fecha_limite, c.compromiso_id)
+        )
+        names = await self._users.names_by_ids(
+            sorted({c.responsable_usuario_id for c in rows})
+        )
+        out = []
+        for c in rows:
+            item = self._commitment_out(c)
+            item.responsable = names.get(c.responsable_usuario_id)
+            out.append(item)
+        return out
+
+    # --- tareas y compromisos pendientes (CU22) ------------------------------------
+
+    async def my_tasks(
+        self,
+        user: CurrentUser,
+        tipo: str | None,
+        estado: str | None,
+        desde: date | None,
+        hasta: date | None,
+    ) -> list[s.TaskOut]:
+        """Compromisos propios e hitos de sus emprendimientos; por defecto, los pendientes."""
+        wanted = estado or "pendiente"
+        moment = now()
+        start, end = self._range(desde, hasta)
+        tasks: list[s.TaskOut] = []
+        if tipo in (None, "compromiso"):
+            rows = await self._repo.commitments_for_user(user.usuario_id, None)
+            names = await self._users.names_by_ids(
+                sorted({c.responsable_usuario_id for c in rows})
+            )
+            for c in rows:
+                state = "cumplido" if c.estado == "cumplido" else "pendiente"
+                tasks.append(
+                    s.TaskOut(
+                        tipo="compromiso",
+                        referencia_id=c.compromiso_id,
+                        emprendimiento_id=c.emprendimiento_id,
+                        titulo=c.descripcion or "Compromiso",
+                        detalle=None,
+                        responsable=names.get(c.responsable_usuario_id),
+                        estado=state,
+                        fecha_prevista=c.fecha_limite,
+                        vencida=state == "pendiente"
+                        and c.fecha_limite is not None
+                        and c.fecha_limite < moment,
+                    )
+                )
+        if tipo in (None, "hito"):
+            for venture_id in await self._entrepreneurs.venture_ids_of_user(
+                user.usuario_id
+            ):
+                for h in await self._ventures.list_milestones(user, venture_id):
+                    state = "cumplido" if h.estado == "cumplido" else "pendiente"
+                    tasks.append(
+                        s.TaskOut(
+                            tipo="hito",
+                            referencia_id=h.hito_id,
+                            emprendimiento_id=venture_id,
+                            titulo=h.titulo,
+                            detalle=h.descripcion,
+                            responsable=None,
+                            estado=state,
+                            fecha_prevista=h.fecha_cumplimiento or h.fecha_estimada,
+                            vencida=state == "pendiente"
+                            and h.fecha_estimada is not None
+                            and h.fecha_estimada < moment,
+                        )
+                    )
+        tasks = [
+            t
+            for t in tasks
+            if t.estado == wanted
+            and (
+                (start is None and end is None)
+                or (
+                    t.fecha_prevista is not None
+                    and (start is None or t.fecha_prevista >= start)
+                    and (end is None or t.fecha_prevista < end)
+                )
+            )
+        ]
+        tasks.sort(key=lambda t: (t.fecha_prevista is None, t.fecha_prevista or moment))
+        return tasks

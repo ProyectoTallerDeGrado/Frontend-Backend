@@ -310,6 +310,16 @@ async def test_gestion_de_alertas_revisada_atendida_y_quien_la_atendio(
     denied = await client.patch(url, json={"estado": "revisada"}, headers=h["m"])
     assert denied.status_code == 403
     assert denied.json()["error"]["code"] == "alert_not_assigned"
+    assert (await client.get(url, headers=h["e"])).status_code == 403
+    no_detail = await client.get(url, headers=h["m"])
+    assert no_detail.status_code == 403
+    assert no_detail.json()["error"]["code"] == "alert_not_assigned"
+    detail = await client.get(url, headers=h["coord"])
+    assert detail.status_code == 200
+    assert detail.json()["alerta_id"] == alert["alerta_id"]
+    assert detail.json()["emprendimiento"] and detail.json()["titulo"]
+    missing = await client.get(f"{API}/alerts/999999", headers=h["coord"])
+    assert missing.status_code == 404
 
     await client.put(
         f"{API}/mentoring/mentors/{mentor.usuario_id}/enabled",

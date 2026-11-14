@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/error/result.dart';
 import '../../domain/entities/chat_message.dart';
+import '../../domain/entities/conversation_summary.dart';
 import '../../domain/repositories/assistant_repository.dart';
 import '../../domain/usecases/assistant_usecases.dart';
+import '../../../ventures/index.dart';
 
 /// Contrato del repositorio; la implementación se inyecta en `app/providers.dart`.
 final assistantRepositoryProvider = Provider<AssistantRepository>(
@@ -16,6 +18,21 @@ final assistantRepositoryProvider = Provider<AssistantRepository>(
 final getLatestConversationUseCaseProvider = Provider(
   (ref) => GetLatestConversationUseCase(ref.watch(assistantRepositoryProvider)),
 );
+
+final listConversationsUseCaseProvider = Provider(
+  (ref) => ListConversationsUseCase(ref.watch(assistantRepositoryProvider)),
+);
+
+final openConversationUseCaseProvider = Provider(
+  (ref) => OpenConversationUseCase(ref.watch(assistantRepositoryProvider)),
+);
+
+/// Conversaciones guardadas con el coach, de la más reciente a la más antigua.
+final conversationsProvider =
+    FutureProvider.autoDispose<List<ConversationSummary>>(
+      (ref) async =>
+          (await ref.watch(listConversationsUseCaseProvider)()).getOrThrow(),
+    );
 
 final askCoachUseCaseProvider = Provider(
   (ref) => AskCoachUseCase(ref.watch(assistantRepositoryProvider)),
@@ -62,9 +79,14 @@ class CoachChatController extends AsyncNotifier<ChatState> {
     state = AsyncData(
       current.copyWith(messages: [...current.messages, pending], sending: true),
     );
+    // Solo cuenta al abrir una conversación nueva: queda en el emprendimiento activo.
+    final ventureId = current.conversationId == null
+        ? await ref.read(currentVentureIdProvider.future)
+        : null;
     final result = await ref.read(askCoachUseCaseProvider)(
       text,
       conversationId: current.conversationId,
+      ventureId: ventureId,
     );
     switch (result) {
       case Ok(:final value):
@@ -77,6 +99,22 @@ class CoachChatController extends AsyncNotifier<ChatState> {
         return null;
       case Err(:final failure):
         state = AsyncData(current.copyWith(sending: false));
+        return failure;
+    }
+  }
+
+  /// Reabre la conversación [id]. `null` si salió bien o el [Failure] para mostrarlo.
+  Future<Failure?> open(int id) async {
+    final current = state.value;
+    if (current != null && current.sending) return null;
+    final result = await ref.read(openConversationUseCaseProvider)(id);
+    switch (result) {
+      case Ok(:final value):
+        state = AsyncData(
+          ChatState(conversationId: value.id, messages: value.messages),
+        );
+        return null;
+      case Err(:final failure):
         return failure;
     }
   }

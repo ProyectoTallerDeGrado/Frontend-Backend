@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/result.dart';
+import '../../../ventures/index.dart';
 import '../../domain/entities/gamification_profile.dart';
 import '../../domain/entities/journey.dart';
 import '../../domain/repositories/gamification_repository.dart';
@@ -28,10 +29,12 @@ final getGamificationProfileUseCaseProvider = Provider(
       GetGamificationProfileUseCase(ref.watch(gamificationRepositoryProvider)),
 );
 
-/// Camino de retos del emprendimiento del usuario.
-final journeyProvider = FutureProvider<Journey>(
-  (ref) async => (await ref.watch(getJourneyUseCaseProvider)()).getOrThrow(),
-);
+/// Camino de retos del emprendimiento activo (el elegido si tiene varios).
+final journeyProvider = FutureProvider<Journey>((ref) async {
+  final ventureId = await ref.watch(currentVentureIdProvider.future);
+  return (await ref.watch(getJourneyUseCaseProvider)(ventureId: ventureId))
+      .getOrThrow();
+});
 
 /// XP, nivel y avance hacia el siguiente nivel.
 final gamificationProfileProvider = FutureProvider<GamificationProfile>(

@@ -49,18 +49,66 @@ class CommitmentsSection extends ConsumerWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: commitments.when(
-            data: (list) => list.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    child: Text(
-                      'Aún no tienes compromisos. Tu mentor los asignará en cada sesión.',
-                      style: text.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: AppColors.muted,
+            data: (list) {
+              final pending = [
+                for (final c in list)
+                  if (!c.done) c,
+              ];
+              final done = [
+                for (final c in list)
+                  if (c.done) c,
+              ];
+              if (list.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  child: Text(
+                    'Aún no tienes compromisos. Tu mentor los asignará en cada sesión.',
+                    style: text.bodyMedium?.copyWith(
+                      fontSize: 14,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                );
+              }
+              return Column(
+                children: [
+                  if (pending.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      child: Text(
+                        'No tienes compromisos pendientes. ¡Buen trabajo!',
+                        style: text.bodyMedium?.copyWith(
+                          fontSize: 14,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                    )
+                  else
+                    for (final c in pending) _CommitmentTile(c),
+                  // Los cumplidos quedan aparte para no mezclarlos con lo pendiente.
+                  if (done.isNotEmpty)
+                    Material(
+                      color: Colors.transparent,
+                      child: Theme(
+                        data: Theme.of(context)
+                            .copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          title: Text(
+                            'Cumplidos (${done.length})',
+                            style: text.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                          children: [for (final c in done) _CommitmentTile(c)],
+                        ),
                       ),
                     ),
-                  )
-                : Column(children: [for (final c in list) _CommitmentTile(c)]),
+                ],
+              );
+            },
             loading: () => const Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator()),

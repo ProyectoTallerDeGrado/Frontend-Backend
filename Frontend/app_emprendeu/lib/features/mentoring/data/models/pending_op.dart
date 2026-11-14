@@ -20,7 +20,14 @@ sealed class PendingOp {
         final ref = json['ref'];
         final text = json['text'];
         if (ref is! String || text is! String) return null;
-        return PendingProgressOp(ref, text, at);
+        // Las colas guardadas antes de CU05 (varios emprendimientos) no lo traen.
+        final venture = json['venture'];
+        return PendingProgressOp(
+          ref,
+          text,
+          at,
+          ventureId: venture is int ? venture : null,
+        );
     }
     return null;
   }
@@ -42,16 +49,25 @@ class PendingCommitmentOp extends PendingOp {
 }
 
 class PendingProgressOp extends PendingOp {
-  const PendingProgressOp(this.clientRef, this.text, super.at);
+  const PendingProgressOp(
+    this.clientRef,
+    this.text,
+    super.at, {
+    this.ventureId,
+  });
 
   final String clientRef;
   final String text;
+
+  /// Emprendimiento del avance; `null` = el primero del usuario.
+  final int? ventureId;
 
   @override
   Map<String, dynamic> toJson() => {
     'type': 'progress',
     'ref': clientRef,
     'text': text,
+    'venture': ?ventureId,
     'at': at.toUtc().toIso8601String(),
   };
 }

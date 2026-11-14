@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:app_emprendeu/core/error/failure.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -69,6 +70,31 @@ void main() {
     expect(find.text('En curso · +175 XP'), findsOneWidget); // ahora el reto 4
     await tester.pump(const Duration(seconds: 3));
   });
+
+  testWidgets(
+    'un reto con evidencia obligatoria muestra requisitos y la envía',
+    (tester) async {
+      final repo = FakeGamificationRepository(
+        journey: sampleJourney(evidence: true),
+      );
+      await _goToJourney(tester, _world(gamification: repo));
+
+      await tester.tap(find.bySemanticsLabel(RegExp('Reto 3: .*en curso')));
+      await settle(tester);
+      expect(find.textContaining('Requisitos: Sube tu avance'), findsOneWidget);
+
+      await tester.enterText(
+        find.byType(TextField),
+        'Armé el prototipo y lo probé.',
+      );
+      await tester.tap(find.text('Marcar como cumplido'));
+      await settle(tester, frames: 12);
+
+      expect(repo.completeCalls, 1);
+      expect(repo.lastEvidenceText, 'Armé el prototipo y lo probé.');
+      await tester.pump(const Duration(seconds: 3));
+    },
+  );
 
   testWidgets('si el servidor rechaza cumplir el reto se muestra el motivo', (
     tester,

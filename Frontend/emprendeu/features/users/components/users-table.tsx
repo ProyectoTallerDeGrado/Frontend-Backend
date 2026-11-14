@@ -1,11 +1,12 @@
 import { formatWhen, initials } from "@/lib/format";
 
 import { AVATAR_COLORS } from "../roles";
-import type { User } from "../types";
+import type { Role, User } from "../types";
 import { UserRoleControl, UserStatusSwitch } from "./user-row-controls";
 
 type UsersTableProps = {
   users: User[];
+  roles: Role[];
   currentUserId: number;
   canToggle: boolean;
   canChangeRole: boolean;
@@ -13,7 +14,7 @@ type UsersTableProps = {
 
 const COLS = "grid-cols-[minmax(240px,2.2fr)_190px_220px_150px]";
 
-export function UsersTable({ users, currentUserId, canToggle, canChangeRole }: UsersTableProps) {
+export function UsersTable({ users, roles, currentUserId, canToggle, canChangeRole }: UsersTableProps) {
   return (
     <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-border bg-card">
       <div className="min-w-[900px]">
@@ -52,6 +53,7 @@ export function UsersTable({ users, currentUserId, canToggle, canChangeRole }: U
                   userId={u.usuario_id}
                   name={name}
                   role={u.rol}
+                  roles={roles}
                   editable={canChangeRole && u.usuario_id !== currentUserId}
                 />
               </div>

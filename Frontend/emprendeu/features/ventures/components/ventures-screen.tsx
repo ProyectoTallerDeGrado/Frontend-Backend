@@ -9,9 +9,19 @@ import { listEntrepreneurOptions } from "@/features/entrepreneurs";
 import { VENTURES_PAGE_SIZE, listStages, listVentures } from "../server/queries";
 import type { Stage } from "../types";
 import { AdvanceStageSheet } from "./advance-stage-sheet";
+import { roleLabel } from "../roles";
+import { TeamSheet } from "./team-sheet";
 import { EditVentureSheet, NewVentureSheet } from "./venture-form-sheet";
 
-type Props = { q: string; estado: string; page: number };
+import type { ReactNode } from "react";
+
+type Props = {
+  q: string;
+  estado: string;
+  page: number;
+  /** Columna extra que compone la página (p. ej. el asesor de cada emprendimiento, CU09). */
+  extraColumn?: { header: string; cell: (venture: { id: number; name: string }) => ReactNode };
+};
 
 /** Etapa activa inmediatamente siguiente a `current` (la misma regla que aplica el backend). */
 function nextStage(stages: Stage[], current: Stage | null): Stage | null {
@@ -30,7 +40,7 @@ function href(q: string, estado: string, page?: number): string {
 }
 
 /** CU12 · Emprendimientos con su etapa actual; coordinación los avanza a la etapa siguiente. */
-export async function VenturesScreen({ q, estado, page }: Props) {
+export async function VenturesScreen({ q, estado, page, extraColumn }: Props) {
   const user = await requireSession();
   if (!hasPermission(user, "emprendedores:consulta")) return <NoAccess section="Emprendimientos" />;
 
@@ -39,14 +49,14 @@ export async function VenturesScreen({ q, estado, page }: Props) {
   const canCreate = hasPermission(user, "emprendedores:registro");
   const canEdit = hasPermission(user, "emprendedores:modificacion");
   const canSeeProgress = hasPermission(user, "seguimiento:consulta");
-  const entrepreneurs = canCreate ? await listEntrepreneurOptions() : [];
-  const columns = 5 + (canChangeStage || canEdit ? 1 : 0);
+  const entrepreneurs = canCreate || canEdit ? await listEntrepreneurOptions() : [];
+  const columns = 6 + (extraColumn ? 1 : 0) + (canChangeStage || canEdit ? 1 : 0);
 
   return (
     <>
       <PageHeader
         title="Emprendimientos"
-        subtitle="Etapa de cada emprendimiento. La coordinación lo avanza a la etapa siguiente, sin saltos."
+        subtitle="Etapa y equipo de cada emprendimiento. La coordinación arma el equipo y avanza la etapa, sin saltos."
         actions={canCreate ? <NewVentureSheet entrepreneurs={entrepreneurs} /> : undefined}
       />
       <form method="get" action="/ventures" className="mb-5 flex flex-wrap items-end gap-3">
@@ -74,11 +84,13 @@ export async function VenturesScreen({ q, estado, page }: Props) {
       </form>
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-        <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[1320px] border-collapse text-left text-sm">
           <thead>
             <tr className="bg-[#f4f6fb] text-[12px] font-bold tracking-[.06em] text-muted-foreground uppercase">
               <th scope="col" className="px-5 py-3.5">Emprendimiento</th>
+              <th scope="col" className="px-5 py-3.5">Equipo</th>
               <th scope="col" className="px-5 py-3.5">Sector</th>
+              {extraColumn && <th scope="col" className="px-5 py-3.5">{extraColumn.header}</th>}
               <th scope="col" className="px-5 py-3.5">Etapa actual</th>
               <th scope="col" className="px-5 py-3.5">Estado</th>
               <th scope="col" className="px-5 py-3.5"><span className="sr-only">Consultas</span></th>
@@ -98,7 +110,24 @@ export async function VenturesScreen({ q, estado, page }: Props) {
               return (
                 <tr key={v.emprendimiento_id} className="border-t border-[#eef2fa] align-middle">
                   <td className="px-5 py-3.5 font-semibold">{v.nombre}</td>
+                  <td className="px-5 py-3.5">
+                    {v.integrantes.length === 0 ? (
+                      <span className="text-muted-foreground">Sin integrantes</span>
+                    ) : (
+                      <ul className="flex flex-col gap-0.5">
+                        {v.integrantes.map((m) => (
+                          <li key={m.emprendedor_id} className="text-[13px] leading-snug">
+                            <span className="font-semibold">{`${m.nombre ?? ""} ${m.apellido ?? ""}`.trim() || m.email}</span>
+                            <span className="text-muted-foreground"> · {roleLabel(m.rol_en_emprendimiento)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
                   <td className="px-5 py-3.5 text-muted-foreground">{v.sector ?? "—"}</td>
+                  {extraColumn && (
+                    <td className="px-5 py-3.5">{extraColumn.cell({ id: v.emprendimiento_id, name: v.nombre })}</td>
+                  )}
                   <td className="px-5 py-3.5">
                     <span className="rounded-full bg-blue-50 px-3 py-1 text-[13px] font-bold text-primary">
                       {v.etapa_actual?.nombre ?? "Sin etapa"}
@@ -115,6 +144,28 @@ export async function VenturesScreen({ q, estado, page }: Props) {
                           Progreso
                         </Link>
                       )}
+                      {canSeeProgress && (
+                        <Link
+                          href={`/ventures/${v.emprendimiento_id}/follow-up`}
+                          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+                        >
+                          Seguimiento
+                        </Link>
+                      )}
+                      {canSeeProgress && (
+                        <Link
+                          href={`/ventures/${v.emprendimiento_id}/stages`}
+                          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+                        >
+                          Etapas
+                        </Link>
+                      )}
+                      <Link
+                        href={`/ventures/${v.emprendimiento_id}/documents`}
+                        className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+                      >
+                        Documentos
+                      </Link>
                       <Link
                         href={`/ventures/${v.emprendimiento_id}/history`}
                         className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
@@ -126,6 +177,7 @@ export async function VenturesScreen({ q, estado, page }: Props) {
                   {(canChangeStage || canEdit) && (
                     <td className="px-5 py-3 text-right">
                       <div className="flex justify-end gap-2">
+                        {canEdit && <TeamSheet venture={v} entrepreneurs={entrepreneurs} />}
                         {canEdit && <EditVentureSheet venture={v} />}
                         {canChangeStage &&
                           (next ? (
