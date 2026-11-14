@@ -8,6 +8,21 @@ import '../repositories/assistant_repository.dart';
 /// Tope del mensaje (lo valida también el servidor).
 const maxCoachMessageLength = 2000;
 
+/// Valida una pregunta ya recortada; `null` si es válida. La usan el coach en
+/// línea y el del celular.
+FieldFailure? coachMessageError(String text) {
+  if (text.isEmpty) {
+    return const FieldFailure('message', 'Escribe tu pregunta.');
+  }
+  if (text.length > maxCoachMessageLength) {
+    return const FieldFailure(
+      'message',
+      'Tu mensaje es muy largo (máximo $maxCoachMessageLength caracteres).',
+    );
+  }
+  return null;
+}
+
 class GetLatestConversationUseCase {
   const GetLatestConversationUseCase(this._repository);
   final AssistantRepository _repository;
@@ -44,17 +59,8 @@ class AskCoachUseCase {
     int? ventureId,
   }) async {
     final text = message.trim();
-    if (text.isEmpty) {
-      return const Result.err(FieldFailure('message', 'Escribe tu pregunta.'));
-    }
-    if (text.length > maxCoachMessageLength) {
-      return const Result.err(
-        FieldFailure(
-          'message',
-          'Tu mensaje es muy largo (máximo $maxCoachMessageLength caracteres).',
-        ),
-      );
-    }
+    final invalid = coachMessageError(text);
+    if (invalid != null) return Result.err(invalid);
     return _repository.ask(
       text,
       conversationId: conversationId,

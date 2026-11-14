@@ -1,7 +1,5 @@
-import Link from "next/link";
-
 import { NoAccess } from "@/components/layout/no-access";
-import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/layout/section-header";
 import { hasPermission, requireSession } from "@/features/auth";
 import { formatDateTime } from "@/lib/format";
 
@@ -9,10 +7,10 @@ import { listVentureCommitments, listVentureRecommendations } from "../server/qu
 import { CompleteCommitmentButton } from "./complete-commitment-button";
 import { ProgressSummaryCard } from "./progress-summary-card";
 
-type Props = { ventureId: number; ventureName: string };
+type Props = { ventureId: number };
 
 /** CU17 y CU18 · Recomendaciones y compromisos del emprendimiento, con su avance. */
-export async function FollowUpScreen({ ventureId, ventureName }: Props) {
+export async function FollowUpScreen({ ventureId }: Props) {
   const user = await requireSession();
   if (!hasPermission(user, "seguimiento:consulta")) return <NoAccess section="Seguimiento" />;
 
@@ -25,13 +23,10 @@ export async function FollowUpScreen({ ventureId, ventureName }: Props) {
 
   return (
     <>
-      <PageHeader
-        title={`Seguimiento · ${ventureName}`}
+      <SectionHeader
+        title="Seguimiento"
         subtitle="Recomendaciones del acompañamiento y compromisos con su responsable y fecha prevista."
       />
-      <Link href="/ventures" className="mb-5 inline-flex min-h-11 items-center text-sm font-semibold text-primary">
-        ← Volver a emprendimientos
-      </Link>
       <ProgressSummaryCard ventureId={ventureId} />
 
       <section aria-labelledby="commitments-title" className="mb-8">
@@ -39,10 +34,10 @@ export async function FollowUpScreen({ ventureId, ventureName }: Props) {
         {commitments.length === 0 ? (
           <p className="rounded-2xl border border-border bg-card p-6 text-center text-muted-foreground">Todavía no hay compromisos.</p>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+          <div className="relative overflow-x-auto rounded-2xl border border-border bg-card">
             <table className="w-full min-w-[760px] border-collapse text-left text-sm">
               <thead>
-                <tr className="bg-[#f4f6fb] text-[12px] font-bold tracking-[.06em] text-muted-foreground uppercase">
+                <tr className="border-b border-border bg-surface-head text-[13px] font-semibold text-muted-foreground">
                   <th scope="col" className="px-5 py-3.5">Compromiso</th>
                   <th scope="col" className="px-5 py-3.5">Responsable</th>
                   <th scope="col" className="px-5 py-3.5">Fecha prevista</th>
@@ -55,13 +50,13 @@ export async function FollowUpScreen({ ventureId, ventureName }: Props) {
                   const done = c.estado === "cumplido";
                   const overdue = c.vencido;
                   return (
-                    <tr key={c.compromiso_id} className="border-t border-[#eef2fa] align-top">
+                    <tr key={c.compromiso_id} className="border-t border-muted transition-colors hover:bg-row-hover align-top">
                       <td className="max-w-[360px] px-5 py-3.5 font-semibold">{c.descripcion ?? "—"}</td>
                       <td className="px-5 py-3.5 text-muted-foreground">{c.responsable ?? "—"}</td>
                       <td className="px-5 py-3.5 text-muted-foreground">{c.fecha_limite ? formatDateTime(c.fecha_limite) : "—"}</td>
                       <td className="px-5 py-3.5">
                         <span
-                          className={`rounded-full px-3 py-1 text-[13px] font-bold ${done ? "bg-success-tint text-success-foreground" : overdue ? "bg-[#ffe3e8] text-[#8f0f25]" : "bg-blue-50 text-primary"}`}
+                          className={`rounded-full px-3 py-1 text-[13px] font-bold ${done ? "bg-success-tint text-success-foreground" : overdue ? "bg-danger-tint text-danger-foreground" : "bg-blue-50 text-primary"}`}
                         >
                           {done ? "Cumplido" : overdue ? "Vencido" : "Pendiente"}
                         </span>

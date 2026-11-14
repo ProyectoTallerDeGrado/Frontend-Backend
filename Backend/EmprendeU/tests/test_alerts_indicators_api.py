@@ -360,3 +360,61 @@ async def test_gestion_de_alertas_revisada_atendida_y_quien_la_atendio(
     ).json()
     managed = [e for e in audit["items"] if e["accion"] == "negocio.alerta"]
     assert len(managed) == 2
+
+
+async def test_salud_ordena_por_urgencia_con_motivos_y_alcance_del_asesor(
+    client: AsyncClient, make_user: MakeUser, login, session: AsyncSession
+) -> None:
+    h, vid, _, mentor, emp = await _world(client, make_user, login)
+    other = (
+        await client.post(f"{API}/ventures", json={"nombre": "Al dia"}, headers=h["e"])
+    ).json()["emprendimiento_id"]
+    now = datetime.now(UTC)
+    # «Sabores»: 50 días sin actividad y un compromiso vencido
+    await session.execute(
+        text(
+            "UPDATE cieu.emprendimiento SET fecha_creacion = now() - interval '50 days' "
+            "WHERE emprendimientoid = :v"
+        ),
+        {"v": vid},
+    )
+    session.add(
+        Compromiso(
+            emprendimiento_id=vid,
+            registrado_por_usuario_id=mentor.usuario_id,
+            responsable_usuario_id=emp.usuario_id,
+            descripcion="Subir fotos",
+            estado="pendiente",
+            fecha_limite=now - timedelta(days=3),
+        )
+    )
+    await session.flush()
+
+    r = await client.get(f"{API}/indicators/health", headers=h["coord"])
+    assert r.status_code == 200, r.text
+    rows = r.json()["emprendimientos"]
+    assert [x["nombre"] for x in rows] == ["Sabores", "Al dia"]  # el urgente primero
+    worst, fine = rows
+    assert worst["compromisos_vencidos"] == 1 and worst["dias_sin_actividad"] == 50
+    assert "1 compromiso vencido" in worst["motivos"]
+    assert "50 días sin actividad" in worst["motivos"]
+    assert worst["puntaje"] < fine["puntaje"] == 100 and fine["nivel"] == "verde"
+
+    # el asesor solo ve lo asignado; el emprendedor no entra
+    assert (await client.get(f"{API}/indicators/health", headers=h["m"])).json()[
+        "emprendimientos"
+    ] == []
+    await client.put(
+        f"{API}/mentoring/mentors/{mentor.usuario_id}/enabled",
+        json={"habilitado": True},
+        headers=h["coord"],
+    )
+    await client.post(
+        f"{API}/mentoring/assignments",
+        json={"usuario_id": mentor.usuario_id, "emprendimiento_id": other},
+        headers=h["coord"],
+    )
+    mine = (await client.get(f"{API}/indicators/health", headers=h["m"])).json()
+    assert [x["nombre"] for x in mine["emprendimientos"]] == ["Al dia"]
+    denied = await client.get(f"{API}/indicators/health", headers=h["e"])
+    assert denied.status_code == 403

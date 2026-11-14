@@ -52,7 +52,7 @@ export function LoginForm() {
         </Button>
         <Link
           href="/register"
-          className="inline-flex min-h-11 items-center self-center text-[15px] font-semibold text-primary hover:text-[#123aa8]"
+          className="inline-flex min-h-11 items-center self-center text-[15px] font-semibold text-primary hover:text-primary-hover"
         >
           Solicitar una cuenta
         </Link>

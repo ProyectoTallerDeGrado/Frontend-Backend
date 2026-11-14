@@ -14,9 +14,9 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "CIE-U · Administración",
+  title: "CIE-U",
   description:
-    "Panel de administración del Centro de Innovación y Emprendimiento Universitario.",
+    "Centro de Innovación y Emprendimiento Universitario (FCEE · UAGRM): programa de acompañamiento a emprendimientos estudiantiles.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

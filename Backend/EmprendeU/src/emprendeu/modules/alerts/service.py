@@ -102,6 +102,26 @@ class AlertService:
         """Alertas sin resolver (abiertas o revisadas) de cada emprendimiento."""
         return await self._repo.open_by_venture(ids)
 
+    async def last_activity_by_venture(
+        self, ids: list[int]
+    ) -> dict[int, datetime | None]:
+        """Última actividad relevante (mentorías, avances, retos) de cada
+        emprendimiento; sin ninguna, su fecha de creación. Es la misma regla que
+        la alerta de inactividad, para que el puntaje de salud no la contradiga."""
+        last: dict[int, datetime] = {}
+        for source in (
+            await self._mentoring.last_activity_by_venture(),
+            await self._gamification.last_activity_by_venture(),
+        ):
+            for vid, when in source.items():
+                if isinstance(when, datetime) and (vid not in last or when > last[vid]):
+                    last[vid] = when
+        return {vid: last.get(vid) or await self._created_at(vid) for vid in ids}
+
+    async def inactivity_days(self) -> int:
+        """Días sin actividad configurados para la alerta (`dias_inactividad`)."""
+        return (await self._settings()).inactividad_dias
+
     async def report_alerts(
         self, ids: list[int], desde: date | None, hasta: date | None
     ) -> list[s.AlertOut]:
@@ -334,17 +354,11 @@ class AlertService:
         moment = now()
 
         # 1) inactividad
-        last: dict[int, datetime] = {}
-        for source in (
-            await self._mentoring.last_activity_by_venture(),
-            await self._gamification.last_activity_by_venture(),
-        ):
-            for vid, when in source.items():
-                if isinstance(when, datetime) and (vid not in last or when > last[vid]):
-                    last[vid] = when
         limit = timedelta(days=settings.inactividad_dias)
-        for vid in await self._ventures.active_venture_ids():
-            reference = last.get(vid) or await self._created_at(vid)
+        venture_ids = await self._ventures.active_venture_ids()
+        last = await self.last_activity_by_venture(venture_ids)
+        for vid in venture_ids:
+            reference = last.get(vid)
             if reference is None or moment - reference <= limit:
                 continue
             idle = (moment - reference).days

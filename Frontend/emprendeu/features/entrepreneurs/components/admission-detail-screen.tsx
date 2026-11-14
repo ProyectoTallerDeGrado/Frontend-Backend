@@ -17,16 +17,17 @@ export async function AdmissionDetailScreen({ id }: { id: number }) {
   const a = await getAdmission(id);
   if (!a) notFound();
   const canDecide = hasPermission(user, "emprendedores:registro");
-  const row = "flex flex-col gap-1 border-t border-[#eef2fa] py-3.5 sm:flex-row sm:gap-6";
-  const label = "text-[13px] font-bold tracking-[.06em] text-muted-foreground uppercase sm:w-44 sm:shrink-0";
+  const row = "flex flex-col gap-1 border-t border-muted py-3.5 sm:flex-row sm:gap-6";
+  const label = "text-[13px] font-semibold text-muted-foreground sm:w-44 sm:shrink-0";
   const applicant = `${a.nombre} ${a.apellido}`;
 
   return (
     <>
-      <PageHeader title={applicant} subtitle={`Postulación con el emprendimiento «${a.nombre_emprendimiento}».`} />
-      <Link href="/admissions" className="mb-5 inline-flex min-h-11 items-center text-sm font-semibold text-primary">
-        ← Volver a admisiones
-      </Link>
+      <PageHeader
+        title={applicant}
+        back={{ href: "/admissions", label: "Admisiones" }}
+        subtitle={`Postulación con el emprendimiento «${a.nombre_emprendimiento}».`}
+      />
       <div className="flex flex-wrap items-start gap-6">
         <section aria-label="Datos de la postulación" className="min-w-[300px] flex-[1_1_480px] rounded-2xl border border-border bg-card px-6 py-2">
           <div className={`${row} border-t-0`}><div className={label}>Correo</div><div>{a.email}</div></div>

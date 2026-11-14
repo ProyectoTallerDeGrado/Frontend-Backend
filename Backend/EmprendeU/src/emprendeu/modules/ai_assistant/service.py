@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import math
+import re
+import unicodedata
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 
@@ -9,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.config import get_settings
 from emprendeu.core.errors import Forbidden, PayloadTooLarge
+from emprendeu.core.pagination import Page, PageParams
 from emprendeu.modules.ai_assistant import schemas as s
 from emprendeu.modules.ai_assistant.chunking import chunk_text
 from emprendeu.modules.ai_assistant.exceptions import (
@@ -50,8 +54,52 @@ SYSTEM_PROMPT = (
 )
 
 
+# Brechas de la base: ventana por defecto, topes y similitud para unir preguntas.
+GAPS_DEFAULT_DAYS = 90
+GAPS_MAX_QUESTIONS = 500
+GAPS_MAX_TOPICS = 50
+GAPS_SIMILARITY = 0.8
+
+
 def now() -> datetime:
     return datetime.now(UTC)
+
+
+def _cosine(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(y * y for y in b))
+    return dot / (na * nb) if na and nb else 0.0
+
+
+def _group_by_similarity(
+    vectors: list[list[float]], threshold: float
+) -> list[list[int]]:
+    """Agrupación voraz: cada vector se une al primer grupo cuyo representante
+    se le parezca al menos `threshold`; si ninguno, abre uno nuevo."""
+    groups: list[list[int]] = []
+    for i, vector in enumerate(vectors):
+        for group in groups:
+            if _cosine(vectors[group[0]], vector) >= threshold:
+                group.append(i)
+                break
+        else:
+            groups.append([i])
+    return groups
+
+
+def _normalized(text: str) -> str:
+    plain = unicodedata.normalize("NFKD", text.lower())
+    plain = "".join(c for c in plain if not unicodedata.combining(c))
+    return " ".join(re.sub(r"[^\w\s]", " ", plain).split())
+
+
+def _group_by_text(texts: list[str]) -> list[list[int]]:
+    """Sin modelo de embeddings: une solo las preguntas iguales (sin tildes ni signos)."""
+    groups: dict[str, list[int]] = {}
+    for i, text in enumerate(texts):
+        groups.setdefault(_normalized(text), []).append(i)
+    return list(groups.values())
 
 
 def _week_key(moment: datetime) -> str:
@@ -73,6 +121,13 @@ class AssistantService:
         return self._llm_or_none
 
     # --- API publica para otros modulos --------------------------------------
+
+    async def sentiment_points(
+        self, since: datetime
+    ) -> list[tuple[int, datetime, float]]:
+        """`(emprendedor_id, fecha, indice)` desde `since`. Solo el índice anónimo
+        (RF07): ni texto ni mensaje. Para indicadores agregados como la salud."""
+        return await self._repo.sentiment_since(since)
 
     async def sentiment_drops(self, drop_pct: int, periods: int) -> list[int]:
         """Emprendedores con `periods` semanas seguidas de caida >= `drop_pct`.
@@ -231,6 +286,101 @@ class AssistantService:
         )
         return self._knowledge_out(doc, count.get(doc_id, 0))
 
+    # --- indice descargable (coach local del movil) ---------------------------
+
+    async def knowledge_index(self) -> s.KnowledgeIndex:
+        return s.KnowledgeIndex(
+            modelo_embeddings=get_settings().ollama_embed_model,
+            dimension=EMBEDDING_DIM,
+            documentos=[
+                s.IndexDocument(
+                    documento_conocimiento_id=d.documento_conocimiento_id,
+                    titulo=d.titulo,
+                    fuente=d.fuente,
+                    fecha_carga=d.fecha_carga,
+                    total_fragmentos=n,
+                )
+                for d, n in await self._repo.active_documents()
+            ],
+        )
+
+    async def knowledge_fragments(
+        self, doc_id: int, params: PageParams, with_embedding: bool = True
+    ) -> Page[s.FragmentOut]:
+        """Fragmentos (con su vector si `with_embedding`); solo de documentos
+        `activo` (si no, 404)."""
+        doc = await self._repo.get_document(doc_id)
+        if doc is None or doc.estado != ACTIVE:
+            raise KnowledgeNotFound
+        rows, total = await self._repo.fragments_page(
+            doc_id, params.offset, params.page_size
+        )
+        return Page[s.FragmentOut].build(
+            [
+                s.FragmentOut(
+                    numero_fragmento=f.numero_fragmento,
+                    contenido=f.contenido,
+                    # pgvector devuelve un ndarray: se pasa a floats de Python
+                    embedding=[float(x) for x in f.embedding]
+                    if with_embedding
+                    else None,
+                )
+                for f in rows
+            ],
+            params,
+            total,
+        )
+
+    # --- brechas de la base (preguntas sin respuesta) --------------------------
+
+    async def knowledge_gaps(
+        self, desde: datetime | None = None, hasta: datetime | None = None
+    ) -> s.KnowledgeGaps:
+        """Preguntas que el coach no pudo responder, agrupadas por tema.
+
+        Sirve para saber qué documentos faltan. **Anónimo:** solo el texto de la
+        pregunta y su fecha, sin emprendedor ni conversación. Si el modelo de
+        embeddings responde, agrupa por similitud; si no, por texto igual.
+        """
+        until = hasta or now()
+        since = desde or until - timedelta(days=GAPS_DEFAULT_DAYS)
+        questions = await self._repo.unanswered_questions(
+            since, until, GAPS_MAX_QUESTIONS
+        )
+        if not questions:
+            return s.KnowledgeGaps(
+                desde=since, hasta=until, por_similitud=False, temas=[]
+            )
+        try:
+            vectors = self._checked(await self._llm.embed([q for q, _ in questions]))
+            groups = _group_by_similarity(vectors, GAPS_SIMILARITY)
+            by_similarity = True
+        except AIUnavailable:
+            groups = _group_by_text([q for q, _ in questions])
+            by_similarity = False
+        topics: list[s.KnowledgeGap] = []
+        for members in groups:
+            # Lo más reciente primero: la pregunta representativa es la última.
+            items = sorted(
+                (questions[i] for i in members), key=lambda q: q[1], reverse=True
+            )
+            texts = list(dict.fromkeys(text for text, _ in items))
+            topics.append(
+                s.KnowledgeGap(
+                    tema=texts[0],
+                    veces=len(items),
+                    ultima_fecha=items[0][1],
+                    ejemplos=texts[1:4],
+                )
+            )
+        topics.sort(key=lambda t: (t.veces, t.ultima_fecha), reverse=True)
+        return s.KnowledgeGaps(
+            desde=since,
+            hasta=until,
+            por_similitud=by_similarity,
+            temas=topics[:GAPS_MAX_TOPICS],
+        )
+
     async def status(self) -> s.AIStatus:
         return s.AIStatus(
             ollama_disponible=await self._llm.ping(),
@@ -250,15 +400,16 @@ class AssistantService:
                 )
         return vectors
 
-    async def _retrieve(self, question: str) -> list[tuple[str, str]]:
+    async def _retrieve(self, question: str) -> list[tuple[str, int, str]]:
+        """Fragmentos relevantes: `(texto, documento_id, titulo)`."""
         settings = get_settings()
         if await self._repo.count_active_documents() == 0:
             return []
         (query,) = self._checked(await self._llm.embed([question]))
         nearest = await self._repo.nearest_fragments(query, settings.ai_top_k)
         return [
-            (text, title)
-            for text, title, sim in nearest
+            (text, doc_id, title)
+            for text, doc_id, title, sim in nearest
             if sim >= settings.ai_min_similarity
         ]
 
@@ -317,13 +468,17 @@ class AssistantService:
         try:
             sources = await self._retrieve(body.mensaje)
             if sources:
-                context = "\n\n".join(f"[{title}] {text}" for text, title in sources)
+                context = "\n\n".join(f"[{title}] {text}" for text, _, title in sources)
                 answer = await self._llm.chat(
                     SYSTEM_PROMPT.format(context=context), body.mensaje, history
                 )
-                titles = list(dict.fromkeys(title for _, title in sources))
+                # un documento por entrada, en orden de relevancia
+                cited = list(
+                    dict.fromkeys((doc_id, title) for _, doc_id, title in sources)
+                )
             else:
-                answer, titles = FALLBACK, []
+                answer, cited = FALLBACK, []
+            titles = [title for _, title in cited]
         except AIUnavailable:
             # Nada a medias: ni la conversacion nueva, ni la pregunta, ni el sentimiento.
             await self._repo.rollback()
@@ -333,6 +488,7 @@ class AssistantService:
             tipo="asistente",
             contenido=answer,
             fecha=now(),
+            con_fuente=bool(titles),
         )
         await self._repo.add(reply)
         conversation.fecha_fin = now()
@@ -344,6 +500,10 @@ class AssistantService:
             respuesta=self._message_out(reply),
             fuente=bool(titles),
             fuentes=titles,
+            fuentes_detalle=[
+                s.SourceOut(documento_conocimiento_id=doc_id, titulo=title)
+                for doc_id, title in cited
+            ],
             derivar_mentor=not titles or any(k in lowered for k in HANDOFF_KEYWORDS),
         )
 

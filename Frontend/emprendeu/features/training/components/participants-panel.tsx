@@ -15,10 +15,10 @@ function Row({ trainingId, participant, name, canEdit }: { trainingId: number; p
   const { pending, run } = useRunner();
   const a = participant.asistencia;
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#eef2fa] py-3 first:border-t-0">
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-muted py-3 first:border-t-0">
       <span className="min-w-0 flex-1 text-[15px] font-semibold">{name}</span>
       <span
-        className={`rounded-full px-3 py-1 text-[13px] font-bold ${a === true ? "bg-success-tint text-success-foreground" : a === false ? "bg-[#ffe3e8] text-[#8f0f25]" : "bg-muted text-muted-foreground"}`}
+        className={`rounded-full px-3 py-1 text-[13px] font-bold ${a === true ? "bg-success-tint text-success-foreground" : a === false ? "bg-danger-tint text-danger-foreground" : "bg-muted text-muted-foreground"}`}
       >
         {a === true ? "Asistió" : a === false ? "No asistió" : "Sin registrar"}
       </span>

@@ -1,3 +1,4 @@
+import { CountUp } from "@/components/data/count-up";
 import { NoAccess } from "@/components/layout/no-access";
 import { PageHeader } from "@/components/layout/page-header";
 import { hasPermission, requireSession } from "@/features/auth";
@@ -7,8 +8,7 @@ import { getDashboard } from "../server/queries";
 import type { PeriodFilters } from "../types";
 import { PeriodFiltersForm } from "./period-filters";
 
-const card =
-  "rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-[0_14px_30px_-18px_rgba(10,26,68,.35)]";
+const card = "rounded-2xl border border-border bg-card p-6";
 
 const TYPE_LABEL: Record<string, string> = {
   inactividad: "Inactividad",
@@ -19,9 +19,9 @@ const TYPE_LABEL: Record<string, string> = {
 function Kpi({ label, value, hint, tone }: { label: string; value: number; hint?: string; tone?: "alert" }) {
   return (
     <div className={card}>
-      <div className="text-[13px] font-bold tracking-[.06em] text-muted-foreground uppercase">{label}</div>
-      <div className={`mt-2 font-heading text-[38px] leading-none font-bold tracking-[-.02em] ${tone === "alert" && value > 0 ? "text-[#8f0f25]" : "text-primary"}`}>
-        {value}
+      <div className="text-[13px] font-semibold text-muted-foreground">{label}</div>
+      <div className={`mt-2 font-heading text-[38px] leading-none font-bold tracking-[-.02em] ${tone === "alert" && value > 0 ? "text-danger-foreground" : "text-primary"}`}>
+        <CountUp value={value} />
       </div>
       {hint && <div className="mt-2 text-[13px] text-muted-foreground">{hint}</div>}
     </div>
@@ -45,7 +45,7 @@ export async function DashboardScreen({ filters }: { filters: PeriodFilters }) {
   return (
     <>
       <PageHeader
-        title="Dashboard ejecutivo"
+        title="Indicadores del programa"
         subtitle="Cómo avanzan los emprendimientos activos: etapas, mentorías, compromisos, alertas e indicadores."
       />
       <PeriodFiltersForm basePath="/dashboard" filters={filters} stages={stages} />
@@ -76,7 +76,7 @@ export async function DashboardScreen({ filters }: { filters: PeriodFilters }) {
                   <span className={`font-semibold ${s.etapa_id === filters.etapa ? "text-primary" : ""}`}>{s.etapa}</span>
                   <span className="font-bold">{s.total}</span>
                 </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-[#eef2fa]" aria-hidden="true">
+                <div className="h-2.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
                   <div className="h-full rounded-full bg-primary" style={{ width: `${(s.total / biggest) * 100}%` }} />
                 </div>
               </li>
@@ -91,7 +91,7 @@ export async function DashboardScreen({ filters }: { filters: PeriodFilters }) {
           ) : (
             <ul>
               {Object.entries(d.alertas.por_tipo).map(([tipo, total]) => (
-                <li key={tipo} className="flex justify-between gap-3 border-t border-[#eef2fa] py-2.5 text-sm first:border-t-0">
+                <li key={tipo} className="flex justify-between gap-3 border-t border-muted py-2.5 text-sm first:border-t-0">
                   <span>{TYPE_LABEL[tipo] ?? tipo}</span>
                   <span className="font-bold">{total}</span>
                 </li>
@@ -109,10 +109,10 @@ export async function DashboardScreen({ filters }: { filters: PeriodFilters }) {
         {d.indicadores.length === 0 ? (
           <p className="text-sm text-muted-foreground">No se registraron valores de indicadores en este periodo.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[420px] border-collapse text-left text-sm">
               <thead>
-                <tr className="text-[12px] font-bold tracking-[.06em] text-muted-foreground uppercase">
+                <tr className="text-[13px] font-semibold text-muted-foreground">
                   <th scope="col" className="py-2.5 pr-4">Indicador</th>
                   <th scope="col" className="px-4 py-2.5">Registros</th>
                   <th scope="col" className="px-4 py-2.5">Promedio</th>
@@ -120,7 +120,7 @@ export async function DashboardScreen({ filters }: { filters: PeriodFilters }) {
               </thead>
               <tbody>
                 {d.indicadores.map((i) => (
-                  <tr key={i.tipo_indicador_id} className="border-t border-[#eef2fa]">
+                  <tr key={i.tipo_indicador_id} className="border-t border-muted transition-colors hover:bg-row-hover">
                     <td className="py-3 pr-4 font-semibold">{i.nombre}</td>
                     <td className="px-4 py-3">{i.registros}</td>
                     <td className="px-4 py-3">

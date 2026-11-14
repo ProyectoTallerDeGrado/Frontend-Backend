@@ -48,6 +48,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...documentsRoutes,
       ...trainingRoutes,
       ...gamificationDetailRoutes,
+      ...assistantDetailRoutes,
       // Pantallas con sesión: barra inferior Inicio · Camino · Mentorías · Perfil.
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),

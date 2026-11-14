@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { DashboardScreen } from "@/features/indicators";
 
-export const metadata: Metadata = { title: "Dashboard · CIE-U" };
+export const metadata: Metadata = { title: "Indicadores · CIE-U" };
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 

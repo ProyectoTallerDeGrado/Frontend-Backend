@@ -54,3 +54,24 @@ export const reportSchema = z.object({
   hasta: z.string().nullable(),
   etapa_id: z.number().nullable(),
 });
+
+/** Puntaje de salud de un emprendimiento (`GET /indicators/health`). */
+export const ventureHealthSchema = z.object({
+  emprendimiento_id: z.number(),
+  nombre: z.string(),
+  etapa: z.string().nullable(),
+  puntaje: z.number(),
+  nivel: z.enum(["verde", "ambar", "rojo"]),
+  motivos: z.array(z.string()),
+  alertas_abiertas: z.number(),
+  compromisos_vencidos: z.number(),
+  dias_sin_actividad: z.number().nullable(),
+  dias_en_etapa: z.number().nullable(),
+  sentimiento: z.number().nullable(),
+});
+
+export const healthReportSchema = z.object({
+  generado_en: z.string(),
+  /** Del menor al mayor puntaje: los más urgentes primero. */
+  emprendimientos: z.array(ventureHealthSchema),
+});

@@ -64,7 +64,7 @@ export function useRunner(onOk?: () => void) {
 export function FormError({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p role="alert" className="rounded-xl bg-[#ffe3e8] px-4 py-3 text-sm font-semibold text-[#8f0f25]">
+    <p role="alert" className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-semibold text-danger-foreground">
       {message}
     </p>
   );

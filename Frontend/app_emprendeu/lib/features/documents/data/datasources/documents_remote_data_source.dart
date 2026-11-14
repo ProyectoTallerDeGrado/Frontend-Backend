@@ -26,6 +26,16 @@ class DocumentsRemoteDataSource {
     return EvidenceDto.fromJson(response.data!);
   }
 
+  /// Guarda el archivo en [savePath] (`GET /documents/{id}/download`).
+  Future<void> download(int documentId, String savePath) async {
+    await _dio.download(
+      '/documents/$documentId/download',
+      savePath,
+      // Un archivo de hasta 10 MB por datos móviles puede tardar más que una consulta.
+      options: Options(receiveTimeout: const Duration(minutes: 2)),
+    );
+  }
+
   Future<void> delete(int documentId) async {
     await _dio.delete<void>('/documents/$documentId');
   }

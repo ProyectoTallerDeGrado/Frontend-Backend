@@ -6,7 +6,7 @@ import { getSession, LoginView } from "@/features/auth";
 export const metadata: Metadata = { title: "Ingreso · CIE-U" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  if (await getSession()) redirect("/");
+  if (await getSession()) redirect("/panel");
   const { registrado } = await searchParams;
   return <LoginView registered={registrado === "1"} />;
 }

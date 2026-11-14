@@ -63,7 +63,7 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
     <div className="flex flex-wrap items-start gap-6">
       <section className="flex min-w-[240px] flex-[0_1_300px] flex-col gap-2.5" aria-label="Roles">
         {canEdit && <NewRoleDrawer roles={roles} />}
-        {roles.map((r, i) => {
+        {roles.map((r) => {
           const on = r.rol_id === selected;
           return (
             <button
@@ -71,8 +71,7 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
               type="button"
               aria-pressed={on}
               onClick={() => setSelected(r.rol_id)}
-              style={{ animationDelay: `${i * 60}ms` }}
-              className={`animate-[fade-up_.5s_ease_both] rounded-2xl border-2 px-[18px] py-4 text-left outline-none transition-shadow hover:shadow-[0_14px_30px_-18px_rgba(10,26,68,.35)] focus-visible:ring-3 focus-visible:ring-primary/30 ${on ? "border-primary bg-blue-50" : "border-border bg-card"}`}
+              className={`rounded-2xl border-2 px-[18px] py-4 text-left outline-none focus-visible:ring-3 focus-visible:ring-primary/30 ${on ? "border-primary bg-blue-50" : "border-border bg-card"}`}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-heading text-base font-semibold">{roleLabel(r.nombre)}</span>
@@ -106,10 +105,10 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
             </Button>
           )}
         </div>
-        <div className="overflow-x-auto overflow-y-hidden">
+        <div className="relative overflow-x-auto overflow-y-hidden">
           <table className="w-full min-w-[640px] border-collapse">
             <thead>
-              <tr className="border-b border-border bg-[#f8fafe] text-[13px] font-bold tracking-[.03em] text-muted-foreground uppercase">
+              <tr className="border-b border-border bg-surface-head text-[13px] font-semibold text-muted-foreground">
                 <th scope="col" className="px-6 py-3 text-left">
                   Módulo
                 </th>
@@ -122,7 +121,7 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
             </thead>
             <tbody>
               {PERMISSION_MODULES.map((m) => (
-                <tr key={m.key} className="border-b border-[#eef2fa] transition-colors hover:bg-[#f4f7ff]">
+                <tr key={m.key} className="border-b border-muted transition-colors hover:bg-row-hover">
                   <th scope="row" className="px-6 py-1 text-left text-[15px] font-semibold">
                     {m.label}
                   </th>
@@ -133,7 +132,7 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
                         onCheckedChange={() => toggle(m.key, a.key)}
                         disabled={!canEdit}
                         aria-label={`${a.label} en ${m.label}`}
-                        className="size-6 rounded-[7px] border-2 border-[#9aa6c4] bg-white data-checked:border-primary data-checked:bg-primary after:-inset-2.5 [&_svg]:size-3.5"
+                        className="size-6 rounded-[7px] border-2 border-switch-off bg-white data-checked:border-primary data-checked:bg-primary after:-inset-2.5 [&_svg]:size-3.5"
                       />
                     </td>
                   ))}
@@ -143,8 +142,8 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
           </table>
         </div>
         {dirty && (
-          <div className="flex animate-[fade-up_.35s_ease_both] flex-wrap items-center justify-between gap-3 border-t border-[#f0dda0] bg-[#fff6dc] px-6 py-4">
-            <span className="text-sm font-semibold text-[#6b4700]">Hay cambios sin guardar en {roleName}.</span>
+          <div className="flex animate-[slide-up_.35s_cubic-bezier(.2,.8,.2,1)_both] flex-wrap items-center justify-between gap-3 border-t border-warning-border bg-warning-soft px-6 py-4">
+            <span className="text-sm font-semibold text-warning-foreground">Hay cambios sin guardar en {roleName}.</span>
             <div className="flex gap-2.5">
               <Button
                 type="button"

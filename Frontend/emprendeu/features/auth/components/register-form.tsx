@@ -68,7 +68,7 @@ export function RegisterForm() {
         </Button>
         <Link
           href="/login"
-          className="inline-flex min-h-11 items-center self-center text-[15px] font-semibold text-primary hover:text-[#123aa8]"
+          className="inline-flex min-h-11 items-center self-center text-[15px] font-semibold text-primary hover:text-primary-hover"
         >
           ¿Ya tienes cuenta? Inicia sesión
         </Link>

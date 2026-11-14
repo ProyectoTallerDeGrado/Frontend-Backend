@@ -1,6 +1,13 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- La app consume la API del CIE-U por red. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- open_filex los declara, pero la app solo abre archivos de su almacenamiento
+         privado (con su FileProvider): no hace falta leer fotos, videos ni audio. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove"/>
     <application
         android:label="app_emprendeu"
         android:name="${applicationName}"

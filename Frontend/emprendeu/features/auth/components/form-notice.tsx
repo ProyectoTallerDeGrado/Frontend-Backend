@@ -15,7 +15,7 @@ export function ErrorNotice({ message }: { message: string }) {
   return (
     <p
       role="alert"
-      className="flex items-start gap-2.5 rounded-xl bg-[#ffe3e8] px-4 py-3 text-sm font-semibold text-[#8f0f25]"
+      className="flex items-start gap-2.5 rounded-xl bg-danger-tint px-4 py-3 text-sm font-semibold text-danger-foreground"
     >
       <CircleAlert aria-hidden="true" className="mt-px size-5 shrink-0" />
       {message}

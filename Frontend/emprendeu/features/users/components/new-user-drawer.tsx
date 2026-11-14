@@ -122,7 +122,7 @@ function Form({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
           El sistema genera una contraseña temporal que verás una sola vez al registrar.
         </p>
         {state.message && (
-          <p role="alert" className="rounded-xl bg-[#ffe3e8] px-4 py-3 text-sm font-semibold text-[#8f0f25]">
+          <p role="alert" className="rounded-xl bg-danger-tint px-4 py-3 text-sm font-semibold text-danger-foreground">
             {state.message}
           </p>
         )}

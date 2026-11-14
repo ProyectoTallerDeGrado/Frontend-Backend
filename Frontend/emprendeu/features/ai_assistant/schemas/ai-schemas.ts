@@ -16,6 +16,22 @@ export const aiStatusSchema = z.object({
   documentos_activos: z.number(),
 });
 
+/** Un tema que el coach no pudo responder (`GET /ai/knowledge/gaps`). Es anónimo. */
+export const knowledgeGapSchema = z.object({
+  tema: z.string(),
+  veces: z.number(),
+  ultima_fecha: z.string(),
+  ejemplos: z.array(z.string()),
+});
+
+export const knowledgeGapsSchema = z.object({
+  desde: z.string(),
+  hasta: z.string(),
+  /** true: agrupadas por similitud con el modelo de embeddings; false: por texto igual. */
+  por_similitud: z.boolean(),
+  temas: z.array(knowledgeGapSchema),
+});
+
 /** Formatos que el backend sabe leer y tope de tamaño (`MAX_UPLOAD_MB`, 10 por defecto). */
 export const KNOWLEDGE_EXTENSIONS = [".txt", ".md", ".pdf", ".docx"] as const;
 export const KNOWLEDGE_MAX_MB = 10;

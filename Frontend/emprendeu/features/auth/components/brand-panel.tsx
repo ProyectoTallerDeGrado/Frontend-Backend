@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 /** Panel de marca (izquierda): logo, mensaje y órbitas decorativas. */
 export function BrandPanel() {
@@ -41,7 +42,11 @@ export function BrandPanel() {
         />
       </svg>
 
-      <div className="relative flex animate-[fade-up_.7s_cubic-bezier(.2,.7,.2,1)_both] items-center gap-3.5">
+      <Link
+        href="/"
+        aria-label="Volver al inicio del CIE-U"
+        className="relative flex w-fit animate-[fade-up_.7s_cubic-bezier(.2,.7,.2,1)_both] items-center gap-3.5 rounded-2xl outline-none focus-visible:ring-3 focus-visible:ring-white/50"
+      >
         <Image
           src="/brand/cie-u-logo.png"
           alt="Logo del CIE-U"
@@ -55,19 +60,19 @@ export function BrandPanel() {
           <br />
           Emprendimiento Universitario
         </div>
-      </div>
+      </Link>
 
       <div className="relative max-w-[560px]">
-        <div className="inline-flex animate-[fade-up_.7s_.1s_cubic-bezier(.2,.7,.2,1)_both] items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold tracking-[.04em] uppercase">
-          <span className="size-2 rounded-full bg-accent-bright" />
-          Administrador del sistema
+        <div className="inline-flex animate-[fade-up_.7s_.1s_cubic-bezier(.2,.7,.2,1)_both] items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold">
+          <span aria-hidden="true" className="size-2 rounded-full bg-accent-bright" />
+          Panel del personal del CIE-U
         </div>
         <h1 className="mt-5 mb-4 animate-[fade-up_.7s_.2s_cubic-bezier(.2,.7,.2,1)_both] font-heading text-[34px] leading-[1.1] font-bold tracking-[-.02em] text-balance sm:text-[46px]">
           Seguimiento de emprendedores, bajo control.
         </h1>
         <p className="max-w-[480px] animate-[fade-up_.7s_.3s_cubic-bezier(.2,.7,.2,1)_both] text-[17px] leading-[1.55] text-on-navy-muted text-pretty">
-          Gestiona usuarios, roles, permisos y parámetros del acompañamiento a
-          emprendimientos del CIE-U.
+          Admisiones, mentorías, alertas y el avance de cada emprendimiento por las
+          etapas del programa, en un solo lugar.
         </p>
       </div>
 

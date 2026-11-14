@@ -8,6 +8,60 @@
 
 ---
 
+## 0. Reorganización del panel (2026-11-14) — prevalece sobre lo que contradiga abajo
+
+El panel creció a 19 secciones; esta revisión lo ordena sin cambiar la marca.
+
+- **Menú agrupado por tarea**: *Inicio* (Resumen, Indicadores, Reportes) · *Programa* (Admisiones,
+  Emprendedores, Emprendimientos, Necesidades, Alertas) · *Acompañamiento* (Asignaciones, Mi
+  disponibilidad, Sesiones, Capacitaciones) · *Configuración* (Usuarios, Roles y permisos, Parámetros,
+  Catálogos y XP, Base de conocimiento, Auditoría). Los grupos se pliegan; el del ítem activo no.
+  «Mi cuenta» es la tarjeta del usuario al pie. Sidebar fijo (`sticky`, 272 px) con scroll propio.
+- **Móvil (< 1024 px)**: barra superior navy de 64 px con el logo y un botón que abre el mismo menú en
+  una hoja izquierda; se cierra al navegar. Enlace «Saltar al contenido».
+- **Ficha del emprendimiento** (`/ventures/[id]/*`): una sola cabecera (volver a Emprendimientos, nombre,
+  estado, sector, integrantes, acciones), el **trayecto de etapas** y pestañas Progreso · Seguimiento ·
+  Etapas · Documentos · Historial. La lista de emprendimientos ya no lleva cinco enlaces por fila: el
+  nombre abre la ficha.
+- **Componentes comunes** (`components/data/`): tabla, buscador, filtros-píldora, píldora de estado,
+  estado vacío, pestañas y cifra animada. Las cabeceras de tabla dejan las MAYÚSCULAS.
+- **Movimiento** (todo cae con `prefers-reduced-motion`). Lo llamativo está concentrado en dos sitios
+  con el motivo de órbitas de la marca:
+  - *Resumen*: franja navy con las órbitas girando; **cada satélite es un emprendimiento activo**
+    (hasta 18) y la cifra cuenta hacia arriba al cargar.
+  - *Trayecto de etapas*: la línea crece hasta la etapa actual, los nodos aparecen en secuencia
+    (`node-pop`) y la etapa actual tiene un halo que late.
+  - El resto responde a la persona: el resaltado del menú y el subrayado de las pestañas **se deslizan**
+    al ítem nuevo, los grupos del menú se pliegan con transición, las páginas se cambian con un fundido
+    corto (View Transitions de React), la barra «cambios sin guardar» sube desde abajo. Se quitó el
+    `fadeUp` escalonado de filas y tarjetas y la sombra al pasar sobre tarjetas estáticas.
+- **Tokens nuevos** en `globals.css`: `surface-head`, `row-hover`, `danger-tint/-foreground`,
+  `warning-tint/-foreground/-soft/-border`, `success`, `success-bright`, `gold`, `switch-off`,
+  `on-navy-dim`, `primary-hover`, `on-accent`, `info-foreground`. No queda hex en crudo en el código.
+- El login dice «Panel del personal del CIE-U» (ya no es solo para el administrador).
+
+### Landing pública (`/`)
+
+Para estudiantes que emprenden; el Resumen del panel pasó a `/panel`. Concepto **«Tu idea, en órbita»**:
+el núcleo es la idea y lo que gira alrededor es lo que da el CIE-U. Animaciones con anime.js 4.
+
+1. **Hero** (navy, alto de pantalla): titular Sora de hasta 108 px cuyas palabras suben desde un recorte
+   (`splitText` + `stagger`); los tres anillos se dibujan (`svg.createDrawable`), el núcleo «Tu idea» entra
+   con resorte y los satélites (Mentorías, Coach IA, Retos y XP, Capacitaciones, Comunidad) giran sin fin con
+   la etiqueta derecha; la órbita sigue al puntero (`createAnimatable`). Botón «Postula tu emprendimiento»
+   (`accent-bright` sobre `on-accent`) y «Cómo funciona» (ancla).
+2. **El camino**: las cuatro etapas. En escritorio, una ruta SVG se dibuja al ritmo del scroll
+   (`onScroll({ sync })`) con un cometa que la recorre (`svg.createMotionPath`) y cada etapa se enciende al
+   pasar; en móvil, línea vertical que crece.
+3. **Lo que recibes**: bloques de tamaños y colores distintos; cada uno se anima una vez al entrar
+   (sesiones que se agendan, chat del coach que se escribe, XP que sube con su barra, talleres que se marcan,
+   aviso que late). Los valores de esos bloques son de ejemplo de la app, no estadísticas.
+4. **Cómo postular**: tres pasos que se unen con una línea.
+5. **Cierre** navy con órbita en CSS y el mismo botón. Pie con FCEE · UAGRM y el ingreso del personal.
+
+Cabecera fija: transparente sobre el hero, navy con desenfoque al bajar. Con «reducir movimiento» no se
+anima nada y todo queda visible; sin JavaScript también (regla `<noscript>`).
+
 ## 1. Alcance
 
 La web es **solo para el rol Administrador del sistema** (Centro de Innovación y Emprendimiento
@@ -147,8 +201,8 @@ Cargar con `next/font/google` (no `<link>`) y asignar a `--font-sans` (DM Sans) 
 | Texto de fila / botón | DM Sans | 15 px | 600 | — |
 | Texto de apoyo | DM Sans | 14 px | 400–600 | — |
 | Notas, metadatos | DM Sans | 13 px | 400–700 | — |
-| Cabecera de tabla | DM Sans | 13 px | 700, MAYÚSCULAS | tracking .03–.04em |
-| Eyebrow del resumen de parámetros | DM Sans | 13 px | 700, MAYÚSCULAS | tracking .06em |
+| Cabecera de tabla | DM Sans | 13 px | 600, sentence case, `muted-foreground` | — (antes MAYÚSCULAS; ver §0) |
+| Encabezado de grupo del menú | DM Sans | 12.5 px | 600, `on-navy-dim` | — |
 
 ### 3.3 Espaciado, radios y sombras
 

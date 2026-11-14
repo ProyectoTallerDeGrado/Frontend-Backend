@@ -11,7 +11,7 @@ import type { Availability } from "../types";
 import { Field, FormError, inputClass, useRunner } from "@/components/forms/form-bits";
 
 const card =
-  "rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-[0_14px_30px_-18px_rgba(10,26,68,.35)]";
+  "rounded-2xl border border-border bg-card p-6";
 
 const STATE_STYLE: Record<Availability["estado"], { label: string; className: string }> = {
   disponible: { label: "Disponible", className: "bg-success-tint text-success-foreground" },
@@ -73,7 +73,7 @@ function Row({ item }: { item: Availability }) {
   const iconButton =
     "size-11 rounded-xl border-border-strong";
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#eef2fa] py-3 first:border-t-0">
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-muted py-3 first:border-t-0">
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-semibold">{formatDateTime(item.fecha_inicio).replace(/, \d{2}:\d{2}$/, "")}</div>
         <div className="text-[13px] text-muted-foreground">{formatTimeRange(item.fecha_inicio, item.fecha_fin)}</div>

@@ -26,14 +26,14 @@ const TYPES = [
 const TYPE_LABEL: Record<string, string> = Object.fromEntries(TYPES.map((t) => [t.value, t.label]));
 
 const STATE_BADGE: Record<string, string> = {
-  abierta: "bg-[#ffe3e8] text-[#8f0f25]",
-  revisada: "bg-[#fff0cc] text-[#5e3f00]",
+  abierta: "bg-danger-tint text-danger-foreground",
+  revisada: "bg-warning-tint text-warning-foreground",
   atendida: "bg-success-tint text-success-foreground",
   descartada: "bg-muted text-muted-foreground",
 };
 const PRIORITY_BADGE: Record<string, string> = {
-  alta: "bg-[#ffe3e8] text-[#8f0f25]",
-  media: "bg-[#fff0cc] text-[#5e3f00]",
+  alta: "bg-danger-tint text-danger-foreground",
+  media: "bg-warning-tint text-warning-foreground",
   baja: "bg-blue-50 text-primary",
 };
 
@@ -97,10 +97,10 @@ export async function AlertsScreen({ filters }: { filters: AlertFilters }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="relative overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full min-w-[860px] border-collapse text-left text-sm">
           <thead>
-            <tr className="bg-[#f4f6fb] text-[12px] font-bold tracking-[.06em] text-muted-foreground uppercase">
+            <tr className="border-b border-border bg-surface-head text-[13px] font-semibold text-muted-foreground">
               <th scope="col" className="px-5 py-3.5">Detectada</th>
               <th scope="col" className="px-5 py-3.5">Emprendimiento</th>
               <th scope="col" className="px-5 py-3.5">Alerta</th>
@@ -121,7 +121,7 @@ export async function AlertsScreen({ filters }: { filters: AlertFilters }) {
               const state = a.estado ?? "";
               const unresolved = state === "abierta" || state === "revisada";
               return (
-                <tr key={a.alerta_id} className="border-t border-[#eef2fa] align-top">
+                <tr key={a.alerta_id} className="border-t border-muted transition-colors hover:bg-row-hover align-top">
                   <td className="px-5 py-3.5 whitespace-nowrap text-muted-foreground">{formatWhen(a.fecha_generacion)}</td>
                   <td className="px-5 py-3.5 font-semibold">{a.emprendimiento ?? `#${a.emprendimiento_id}`}</td>
                   <td className="max-w-[340px] px-5 py-3.5">

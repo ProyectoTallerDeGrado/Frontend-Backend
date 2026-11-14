@@ -62,7 +62,7 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   } catch (error) {
     return { message: messageFor(error), values };
   }
-  redirect("/");
+  redirect("/panel");
 }
 
 export async function registerAction(_prev: FormState, formData: FormData): Promise<FormState> {
