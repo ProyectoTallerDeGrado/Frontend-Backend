@@ -57,3 +57,10 @@ class GetVentureEvidenceUseCase {
   Future<Result<List<Evidence>>> call(int ventureId) =>
       _repository.listForVenture(ventureId);
 }
+
+class DeleteDocumentUseCase {
+  const DeleteDocumentUseCase(this._repository);
+  final DocumentsRepository _repository;
+
+  Future<Result<void>> call(int documentId) => _repository.delete(documentId);
+}

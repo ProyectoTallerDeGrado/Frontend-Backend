@@ -82,6 +82,24 @@ void main() {
     expect(mentoring.commitments.last.done, isTrue);
   });
 
+  testWidgets('los compromisos cumplidos quedan aparte de los pendientes', (
+    tester,
+  ) async {
+    final mentoring = FakeMentoringRepository();
+    await pumpApp(tester, _loggedIn(mentoring: mentoring), height: 1700);
+
+    await tester.tap(
+      find.bySemanticsLabel(RegExp('Marcar como cumplido: Actualizar costos')),
+    );
+    await settle(tester);
+
+    expect(find.text('Cumplidos (1)'), findsOneWidget);
+    // Cerrada la sección, el cumplido no se mezcla con los pendientes.
+    expect(find.text('Actualizar costos del prototipo'), findsNothing);
+    await _tapText(tester, 'Cumplidos (1)');
+    expect(find.text('Actualizar costos del prototipo'), findsOneWidget);
+  });
+
   testWidgets(
     'registrar un avance sin conexión lo deja pendiente y luego se sincroniza',
     (tester) async {

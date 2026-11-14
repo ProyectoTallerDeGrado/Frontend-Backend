@@ -101,7 +101,7 @@ test/                         # espejo exacto de lib/
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
 `auth` ✅, `ventures` ✅ (editar, hitos), `gamification` ✅ (Camino, XP e insignias), `mentoring` ✅ (compromisos y avances, agendar y ver sesiones, historial),
-`documents` ✅ (evidencia de hitos), `ai_assistant` ✅ (Coach IA y conversaciones anteriores), `needs` ✅ (necesidades y dificultades), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
+`documents` ✅ (evidencia de hitos), `ai_assistant` ✅ (Coach IA y conversaciones anteriores), `needs` ✅ (necesidades y dificultades), `training` ✅ (capacitaciones), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
 (regla global §4.6).
 
 > **`home` es una excepción documentada a la regla 6:** no tiene módulo en el backend porque
@@ -208,6 +208,12 @@ test/                         # espejo exacto de lib/
   `POST /ventures/{id}/needs`. `ReportNeedUseCase` valida rubro y descripción antes de llamar; una necesidad ya abierta
   del mismo rubro es `NeedAlreadyRegisteredFailure` (se puede repetir cuando el CIE-U la resuelva). Si el catálogo está
   vacío (el seed demo lo crea, las migraciones no) la pantalla lo explica.
+- **Capacitaciones** (CU29, requiere conexión): feature `training`. Perfil → «Capacitaciones» (`/training`) combina
+  `GET /training` con `GET /training/me` para marcar la inscripción y la asistencia propia (`asistencia`: `null` = sin
+  registrar); «Inscribirme» llama a `POST /training/{id}/enroll` y solo aparece en las `programadas`.
+- **Documentos** (CU30, requiere conexión): Perfil → «Documentos» (`/venture/documents`, feature `documents`) lista todos los
+  archivos del emprendimiento, sube con `EvidencePicker` y elimina los propios (`DELETE /documents/{id}`). **La descarga no
+  está** (haría falta `path_provider` + `open_filex`).
 - **Varios emprendimientos** (CU05): la coordinación puede poner a un emprendedor en más de un equipo.
   `myVenturesProvider` trae la lista, `selectedVentureIdProvider` guarda el elegido (en memoria: al reabrir la app vuelve
   al primero) y `myVentureProvider` es el elegido o el primero. `VentureSwitcher` aparece en Inicio y en «Mi

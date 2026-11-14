@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$EvidenceDto {
 
-@JsonKey(name: 'documento_id') int get documentoId; String get nombre; String? get tipo;@JsonKey(name: 'hito_id') int? get hitoId;
+@JsonKey(name: 'documento_id') int get documentoId; String get nombre; String? get tipo;@JsonKey(name: 'hito_id') int? get hitoId;@JsonKey(name: 'usuario_id') int? get usuarioId;@JsonKey(name: 'fecha_subida') DateTime? get fechaSubida;
 /// Create a copy of EvidenceDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $EvidenceDtoCopyWith<EvidenceDto> get copyWith => _$EvidenceDtoCopyWithImpl<Evid
 @override
 bool operator ==(Object other) {
   final _this = this as EvidenceDto;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EvidenceDto&&(identical(other.documentoId, _this.documentoId) || other.documentoId == _this.documentoId)&&(identical(other.nombre, _this.nombre) || other.nombre == _this.nombre)&&(identical(other.tipo, _this.tipo) || other.tipo == _this.tipo)&&(identical(other.hitoId, _this.hitoId) || other.hitoId == _this.hitoId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EvidenceDto&&(identical(other.documentoId, _this.documentoId) || other.documentoId == _this.documentoId)&&(identical(other.nombre, _this.nombre) || other.nombre == _this.nombre)&&(identical(other.tipo, _this.tipo) || other.tipo == _this.tipo)&&(identical(other.hitoId, _this.hitoId) || other.hitoId == _this.hitoId)&&(identical(other.usuarioId, _this.usuarioId) || other.usuarioId == _this.usuarioId)&&(identical(other.fechaSubida, _this.fechaSubida) || other.fechaSubida == _this.fechaSubida));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as EvidenceDto;
-  return Object.hash(runtimeType,_this.documentoId,_this.nombre,_this.tipo,_this.hitoId);
+  return Object.hash(runtimeType,_this.documentoId,_this.nombre,_this.tipo,_this.hitoId,_this.usuarioId,_this.fechaSubida);
 }
 
 @override
 String toString() {
   final _this = this as EvidenceDto;
-  return 'EvidenceDto(documentoId: ${_this.documentoId}, nombre: ${_this.nombre}, tipo: ${_this.tipo}, hitoId: ${_this.hitoId})';
+  return 'EvidenceDto(documentoId: ${_this.documentoId}, nombre: ${_this.nombre}, tipo: ${_this.tipo}, hitoId: ${_this.hitoId}, usuarioId: ${_this.usuarioId}, fechaSubida: ${_this.fechaSubida})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $EvidenceDtoCopyWith<$Res>  {
   factory $EvidenceDtoCopyWith(EvidenceDto value, $Res Function(EvidenceDto) _then) = _$EvidenceDtoCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'documento_id') int documentoId, String nombre, String? tipo,@JsonKey(name: 'hito_id') int? hitoId
+@JsonKey(name: 'documento_id') int documentoId, String nombre, String? tipo,@JsonKey(name: 'hito_id') int? hitoId,@JsonKey(name: 'usuario_id') int? usuarioId,@JsonKey(name: 'fecha_subida') DateTime? fechaSubida
 });
 
 
@@ -71,13 +71,15 @@ class _$EvidenceDtoCopyWithImpl<$Res>
 
 /// Create a copy of EvidenceDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? documentoId = null,Object? nombre = null,Object? tipo = freezed,Object? hitoId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? documentoId = null,Object? nombre = null,Object? tipo = freezed,Object? hitoId = freezed,Object? usuarioId = freezed,Object? fechaSubida = freezed,}) {
   return _then(EvidenceDto(
 documentoId: null == documentoId ? _self.documentoId : documentoId // ignore: cast_nullable_to_non_nullable
 as int,nombre: null == nombre ? _self.nombre : nombre // ignore: cast_nullable_to_non_nullable
 as String,tipo: freezed == tipo ? _self.tipo : tipo // ignore: cast_nullable_to_non_nullable
 as String?,hitoId: freezed == hitoId ? _self.hitoId : hitoId // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,usuarioId: freezed == usuarioId ? _self.usuarioId : usuarioId // ignore: cast_nullable_to_non_nullable
+as int?,fechaSubida: freezed == fechaSubida ? _self.fechaSubida : fechaSubida // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -162,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'documento_id')  int documentoId,  String nombre,  String? tipo, @JsonKey(name: 'hito_id')  int? hitoId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'documento_id')  int documentoId,  String nombre,  String? tipo, @JsonKey(name: 'hito_id')  int? hitoId, @JsonKey(name: 'usuario_id')  int? usuarioId, @JsonKey(name: 'fecha_subida')  DateTime? fechaSubida)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EvidenceDto() when $default != null:
-return $default(_that.documentoId,_that.nombre,_that.tipo,_that.hitoId);case _:
+return $default(_that.documentoId,_that.nombre,_that.tipo,_that.hitoId,_that.usuarioId,_that.fechaSubida);case _:
   return orElse();
 
 }
@@ -183,10 +185,10 @@ return $default(_that.documentoId,_that.nombre,_that.tipo,_that.hitoId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'documento_id')  int documentoId,  String nombre,  String? tipo, @JsonKey(name: 'hito_id')  int? hitoId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'documento_id')  int documentoId,  String nombre,  String? tipo, @JsonKey(name: 'hito_id')  int? hitoId, @JsonKey(name: 'usuario_id')  int? usuarioId, @JsonKey(name: 'fecha_subida')  DateTime? fechaSubida)  $default,) {final _that = this;
 switch (_that) {
 case _EvidenceDto():
-return $default(_that.documentoId,_that.nombre,_that.tipo,_that.hitoId);case _:
+return $default(_that.documentoId,_that.nombre,_that.tipo,_that.hitoId,_that.usuarioId,_that.fechaSubida);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +205,10 @@ return $default(_that.documentoId,_that.nombre,_that.tipo,_that.hitoId);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'documento_id')  int documentoId,  String nombre,  String? tipo, @JsonKey(name: 'hito_id')  int? hitoId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'documento_id')  int documentoId,  String nombre,  String? tipo, @JsonKey(name: 'hito_id')  int? hitoId, @JsonKey(name: 'usuario_id')  int? usuarioId, @JsonKey(name: 'fecha_subida')  DateTime? fechaSubida)?  $default,) {final _that = this;
 switch (_that) {
 case _EvidenceDto() when $default != null:
-return $default(_that.documentoId,_that.nombre,_that.tipo,_that.hitoId);case _:
+return $default(_that.documentoId,_that.nombre,_that.tipo,_that.hitoId,_that.usuarioId,_that.fechaSubida);case _:
   return null;
 
 }
@@ -218,13 +220,15 @@ return $default(_that.documentoId,_that.nombre,_that.tipo,_that.hitoId);case _:
 @JsonSerializable()
 
 class _EvidenceDto extends EvidenceDto {
-  const _EvidenceDto({@JsonKey(name: 'documento_id') required this.documentoId, required this.nombre, this.tipo, @JsonKey(name: 'hito_id') this.hitoId}): super._();
+  const _EvidenceDto({@JsonKey(name: 'documento_id') required this.documentoId, required this.nombre, this.tipo, @JsonKey(name: 'hito_id') this.hitoId, @JsonKey(name: 'usuario_id') this.usuarioId, @JsonKey(name: 'fecha_subida') this.fechaSubida}): super._();
   factory _EvidenceDto.fromJson(Map<String, dynamic> json) => _$EvidenceDtoFromJson(json);
 
 @override@JsonKey(name: 'documento_id') final  int documentoId;
 @override final  String nombre;
 @override final  String? tipo;
 @override@JsonKey(name: 'hito_id') final  int? hitoId;
+@override@JsonKey(name: 'usuario_id') final  int? usuarioId;
+@override@JsonKey(name: 'fecha_subida') final  DateTime? fechaSubida;
 
 /// Create a copy of EvidenceDto
 /// with the given fields replaced by the non-null parameter values.
@@ -239,18 +243,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _EvidenceDto&&(identical(other.documentoId, documentoId) || other.documentoId == documentoId)&&(identical(other.nombre, nombre) || other.nombre == nombre)&&(identical(other.tipo, tipo) || other.tipo == tipo)&&(identical(other.hitoId, hitoId) || other.hitoId == hitoId));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _EvidenceDto&&(identical(other.documentoId, documentoId) || other.documentoId == documentoId)&&(identical(other.nombre, nombre) || other.nombre == nombre)&&(identical(other.tipo, tipo) || other.tipo == tipo)&&(identical(other.hitoId, hitoId) || other.hitoId == hitoId)&&(identical(other.usuarioId, usuarioId) || other.usuarioId == usuarioId)&&(identical(other.fechaSubida, fechaSubida) || other.fechaSubida == fechaSubida));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,documentoId,nombre,tipo,hitoId);
+    return Object.hash(runtimeType,documentoId,nombre,tipo,hitoId,usuarioId,fechaSubida);
 }
 
 @override
 String toString() {
-    return 'EvidenceDto(documentoId: $documentoId, nombre: $nombre, tipo: $tipo, hitoId: $hitoId)';
+    return 'EvidenceDto(documentoId: $documentoId, nombre: $nombre, tipo: $tipo, hitoId: $hitoId, usuarioId: $usuarioId, fechaSubida: $fechaSubida)';
 }
 
 
@@ -261,7 +265,7 @@ abstract mixin class _$EvidenceDtoCopyWith<$Res> implements $EvidenceDtoCopyWith
   factory _$EvidenceDtoCopyWith(_EvidenceDto value, $Res Function(_EvidenceDto) _then) = __$EvidenceDtoCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'documento_id') int documentoId, String nombre, String? tipo,@JsonKey(name: 'hito_id') int? hitoId
+@JsonKey(name: 'documento_id') int documentoId, String nombre, String? tipo,@JsonKey(name: 'hito_id') int? hitoId,@JsonKey(name: 'usuario_id') int? usuarioId,@JsonKey(name: 'fecha_subida') DateTime? fechaSubida
 });
 
 
@@ -278,13 +282,15 @@ class __$EvidenceDtoCopyWithImpl<$Res>
 
 /// Create a copy of EvidenceDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? documentoId = null,Object? nombre = null,Object? tipo = freezed,Object? hitoId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? documentoId = null,Object? nombre = null,Object? tipo = freezed,Object? hitoId = freezed,Object? usuarioId = freezed,Object? fechaSubida = freezed,}) {
   return _then(_EvidenceDto(
 documentoId: null == documentoId ? _self.documentoId : documentoId // ignore: cast_nullable_to_non_nullable
 as int,nombre: null == nombre ? _self.nombre : nombre // ignore: cast_nullable_to_non_nullable
 as String,tipo: freezed == tipo ? _self.tipo : tipo // ignore: cast_nullable_to_non_nullable
 as String?,hitoId: freezed == hitoId ? _self.hitoId : hitoId // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,usuarioId: freezed == usuarioId ? _self.usuarioId : usuarioId // ignore: cast_nullable_to_non_nullable
+as int?,fechaSubida: freezed == fechaSubida ? _self.fechaSubida : fechaSubida // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

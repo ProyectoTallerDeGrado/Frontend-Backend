@@ -12,4 +12,7 @@ abstract interface class DocumentsRepository {
 
   /// Archivos del emprendimiento (incluida la evidencia de sus hitos).
   Future<Result<List<Evidence>>> listForVenture(int ventureId);
+
+  /// Elimina un archivo propio (CU30); el servidor lo registra en auditoría.
+  Future<Result<void>> delete(int documentId);
 }

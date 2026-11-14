@@ -13,6 +13,7 @@ import {
   FileSpreadsheet,
   CalendarDays,
   ClipboardList,
+  GraduationCap,
   LayoutDashboard,
   Rocket,
   ShieldCheck,
@@ -45,6 +46,7 @@ const ICONS: Record<string, LucideIcon> = {
   assignments: UserCheck,
   availability: CalendarClock,
   sessions: CalendarDays,
+  training: GraduationCap,
 };
 
 export function SidebarNav({ items }: { items: NavItem[] }) {

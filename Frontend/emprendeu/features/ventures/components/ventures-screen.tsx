@@ -161,6 +161,12 @@ export async function VenturesScreen({ q, estado, page, extraColumn }: Props) {
                         </Link>
                       )}
                       <Link
+                        href={`/ventures/${v.emprendimiento_id}/documents`}
+                        className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+                      >
+                        Documentos
+                      </Link>
+                      <Link
                         href={`/ventures/${v.emprendimiento_id}/history`}
                         className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
                       >

@@ -39,6 +39,7 @@ class TrainingOut(BaseModel):
     estado: str | None
     total_inscritos: int
     inscrito: bool | None = None
+    asistencia: bool | None = None  # solo en /me: None = pendiente de registrar
 
 
 class ParticipantAdd(BaseModel):

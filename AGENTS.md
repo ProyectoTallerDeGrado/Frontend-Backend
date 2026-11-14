@@ -49,12 +49,12 @@ Mentorías y el Perfil completo).
   `Backend/EmprendeU/AGENTS.md` §4 y `ROADMAP.md`.
 - **Web**: tokens de marca, fuentes, auth conectada (cookie `httpOnly`, `proxy.ts`) y el
   **panel de administración completo** (Resumen, Usuarios, Roles y permisos, Parámetros,
-  Catálogos y XP, Auditoría) conectado al backend, con permisos por rol. Mentorías (asignaciones, disponibilidad y sesiones), Emprendimientos (avanzar etapa e historial), Alertas, Dashboard, Reportes (vista previa y CSV), Emprendedores (registro con documento único), Emprendimientos (crear, editar, progreso), Base de conocimiento del coach (subir documentos y ver su estado) y Mi cuenta. Faltan
-  capacitaciones y la gestión de documentos del emprendimiento.
+  Catálogos y XP, Auditoría) conectado al backend, con permisos por rol. Mentorías (asignaciones, disponibilidad y sesiones), Emprendimientos (avanzar etapa e historial), Alertas, Dashboard, Reportes (vista previa y CSV), Emprendedores (registro con documento único), Emprendimientos (crear, editar, progreso), Base de conocimiento del coach (subir documentos y ver su estado) y Mi cuenta. Capacitaciones (crear, editar,
+  participantes y asistencia) y documentos del emprendimiento (subir, descargar, eliminar).
 - **Móvil**: tema, router con barra inferior, `core/` (red, errores, almacenamiento, conectividad) y
   las features `auth`, `ventures`, `gamification` (Camino), `mentoring` (compromisos y avances con cola
   sin conexión) y `home` (Inicio), todas **conectadas al backend**. Mentorías (agendar y ver las sesiones, con
-  filtros por estado y periodo), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia (`documents`) el Coach IA (chat con fuentes) y cambio de contraseña. Tiene tests de integración opt-in contra el backend real.
+  filtros por estado y periodo), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia (`documents`) el Coach IA (chat con fuentes) cambio de contraseña, capacitaciones (inscribirse y ver la asistencia) y documentos del emprendimiento (ver, subir, eliminar; **sin descarga todavía**). Tiene tests de integración opt-in contra el backend real.
 - **Diseño visual**: `Frontend/emprendeu/design.md` (panel de administración) y
   `Frontend/app_emprendeu/design.md` (app del emprendedor), basados en el mockup del CIE-U.
 

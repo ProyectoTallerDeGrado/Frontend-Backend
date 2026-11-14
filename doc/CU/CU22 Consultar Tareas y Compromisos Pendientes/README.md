@@ -6,7 +6,7 @@
 | Actor(es) | Emprendedor |
 | Cliente | App móvil |
 | Fase del plan | F6 |
-| **Estado** | **🟡 Parcial** |
+| **Estado** | **✅ Completado** |
 
 ## Descripción
 
@@ -16,6 +16,9 @@ El emprendedor ve los compromisos de los que es responsable y los marca cumplido
 
 - `GET /mentoring/commitments/me` filtra por `responsable_usuarioid` del usuario y acepta `estado` (p. ej. `pendiente`).
 - Móvil: sección «Compromisos pendientes» en Inicio (`CommitmentsSection`) con casillas que funcionan **sin conexión** (cola local + `POST /mentoring/sync`) y etiqueta «Pendiente de sincronizar».
+
+- **Pantalla «Tareas y compromisos»** (Mentorías → `/mentoring/tasks`, `GET /mentoring/tasks/me`): compromisos e hitos con filtros de estado, tipo y fecha; las vencidas llevan su etiqueta.
+- En Inicio, `CommitmentsSection` muestra los **pendientes** y deja los cumplidos en una sección plegable «Cumplidos (n)».
 
 ## Dónde está implementado
 
@@ -35,6 +38,5 @@ El emprendedor ve los compromisos de los que es responsable y los marca cumplido
 
 ## Pendiente
 
-- La app pide `commitments/me` sin filtro de estado: lista pendientes y cumplidos juntos, no solo los pendientes.
-- No hay prueba de API dedicada al caso ni cierre formal en el tablero del plan (fase 6).
-- «Tareas» distintas de compromisos no existen como entidad aparte.
+- «Tareas» distintas de compromisos no existen como entidad aparte (las tareas de la pantalla son compromisos e hitos).
+- Probar a mano el flujo de punta a punta.

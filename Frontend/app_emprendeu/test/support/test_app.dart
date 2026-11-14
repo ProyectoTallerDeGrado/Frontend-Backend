@@ -7,6 +7,7 @@ import 'package:app_emprendeu/features/documents/index.dart';
 import 'package:app_emprendeu/features/gamification/index.dart';
 import 'package:app_emprendeu/features/mentoring/index.dart';
 import 'package:app_emprendeu/features/needs/index.dart';
+import 'package:app_emprendeu/features/training/index.dart';
 import 'package:app_emprendeu/features/ventures/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,7 @@ import '../features/auth/fake_auth_repository.dart';
 import '../features/documents/fake_documents.dart';
 import '../features/mentoring/fake_booking_repository.dart';
 import '../features/needs/fake_needs_repository.dart';
+import '../features/training/fake_training_repository.dart';
 import 'fakes.dart';
 
 /// Todo lo que una prueba de pantalla puede querer ajustar.
@@ -30,6 +32,7 @@ class TestWorld {
     FakeDocumentsRepository? documents,
     FakeAssistantRepository? assistant,
     FakeNeedsRepository? needs,
+    FakeTrainingRepository? training,
     FakeEvidencePicker? picker,
     FakeConnectivity? connectivity,
   }) : auth = auth ?? FakeAuthRepository(),
@@ -48,6 +51,7 @@ class TestWorld {
        documents = documents ?? FakeDocumentsRepository(),
        assistant = assistant ?? FakeAssistantRepository(),
        needs = needs ?? FakeNeedsRepository(),
+       training = training ?? FakeTrainingRepository(),
        picker = picker ?? FakeEvidencePicker(),
        connectivity = connectivity ?? FakeConnectivity();
 
@@ -59,6 +63,7 @@ class TestWorld {
   final FakeDocumentsRepository documents;
   final FakeAssistantRepository assistant;
   final FakeNeedsRepository needs;
+  final FakeTrainingRepository training;
   final FakeEvidencePicker picker;
   final FakeConnectivity connectivity;
   final store = InMemoryKeyValueStore();
@@ -84,6 +89,7 @@ Future<void> pumpApp(
         documentsRepositoryProvider.overrideWithValue(world.documents),
         assistantRepositoryProvider.overrideWithValue(world.assistant),
         needsRepositoryProvider.overrideWithValue(world.needs),
+        trainingRepositoryProvider.overrideWithValue(world.training),
         evidencePickerProvider.overrideWithValue(world.picker),
         connectivitySourceProvider.overrideWithValue(world.connectivity),
         keyValueStoreProvider.overrideWithValue(world.store),

@@ -54,6 +54,10 @@ class DocumentsRepositoryImpl implements DocumentsRepository {
   );
 
   @override
+  Future<Result<void>> delete(int documentId) =>
+      _guard(() => _remote.delete(documentId));
+
+  @override
   Future<Result<List<Evidence>>> listForVenture(int ventureId) => _guard(
     () async => [
       for (final d in await _remote.listForVenture(ventureId)) d.toEntity(),

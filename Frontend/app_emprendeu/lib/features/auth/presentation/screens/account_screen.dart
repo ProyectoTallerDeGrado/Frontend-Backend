@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../documents/index.dart';
 import '../../../gamification/index.dart';
 import '../../../needs/index.dart';
+import '../../../training/index.dart';
 import '../../../ventures/index.dart';
 import '../auth_routes.dart';
 import '../controllers/auth_controller.dart';
@@ -102,7 +104,27 @@ class AccountScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push(DocumentsRoutes.list),
+                    icon: const Icon(Icons.folder_open_outlined, size: 18),
+                    label: const Text('Documentos'),
+                    style: outlined,
+                  ),
+                ),
+                const SizedBox(height: 14),
               ],
+              SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push(TrainingRoutes.list),
+                  icon: const Icon(Icons.school_outlined, size: 18),
+                  label: const Text('Capacitaciones'),
+                  style: outlined,
+                ),
+              ),
+              const SizedBox(height: 14),
               SizedBox(
                 height: 52,
                 child: OutlinedButton.icon(

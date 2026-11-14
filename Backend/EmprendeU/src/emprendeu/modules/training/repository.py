@@ -84,9 +84,9 @@ class TrainingRepository:
 
     async def for_entrepreneur(
         self, emprendedor_id: int
-    ) -> list[tuple[Capacitacion, int]]:
+    ) -> list[tuple[Capacitacion, int, bool | None]]:
         stmt = (
-            select(Capacitacion)
+            select(Capacitacion, CapacitacionParticipante.asistencia)
             .join(
                 CapacitacionParticipante,
                 CapacitacionParticipante.capacitacion_id
@@ -95,5 +95,8 @@ class TrainingRepository:
             .where(CapacitacionParticipante.emprendedor_id == emprendedor_id)
             .order_by(Capacitacion.fecha.desc().nulls_last())
         )
-        rows = (await self._session.execute(stmt)).scalars().all()
-        return [(r, await self.count_participants(r.capacitacion_id)) for r in rows]
+        rows = (await self._session.execute(stmt)).all()
+        return [
+            (r[0], await self.count_participants(r[0].capacitacion_id), r[1])
+            for r in rows
+        ]

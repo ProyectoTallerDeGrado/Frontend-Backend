@@ -6,7 +6,7 @@
 | Actor(es) | Emprendedor |
 | Cliente | App móvil |
 | Fase del plan | F6 |
-| **Estado** | **🟡 Parcial** |
+| **Estado** | **✅ Completado** |
 
 ## Descripción
 
@@ -15,14 +15,16 @@ El emprendedor registra las necesidades o dificultades de su emprendimiento para
 ## Qué se hizo
 
 - **Backend hecho:** catálogo `GET/POST /needs` (`necesidades`), `GET/POST /ventures/{id}/needs` (`emprendimiento_necesidades`) y `PATCH /venture-needs/{id}/resolve` para marcarla resuelta.
-- **Clientes no hechos:** ni la app móvil ni la web tienen pantalla para registrar o ver necesidades.
+- **App móvil:** feature `needs` (Perfil → «Necesidades y dificultades»): lista lo reportado y «Reportar» pide tipo, rubro del catálogo, prioridad y descripción.
+- **Web:** bandeja `/needs` para el personal, con filtros por estado y tipo y el botón «Marcar resuelta».
 
 ## Dónde está implementado
 
 | Capa | Archivos |
 |---|---|
 | Backend | `Backend/EmprendeU/src/emprendeu/modules/ventures/router.py` (rutas `/needs`, `/venture-needs`), `Backend/EmprendeU/src/emprendeu/modules/ventures/service.py` (`list_needs`, `create_need`, `add_venture_need`, `resolve_venture_need`) |
-| Móvil | — (falta crear en `Frontend/app_emprendeu/lib/features/ventures/`) |
+| Móvil | `Frontend/app_emprendeu/lib/features/needs/` |
+| Web | `Frontend/emprendeu/features/ventures/components/needs-screen.tsx`, `resolve-need-button.tsx`; página `app/(app)/needs/page.tsx` |
 
 ## Por qué se hizo así
 
@@ -31,9 +33,8 @@ El emprendedor registra las necesidades o dificultades de su emprendimiento para
 ## Verificación
 
 - `Backend/EmprendeU/tests/test_audit_ventures_api.py::test_cambio_de_etapa_hitos_y_necesidades`
+- `Frontend/app_emprendeu/test/features/needs/` (casos de uso y pantallas)
 
 ## Pendiente
 
-- Pantalla en la app móvil para registrar una necesidad (elegir del catálogo o crear una nueva) y ver su estado.
-- Opcional: vista en la web para que la coordinación resuelva las necesidades.
-- Pruebas de la pantalla y cierre en el tablero (fase 6 del plan).
+- Probar a mano el flujo de punta a punta.

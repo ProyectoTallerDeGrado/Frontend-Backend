@@ -7,7 +7,9 @@ import '../features/auth/index.dart';
 import '../features/gamification/index.dart';
 import '../features/home/index.dart';
 import '../features/mentoring/index.dart';
+import '../features/documents/index.dart';
 import '../features/needs/index.dart';
+import '../features/training/index.dart';
 import '../features/ventures/index.dart';
 import '../shared/widgets/app_shell.dart';
 
@@ -43,6 +45,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...authRoutes,
       ...venturesRoutes,
       ...needsRoutes,
+      ...documentsRoutes,
+      ...trainingRoutes,
       ...gamificationDetailRoutes,
       // Pantallas con sesión: barra inferior Inicio · Camino · Mentorías · Perfil.
       StatefulShellRoute.indexedStack(

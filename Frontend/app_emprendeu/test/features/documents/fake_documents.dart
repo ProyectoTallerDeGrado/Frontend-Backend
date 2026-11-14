@@ -34,6 +34,15 @@ class FakeDocumentsRepository implements DocumentsRepository {
     return Result.ok(created);
   }
 
+  int deleteCalls = 0;
+
+  @override
+  Future<Result<void>> delete(int documentId) async {
+    deleteCalls++;
+    files.removeWhere((f) => f.id == documentId);
+    return const Result.ok(null);
+  }
+
   @override
   Future<Result<List<Evidence>>> listForVenture(int ventureId) async =>
       Result.ok(List.of(files));

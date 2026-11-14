@@ -157,7 +157,7 @@ proxy.ts                   ✅ # (Next 16) antiguo middleware: protege rutas pri
 
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
-`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅, `ai_assistant` ✅ (todas conectadas al backend); pendientes `training`, `documents` — los
+`auth` ✅, `users` ✅, `audit` ✅, `alerts` ✅, `gamification` ✅, `ventures` ✅, `indicators` ✅, `mentoring` ✅, `entrepreneurs` ✅, `ai_assistant` ✅ (todas conectadas al backend); `training` ✅ (`/training`, `/training/[id]`), `documents` ✅ (`/ventures/[id]/documents`, con descarga por `route.ts`) — los
 mismos nombres que los módulos del backend (regla global §4.6). Registra aquí cada feature nueva.
 
 ## 4. Reglas de la web

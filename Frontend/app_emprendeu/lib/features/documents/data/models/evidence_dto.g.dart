@@ -11,6 +11,10 @@ _EvidenceDto _$EvidenceDtoFromJson(Map<String, dynamic> json) => _EvidenceDto(
   nombre: json['nombre'] as String,
   tipo: json['tipo'] as String?,
   hitoId: (json['hito_id'] as num?)?.toInt(),
+  usuarioId: (json['usuario_id'] as num?)?.toInt(),
+  fechaSubida: json['fecha_subida'] == null
+      ? null
+      : DateTime.parse(json['fecha_subida'] as String),
 );
 
 Map<String, dynamic> _$EvidenceDtoToJson(_EvidenceDto instance) =>
@@ -19,4 +23,6 @@ Map<String, dynamic> _$EvidenceDtoToJson(_EvidenceDto instance) =>
       'nombre': instance.nombre,
       'tipo': instance.tipo,
       'hito_id': instance.hitoId,
+      'usuario_id': instance.usuarioId,
+      'fecha_subida': instance.fechaSubida?.toIso8601String(),
     };

@@ -22,6 +22,7 @@ const NAV: (NavItem & { permission?: string; hideForRole?: string; onlyForRole?:
   { href: "/mentoring/assignments", label: "Asignaciones", icon: "assignments", permission: "asesorias:registro", hideForRole: "asesor" },
   { href: "/mentoring/availability", label: "Mi disponibilidad", icon: "availability", permission: "asesorias:modificacion", onlyForRole: "asesor" },
   { href: "/mentoring/sessions", label: "Sesiones", icon: "sessions", permission: "asesorias:consulta" },
+  { href: "/training", label: "Capacitaciones", icon: "training", permission: "asesorias:consulta", hideForRole: "emprendedor" },
   { href: "/account", label: "Mi cuenta", icon: "account" },
 ];
 
