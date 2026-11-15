@@ -38,3 +38,25 @@ class FakeLLM:
 
     async def ping(self) -> bool:
         return not self.down
+
+
+class FakeMailer:
+    """Guarda los correos en memoria; `down` simula un SMTP caido."""
+
+    def __init__(self) -> None:
+        self.sent: list[tuple[str, str, str]] = []
+        self.down = False
+
+    async def send(self, to: str, subject: str, body: str) -> None:
+        from emprendeu.core.mailer import EmailUnavailable
+
+        if self.down:
+            raise EmailUnavailable
+        self.sent.append((to, subject, body))
+
+    def last_code(self) -> str:
+        import re
+
+        match = re.search(r"\b(\d{6})\b", self.sent[-1][2])
+        assert match
+        return match.group(1)

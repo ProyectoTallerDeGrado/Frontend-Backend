@@ -78,6 +78,13 @@ services:
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
       OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3.2}
+      # Correo (recuperacion de contrasena). Por defecto va a Mailpit (perfil `mail`).
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-EmprendeU <no-reply@emprendeu.local>}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
@@ -102,6 +109,16 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en tu entorno (ver .env.example)}
       ENVIRONMENT: ${ENVIRONMENT:-development}
+
+  # Bandeja de correo de desarrollo: recibe lo que envia la API sin entregarlo a nadie.
+  # Se levanta con `docker compose --profile mail up`; los correos se leen en http://localhost:8025.
+  # En produccion no se usa: define SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD del proveedor real.
+  mailpit:
+    profiles: ["mail"]
+    image: axllent/mailpit:latest
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
 
   ollama:
     profiles: ["ai"]

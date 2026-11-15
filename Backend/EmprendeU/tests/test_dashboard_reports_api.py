@@ -241,6 +241,28 @@ async def test_reportes_vista_previa_filtros_y_csv(
         await client.get(f"{base}/resumen/export", headers=h["m"])
     ).status_code == 403
 
+    # --- exportación a Excel: mismo contenido, otro formato
+    xlsx = await client.get(f"{base}/resumen/export?formato=xlsx", headers=h["coord"])
+    assert xlsx.status_code == 200
+    assert xlsx.headers["content-type"].startswith(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert "reporte-resumen.xlsx" in xlsx.headers["content-disposition"]
+    import io
+
+    from openpyxl import load_workbook
+
+    sheet = load_workbook(io.BytesIO(xlsx.content)).active
+    assert sheet is not None
+    assert sheet["A1"].value == "Emprendimiento" and sheet["A1"].font.bold
+    assert sheet["A2"].value == "Alfa" and sheet.max_row == 3
+    assert (
+        await client.get(f"{base}/resumen/export?formato=pdf", headers=h["coord"])
+    ).status_code == 422
+    assert (
+        await client.get(f"{base}/resumen/export?formato=xlsx", headers=h["m"])
+    ).status_code == 403
+
     # la exportación queda en la bitácora
     audit = (
         await client.get(f"{API}/audit?categoria=negocio", headers=h["admin"])

@@ -97,14 +97,17 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
 @pytest.fixture
 async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
     """Cliente HTTP; `client._transport.app.state.fake_llm` es el LLM simulado."""
+    from emprendeu.core.mailer import get_mailer
     from emprendeu.db.session import get_session
     from emprendeu.main import create_app
     from emprendeu.modules.ai_assistant import get_llm
-    from tests.fakes import FakeLLM
+    from tests.fakes import FakeLLM, FakeMailer
 
     app = create_app()
     app.state.fake_llm = FakeLLM()
     app.dependency_overrides[get_llm] = lambda: app.state.fake_llm
+    app.state.fake_mailer = FakeMailer()
+    app.dependency_overrides[get_mailer] = lambda: app.state.fake_mailer
 
     async def _override() -> AsyncIterator[AsyncSession]:
         yield session

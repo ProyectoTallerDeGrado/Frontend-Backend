@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import secrets
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 
+from emprendeu.core.config import get_settings
 from emprendeu.core.errors import TooManyRequests, Unauthorized
+from emprendeu.core.mailer import Mailer
 from emprendeu.core.pagination import PageParams
 from emprendeu.core.ratelimit import SlidingWindowLimiter
 from emprendeu.core.security import (
@@ -27,6 +30,7 @@ from emprendeu.modules.users.exceptions import (
     InvalidCredentials,
     InvalidFullName,
     InvalidPermissions,
+    InvalidResetCode,
     RoleInUse,
     RoleNameTaken,
     RoleNotFound,
@@ -34,7 +38,7 @@ from emprendeu.modules.users.exceptions import (
     UserNotFound,
     WrongCurrentPassword,
 )
-from emprendeu.modules.users.models import Rol, Usuario
+from emprendeu.modules.users.models import RestablecimientoPassword, Rol, Usuario
 from emprendeu.modules.users.permissions import (
     ACTIONS,
     ADMIN_REQUIRED,
@@ -88,11 +92,13 @@ class UserService:
         audit: AuditService,
         entrepreneurs: EntrepreneurService,
         login_limiter: SlidingWindowLimiter | None = None,
+        reset_limiter: SlidingWindowLimiter | None = None,
     ) -> None:
         self._repo = repository
         self._audit = audit
         self._entrepreneurs = entrepreneurs
         self._limiter = login_limiter
+        self._reset_limiter = reset_limiter
 
     # --- autenticacion ----------------------------------------------------
 
@@ -300,6 +306,72 @@ class UserService:
         await self._repo.commit()
         token, expires_in = create_access_token(user.usuario_id)
         return user, token, expires_in
+
+    async def request_password_reset(
+        self, email: str, mailer: Mailer, ip: str | None = None
+    ) -> None:
+        """Envia un codigo de 6 digitos al correo si la cuenta existe y esta habilitada.
+
+        No revela si la cuenta existe: el llamador responde igual en ambos casos.
+        """
+        email = email.strip().lower()
+        key = f"reset|{ip or '-'}|{email}"
+        if self._reset_limiter:
+            if self._reset_limiter.is_blocked(key):
+                raise TooManyRequests(
+                    "Demasiadas solicitudes. Intenta de nuevo mas tarde.",
+                    details={"retry_after": self._reset_limiter.retry_after(key)},
+                )
+            self._reset_limiter.hit(key)
+        user = await self._repo.get_user_by_email(email)
+        if user is None or user.estado == DISABLED:
+            return
+        settings = get_settings()
+        code = f"{secrets.randbelow(10**6):06d}"
+        await self._repo.invalidate_resets(user.usuario_id)
+        await self._repo.add_reset(
+            RestablecimientoPassword(
+                usuario_id=user.usuario_id,
+                codigo_hash=hash_password(code),
+                expira=datetime.now(UTC)
+                + timedelta(minutes=settings.reset_code_ttl_minutes),
+            )
+        )
+        await self._repo.commit()
+        await mailer.send(
+            user.email,
+            "Código para restablecer tu contraseña",
+            f"Hola {user.nombre},\n\nTu código para restablecer la contraseña de "
+            f"EmprendeU es: {code}\n\nVence en {settings.reset_code_ttl_minutes} "
+            "minutos. Si no lo pediste, ignora este mensaje.",
+        )
+
+    async def reset_password(self, email: str, code: str, new: str) -> None:
+        """Cambia la clave con el codigo recibido e invalida los tokens anteriores."""
+        user = await self._repo.get_user_by_email(email.strip().lower())
+        reset = (
+            await self._repo.active_reset(user.usuario_id, datetime.now(UTC))
+            if user is not None and user.estado != DISABLED
+            else None
+        )
+        # Se verifica siempre (con hash falso si no hay codigo) para igualar tiempos.
+        valid = verify_password(code, reset.codigo_hash if reset else None)
+        if user is None or reset is None:
+            raise InvalidResetCode
+        if not valid:
+            reset.intentos += 1
+            if reset.intentos >= get_settings().reset_max_attempts:
+                reset.usado = True
+            await self._repo.commit()
+            raise InvalidResetCode
+        reset.usado = True
+        await self._repo.set_password(user, hash_password(new))
+        await self._audit.record(
+            user.usuario_id,
+            "usuarios.restablecer_clave",
+            f"{user.nombre} {user.apellido}",
+        )
+        await self._repo.commit()
 
     async def mentors(self) -> list[Usuario]:
         """Usuarios con rol asesor y cuenta habilitada (para el modulo mentoring)."""

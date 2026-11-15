@@ -52,6 +52,18 @@ class Settings(BaseSettings):
     ai_min_similarity: float = 0.65
     ai_top_k: int = 4
 
+    # Correo saliente (recuperacion de contrasena). Sin `smtp_host` no se envia nada.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "EmprendeU <no-reply@emprendeu.local>"
+    smtp_starttls: bool = True
+    reset_code_ttl_minutes: int = 15
+    reset_max_attempts: int = 5
+    reset_request_max: int = 3
+    reset_request_window_seconds: int = 900
+
     # Carga de archivos (modulo documents).
     upload_dir: str = "uploads"
     max_upload_mb: int = 10

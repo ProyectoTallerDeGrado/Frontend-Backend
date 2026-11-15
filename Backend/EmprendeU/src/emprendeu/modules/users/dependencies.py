@@ -33,12 +33,27 @@ def get_login_limiter() -> SlidingWindowLimiter:
     return _limiter
 
 
+_reset_limiter: SlidingWindowLimiter | None = None
+
+
+def get_reset_limiter() -> SlidingWindowLimiter:
+    """Limitador de solicitudes de codigo, unico por proceso."""
+    global _reset_limiter  # noqa: PLW0603
+    if _reset_limiter is None:
+        settings = get_settings()
+        _reset_limiter = SlidingWindowLimiter(
+            settings.reset_request_max, settings.reset_request_window_seconds
+        )
+    return _reset_limiter
+
+
 def build_user_service(session: AsyncSession) -> UserService:
     return UserService(
         UserRepository(session),
         AuditService(session),
         EntrepreneurService(session),
         get_login_limiter(),
+        get_reset_limiter(),
     )
 
 

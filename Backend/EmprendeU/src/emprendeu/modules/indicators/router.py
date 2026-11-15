@@ -1,12 +1,13 @@
 """HTTP de indicators (prefijo /indicators)."""
 
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from emprendeu.core.xlsx_export import XLSX_MEDIA_TYPE
 from emprendeu.db.session import get_session
 from emprendeu.modules.ai_assistant import LLMClient, get_llm
 from emprendeu.modules.indicators import schemas as s
@@ -91,12 +92,15 @@ async def export_report(
     desde: date | None = None,
     hasta: date | None = None,
     etapa_id: int | None = None,
+    formato: Annotated[Literal["csv", "xlsx"], Query()] = "csv",
 ) -> Response:
-    content = await service.export_report(actor, kind, desde, hasta, etapa_id)
+    content = await service.export_report(actor, kind, desde, hasta, etapa_id, formato)
     return Response(
         content=content,
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="reporte-{kind}.csv"'},
+        media_type=XLSX_MEDIA_TYPE if formato == "xlsx" else "text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="reporte-{kind}.{formato}"'
+        },
     )
 
 

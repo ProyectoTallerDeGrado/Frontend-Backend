@@ -81,6 +81,18 @@ class EntrepreneurRepository:
         rows = (await self._session.execute(stmt)).all()
         return {r[0]: (r[1], r[2], r[3]) for r in rows}
 
+    async def names_by_entrepreneur(self, emprendedor_ids: list[int]) -> dict[int, str]:
+        """`Nombre Apellido` de varios emprendedores en una sola consulta."""
+        if not emprendedor_ids:
+            return {}
+        stmt = (
+            select(Emprendedor.emprendedor_id, _usuario.c.nombre, _usuario.c.apellido)
+            .join(_usuario, _usuario.c.usuarioid == Emprendedor.usuario_id)
+            .where(Emprendedor.emprendedor_id.in_(emprendedor_ids))
+        )
+        rows = (await self._session.execute(stmt)).all()
+        return {r[0]: f"{r[1]} {r[2]}".strip() for r in rows}
+
     async def list(
         self, *, q: str | None, offset: int, limit: int
     ) -> tuple[list[Emprendedor], int]:
@@ -196,6 +208,20 @@ class EntrepreneurRepository:
             )
         )
         return [(r[0], r[1]) for r in (await self._session.execute(stmt)).all()]
+
+    async def set_role(
+        self, emprendedor_id: int, emprendimiento_id: int, rol: str | None
+    ) -> bool:
+        stmt = select(EmprendimientoEmprendedor).where(
+            EmprendimientoEmprendedor.emprendedor_id == emprendedor_id,
+            EmprendimientoEmprendedor.emprendimiento_id == emprendimiento_id,
+        )
+        found = (await self._session.execute(stmt)).scalar_one_or_none()
+        if found is None:
+            return False
+        found.rol_en_emprendimiento = rol
+        await self._session.flush()
+        return True
 
     async def unlink(self, emprendedor_id: int, emprendimiento_id: int) -> bool:
         stmt = select(EmprendimientoEmprendedor).where(

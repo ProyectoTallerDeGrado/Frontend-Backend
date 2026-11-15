@@ -13,7 +13,7 @@
 | Gestor / build | **uv** (`uv_build` como build-backend) | instalado |
 | Framework HTTP | **FastAPI** `>=0.142.2` | en uso (`emprendeu.main:create_app`) |
 | Servidor ASGI | **uvicorn[standard]** `>=0.54.0` | instalado |
-| ORM | **SQLAlchemy 2.x async** | en uso: 42 modelos declarativos |
+| ORM | **SQLAlchemy 2.x async** | en uso: 43 modelos declarativos |
 | Driver | **psycopg 3** (`postgresql+psycopg://`) | instalado |
 | Migraciones | **Alembic** (plantilla `async`) | en uso, con migración base |
 | Layout | `src/` layout, paquete `emprendeu` | instalado |
@@ -120,7 +120,7 @@ ingles; nombres de tabla y columna en espanol, porque los fija la base.
 
 | Modulo | Tablas |
 |---|---|
-| `users` | `usuario`, `rol`, `permiso`, `rol_permiso`, `rol_usuario` |
+| `users` | `usuario`, `rol`, `permiso`, `rol_permiso`, `rol_usuario`, `restablecimientos_password`* |
 | `entrepreneurs` | `emprendedor`, `emprendimiento_emprendedores`, `postulaciones`* |
 | `ventures` | `emprendimiento`, `etapas`, `emprendimiento_etapas`, `hito`, `necesidades`, `emprendimiento_necesidades` |
 | `mentoring` | `tipo`, `sesiones_acompanamiento`, `sesion_participantes`, `compromisos`, `seguimientos`, `recomendaciones`, `asignaciones`, `perfil_mentor`*, `disponibilidad_mentor`* |
@@ -177,10 +177,10 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 
 | Módulo | Endpoints principales |
 |---|---|
-| `users` ✅ | `POST /auth/login`, `/auth/register`, `/auth/change-password`, `GET /auth/me`; `GET/POST /users`, `PATCH /users/{id}/estado`, `/users/{id}/rol`; `GET/POST /roles`, `PATCH/DELETE /roles/{id}` (solo roles personalizados), `GET/PUT /roles/{id}/permissions` |
+| `users` ✅ | `POST /auth/login`, `/auth/register`, `/auth/change-password`, `/auth/forgot-password` y `/auth/reset-password` (código de 6 dígitos por correo), `GET /auth/me`; `GET/POST /users`, `PATCH /users/{id}/estado`, `/users/{id}/rol`; `GET/POST /roles`, `PATCH/DELETE /roles/{id}` (solo roles personalizados), `GET/PUT /roles/{id}/permissions` |
 | `audit` ✅ | `GET /audit`, `GET /audit/export` (CSV); `AuditService.record(...)` para el resto de módulos |
 | `entrepreneurs` ✅ | `GET/POST /entrepreneurs` (el alta crea usuario + emprendedor), `/entrepreneurs/me` (GET/PATCH), `/entrepreneurs/{id}` |
-| `ventures` ✅ | `/stages`, `/ventures` (CRUD, `/me`, `PUT /{id}/stage`, historial), equipo (`GET/POST /ventures/{id}/members`, `DELETE /ventures/{id}/members/{emprendedor_id}`), hitos (`/milestones`), necesidades (`/needs`) |
+| `ventures` ✅ | `/stages`, `/ventures` (CRUD, `/me`, `PUT /{id}/stage`, historial), equipo (`GET/POST /ventures/{id}/members`, `PATCH/DELETE /ventures/{id}/members/{emprendedor_id}`), hitos (`/milestones`), necesidades (`/needs`) |
 | `gamification` ✅ | `/challenges`, `/badges` (catálogo), `GET /journey`, `POST /journey/challenges/{id}/complete` (cuerpo opcional con evidencia; 422 `criteria_not_met` si el reto la exige y falta), `GET /gamification/me` |
 | `mentoring` ✅ | `/mentoring/mentors` (+ `PUT {id}/enabled`, perfil, `slots`, horarios: `GET/PUT/POST {id}/availability`, `PATCH/DELETE /availability/{id}`), `booking-status`, `sessions` (agendar, `me` y lista con filtros `estado/desde/hasta`, `register`, completar, cancelar), `commitments` (`POST`, `me`), `recommendations` (`POST`, `me`), `progress`, `POST /mentoring/sync`, `assignments`, historial `GET /mentoring/ventures/{id}/history` y `/ventures/me/history` |
 | `alerts` ✅ | `GET/PUT /alerts/settings`, `GET /alerts`, `PATCH /alerts/{id}` (`revisada`, `atendida`, `descartada`), `POST /alerts/evaluate`; tarea `alerts/jobs.py` |
@@ -253,6 +253,14 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
   una cuenta deshabilitada se rechaza en cada peticion (403 `account_disabled`).
 - **JWT de acceso unico** (sin refresh), vida `ACCESS_TOKEN_EXPIRE_MINUTES` (60 por
   defecto). `JWT_SECRET` es obligatorio y sin valor por defecto.
+- **Recuperación de contraseña (CU01):** `POST /auth/forgot-password {email}` responde 202 con el mismo mensaje exista o no
+  la cuenta (sin enumeración) y, si está habilitada, guarda un código de 6 dígitos **hasheado** en
+  `restablecimientos_password` (vence en `RESET_CODE_TTL_MINUTES`, 15) y lo envía por SMTP (`core/mailer.py`, `aiosmtplib`,
+  detrás de `Mailer` como `LLMClient`; doble `FakeMailer` en `tests/fakes.py`). Un código nuevo anula los anteriores y hay límite de
+  solicitudes por IP+correo (429). `POST /auth/reset-password {email, codigo, password_nueva}`: código malo, vencido o usado es 400
+  `invalid_code`; a los `RESET_MAX_ATTEMPTS` fallos el código se invalida. Al restablecer se usa `set_password`, así los tokens anteriores
+  dejan de valer, y queda en auditoría (`usuarios.restablecer_clave`). Sin `SMTP_HOST` o con el servidor caído: 503 `email_unavailable`.
+  En desarrollo, `docker compose --profile mail up` levanta Mailpit (UI en `:8025`).
 - **Cambio de contraseña:** `POST /auth/change-password` guarda `usuario.password_changed_at`,
   devuelve una sesión nueva (`TokenResponse`) y desde ese instante `UserService.authenticate`
   rechaza (401) todo token emitido antes. El token lleva `iat_us` (microsegundos): `iat` solo

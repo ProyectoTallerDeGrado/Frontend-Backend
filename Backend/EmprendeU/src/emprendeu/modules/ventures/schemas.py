@@ -37,6 +37,10 @@ class MemberIn(BaseModel):
     rol_en_emprendimiento: MemberRole = "miembro"
 
 
+class MemberRoleUpdate(BaseModel):
+    rol_en_emprendimiento: MemberRole
+
+
 class MemberOut(BaseModel):
     emprendedor_id: int
     usuario_id: int

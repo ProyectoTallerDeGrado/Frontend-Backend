@@ -64,6 +64,7 @@ async def test_capacitaciones_inscripcion_y_asistencia(
         await client.get(f"{API}/training/{cid}/participants", headers=h["coord"])
     ).json()
     assert people[0]["asistencia"] is None
+    assert people[0]["nombre"] == "Ana Prueba"
     eid = people[0]["emprendedor_id"]
     assert (
         await client.get(f"{API}/training/{cid}/participants", headers=h["e"])

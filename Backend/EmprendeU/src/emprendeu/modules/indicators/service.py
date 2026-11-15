@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from emprendeu.core.csv_export import to_csv
 from emprendeu.core.errors import Forbidden, NotFoundError
 from emprendeu.core.periods import local_text, period_bounds
+from emprendeu.core.xlsx_export import to_xlsx
 from emprendeu.modules.ai_assistant import AssistantService, LLMClient
 from emprendeu.modules.alerts import AlertService
 from emprendeu.modules.audit import AuditService
@@ -441,17 +442,24 @@ class IndicatorService:
         desde: date | None,
         hasta: date | None,
         etapa_id: int | None,
-    ) -> str:
-        """CSV completo del reporte (mismo helper que la auditoria); la exportacion se audita."""
+        formato: str = "csv",
+    ) -> bytes:
+        """Reporte completo en CSV o XLSX; la exportacion se audita."""
         out = await self.report(kind, desde, hasta, etapa_id, limit=None)
         await self._audit.record(
             actor.usuario_id,
             "negocio.reporte",
             out.titulo,
-            despues={"filas": out.total, "desde": str(desde), "hasta": str(hasta)},
+            despues={
+                "filas": out.total,
+                "desde": str(desde),
+                "hasta": str(hasta),
+                "formato": formato,
+            },
         )
         await self._session.commit()
-        return to_csv(
-            [c.etiqueta for c in out.columnas],
-            ([row.get(c.clave) for c in out.columnas] for row in out.filas),
-        )
+        headers = [c.etiqueta for c in out.columnas]
+        rows = ([row.get(c.clave) for c in out.columnas] for row in out.filas)
+        if formato == "xlsx":
+            return to_xlsx(out.titulo, headers, rows)
+        return to_csv(headers, rows).encode("utf-8")
