@@ -21,6 +21,17 @@ abstract interface class AuthRepository {
     required String newPassword,
   });
 
+  /// Pide un código de 6 dígitos por correo (CU01). El servidor responde igual
+  /// exista o no la cuenta.
+  Future<Result<void>> requestPasswordReset(String email);
+
+  /// Cambia la contraseña con el código recibido. No inicia sesión.
+  Future<Result<void>> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  });
+
   /// Usuario dueño del token (`GET /auth/me`).
   Future<Result<AuthUser>> fetchCurrentUser(String token);
 

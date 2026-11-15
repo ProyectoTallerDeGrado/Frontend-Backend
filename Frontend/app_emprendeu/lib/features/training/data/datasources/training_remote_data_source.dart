@@ -8,15 +8,22 @@ class TrainingRemoteDataSource {
 
   final Dio _dio;
 
-  /// Capacitaciones programadas (la lista general, paginada; se toma la primera página).
-  Future<List<TrainingDto>> all() async {
+  /// Una página de la lista general: las capacitaciones y el total del programa.
+  Future<({List<TrainingDto> items, int total})> all({
+    required int page,
+    required int pageSize,
+  }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/training',
-      queryParameters: {'page_size': 100},
+      queryParameters: {'page': page, 'page_size': pageSize},
     );
-    return (response.data!['items'] as List<dynamic>)
-        .map((e) => TrainingDto.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final data = response.data!;
+    return (
+      items: (data['items'] as List<dynamic>)
+          .map((e) => TrainingDto.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      total: data['total'] as int,
+    );
   }
 
   /// Las capacitaciones en las que el emprendedor está inscrito, con su asistencia.

@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { NoAccess } from "@/components/layout/no-access";
 import { PageHeader } from "@/components/layout/page-header";
 import { hasPermission, requireSession } from "@/features/auth";
-import { listEntrepreneurOptions } from "@/features/entrepreneurs";
 import { formatDateTime } from "@/lib/format";
 
 import { getTraining, listParticipants } from "../server/queries";
@@ -17,7 +16,7 @@ export async function TrainingDetailScreen({ id }: { id: number }) {
 
   const training = await getTraining(id);
   if (!training) notFound();
-  const [participants, options] = await Promise.all([listParticipants(id), listEntrepreneurOptions()]);
+  const participants = await listParticipants(id);
   const canEdit = hasPermission(user, "asesorias:modificacion");
 
   return (
@@ -32,7 +31,6 @@ export async function TrainingDetailScreen({ id }: { id: number }) {
       <ParticipantsPanel
         trainingId={id}
         participants={participants}
-        options={options}
         canEdit={canEdit}
         canAdd={hasPermission(user, "asesorias:registro")}
         closed={training.estado === "cancelada"}

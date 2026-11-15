@@ -28,6 +28,15 @@ export async function listEntrepreneurOptions(): Promise<{ id: number; name: str
   }));
 }
 
+/** Búsqueda de emprendedores por nombre, correo o documento (hasta 15 resultados). */
+export async function searchEntrepreneurOptions(q: string): Promise<{ id: number; name: string }[]> {
+  const page = await listEntrepreneurs({ q: q.trim() || undefined, page: 1 });
+  return page.items.slice(0, 15).map((e) => ({
+    id: e.emprendedor_id,
+    name: `${e.nombre ?? ""} ${e.apellido ?? ""}`.trim() + (e.documento_identidad ? ` · ${e.documento_identidad}` : ""),
+  }));
+}
+
 /** CU26 · Postulaciones al programa; las pendientes aparecen primero. */
 export async function listAdmissions(filters: AdmissionFilters) {
   const search = new URLSearchParams({ page: String(filters.page ?? 1), page_size: String(ADMISSIONS_PAGE_SIZE) });

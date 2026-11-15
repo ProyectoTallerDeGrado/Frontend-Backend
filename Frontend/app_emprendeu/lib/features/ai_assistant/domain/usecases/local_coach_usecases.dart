@@ -12,6 +12,88 @@ const localCoachFallback =
     'No encontré información suficiente en la base documental del CIE-U '
     'para responder con certeza.';
 
+/// Respuesta cuando el celular aún no tiene ninguna guía del CIE-U.
+const localCoachNoDocuments =
+    'Todavía no tengo guías del CIE-U en tu celular. Se descargan solas con '
+    'internet cuando el CIE-U las carga en su base de conocimiento. Mientras '
+    'tanto puedes usar el Coach en línea o agregar tus propios archivos.';
+
+/// Para saludos y charla corta: el modelo responde sin buscar en documentos.
+const localCoachSmallTalkPrompt =
+    'Eres el coach virtual del CIE-U (Centro de Innovación y Emprendimiento '
+    'Universitario) y ayudas a emprendedores universitarios. La persona te '
+    'saluda o conversa. Responde en español, amable y en máximo 2 oraciones, '
+    'y ofrece ayuda con su emprendimiento (costos, validar la idea, modelo de '
+    'negocio, plan de trabajo). No des datos ni consejos concretos.';
+
+/// Saludos, agradecimientos y preguntas sobre el propio coach.
+const _smallTalk = [
+  'hola',
+  'holi',
+  'buenas',
+  'buen dia',
+  'buenos dias',
+  'buenas tardes',
+  'buenas noches',
+  'hey',
+  'saludos',
+  'que tal',
+  'como estas',
+  'como te va',
+  'gracias',
+  'muchas gracias',
+  'ok',
+  'okay',
+  'vale',
+  'listo',
+  'perfecto',
+  'genial',
+  'adios',
+  'chao',
+  'hasta luego',
+  'nos vemos',
+  'quien eres',
+  'que eres',
+  'que puedes hacer',
+  'en que me ayudas',
+  'en que me puedes ayudar',
+  'ayuda',
+];
+
+/// Minúsculas, sin tildes, sin signos y con un solo espacio entre palabras.
+String _normalize(String text) {
+  const from = 'áéíóúüñ';
+  const to = 'aeiouun';
+  final buffer = StringBuffer();
+  for (final ch in text.toLowerCase().split('')) {
+    final i = from.indexOf(ch);
+    buffer.write(i >= 0 ? to[i] : ch);
+  }
+  return buffer
+      .toString()
+      .replaceAll(RegExp(r'[^a-z0-9 ]'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
+/// `true` si el mensaje es solo un saludo o charla corta («hola», «gracias»,
+/// «hola, ¿qué puedes hacer?»): no tiene sentido buscarlo en los documentos.
+bool isSmallTalk(String message) {
+  var rest = ' ${_normalize(message)} ';
+  if (rest.trim().split(' ').length > 8) return false;
+  // De la frase más larga a la más corta, para quitar «buenas tardes» entero.
+  final phrases = [..._smallTalk]..sort((a, b) => b.length - a.length);
+  for (final p in phrases) {
+    rest = rest.replaceAll(' $p ', ' ');
+  }
+  const filler = {'coach', 'amigo', 'y', 'tu', 'te', 'me', 'por', 'favor'};
+  return rest
+      .trim()
+      .split(' ')
+      .where((w) => w.isNotEmpty && !filler.contains(w))
+      .isEmpty;
+}
+
 /// Temas en los que siempre se sugiere hablar con un mentor (igual que el servidor).
 const _handoffKeywords = [
   'financ',
@@ -80,6 +162,26 @@ class AskLocalCoachUseCase {
     final invalid = coachMessageError(text);
     if (invalid != null) return Err(invalid);
 
+    // Un saludo nunca se parece a una guía: lo contesta el modelo sin contexto.
+    if (isSmallTalk(text)) {
+      final generated = await _coach.generate(
+        system: localCoachSmallTalkPrompt,
+        prompt: buildLocalPrompt(text, const [], history, historyTurns),
+        onPartial: onPartial,
+      );
+      if (generated case Err(:final failure)) return Err(failure);
+      final reply = generated.valueOrNull!.trim();
+      return _save(
+        text,
+        history,
+        reply.isEmpty
+            ? '¡Hola! ¿En qué te ayudo con tu emprendimiento?'
+            : reply,
+        sources: const [],
+        suggestMentor: false,
+      );
+    }
+
     final found = await _knowledge.search(text, limit: topK);
     if (found case Err(:final failure)) return Err(failure);
     // Los archivos propios son opcionales: si fallan, se responde con el CIE-U.
@@ -91,7 +193,10 @@ class AskLocalCoachUseCase {
 
     final String answerText;
     if (matches.isEmpty) {
-      answerText = localCoachFallback;
+      final status = (await _knowledge.status()).valueOrNull;
+      answerText = (status?.documents ?? 0) == 0
+          ? localCoachNoDocuments
+          : localCoachFallback;
     } else {
       final generated = await _coach.generate(
         system: localCoachSystemPrompt,
@@ -108,15 +213,31 @@ class AskLocalCoachUseCase {
     // Sin una guía del CIE-U que respalde la respuesta, se sugiere un mentor.
     final backedByCieu = matches.any((m) => !m.own);
     final lowered = text.toLowerCase();
+    return _save(
+      text,
+      history,
+      answerText.isEmpty ? localCoachFallback : answerText,
+      sources: titles,
+      suggestMentor:
+          !backedByCieu || _handoffKeywords.any((k) => lowered.contains(k)),
+    );
+  }
+
+  Future<Result<LocalCoachAnswer>> _save(
+    String text,
+    List<ChatMessage> history,
+    String answerText, {
+    required List<String> sources,
+    required bool suggestMentor,
+  }) async {
     final id = _clock().microsecondsSinceEpoch;
     final question = ChatMessage(id: id, isUser: true, text: text);
     final answer = ChatMessage(
       id: id + 1,
       isUser: false,
-      text: answerText.isEmpty ? localCoachFallback : answerText,
-      sources: titles,
-      suggestMentor:
-          !backedByCieu || _handoffKeywords.any((k) => lowered.contains(k)),
+      text: answerText,
+      sources: sources,
+      suggestMentor: suggestMentor,
     );
     // Si no se puede guardar, la respuesta igual se muestra.
     await _coach.saveConversation([...history, question, answer]);

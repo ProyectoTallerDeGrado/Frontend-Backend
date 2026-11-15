@@ -117,11 +117,16 @@ class LocalKnowledgeController extends AsyncNotifier<LocalKnowledgeState> {
     });
   }
 
-  /// Sincroniza solo si nunca se hizo o pasó [staleAfter]; sin red, no molesta.
+  /// Sincroniza si nunca se hizo, si pasó [staleAfter] o si aún no hay ningún
+  /// documento (el CIE-U puede cargarlos en cualquier momento); sin red, no molesta.
   Future<void> syncIfStale() async {
     final current = await future;
     final last = current.status.syncedAt;
-    if (last != null && DateTime.now().difference(last) < staleAfter) return;
+    if (current.status.documents > 0 &&
+        last != null &&
+        DateTime.now().difference(last) < staleAfter) {
+      return;
+    }
     await sync();
   }
 }

@@ -32,7 +32,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 | Utilidad `cn` | paquete `cn`, reexportado en `lib/utils.ts` | |
 | Gestor | **pnpm** 12.9.1 | usa `pnpm`, nunca `npm`/`yarn` |
 
-`zod` (validación de `features/auth`) y `server-only` ya están instalados. Sin librería de datos ni de formularios todavía.
+`zod` (validación de `features/auth`) y `server-only` ya están instalados. Sin librería de datos ni de formularios todavía. Pruebas: `vitest` y `@playwright/test`.
 Si el estado de servidor lo justifica, `@tanstack/react-query` **solo** para datos
 consumidos desde componentes cliente.
 
@@ -101,6 +101,17 @@ consumidos desde componentes cliente.
   `POST /ai/knowledge/upload` desde una server action con `FormData` (`lib/api-client.ts` admite `FormData` y un plazo
   mayor, 120 s, porque calcular embeddings tarda; `next.config.ts` sube el límite de las server actions a 11 MB). Si el
   servicio de IA no responde, el intento queda visible en estado «Error».
+- **Recuperación de contraseña** (CU01, `features/auth`): «¿Olvidaste tu contraseña?» en el login → `/forgot-password`
+  (`forgotPasswordAction`, pide el código al backend) → `/reset-password` (`resetPasswordAction`: correo, código de
+  6 dígitos y contraseña nueva) → `/login?restablecida=1`. Ambas rutas son públicas (`proxy.ts`). El backend responde
+  igual exista o no el correo, así que la pantalla nunca revela cuentas; un código malo o vencido se muestra en el campo
+  del código. React limpia el formulario tras cada envío: los valores que deben conservarse viajan en `state.values`.
+- **Reportes** (CU21): «Exportar Excel» y «Exportar CSV» usan el mismo *route handler* (`/reports/export?formato=xlsx|csv`).
+- **Pruebas** (fase 7): `pnpm test` (Vitest: esquemas y utilidades, archivos `*.test.ts` junto al código) y
+  `pnpm test:e2e` (Playwright, `e2e/`). Las E2E necesitan el backend arriba **con los datos de demostración**
+  (`uv run python -m emprendeu.db.seed`) y `API_URL` apuntándole; levantan la web en el puerto 3100. Usan el Chromium
+  completo (`channel: "chromium"`): `npx playwright install chromium`. El backend limita la recuperación a 3 solicitudes por
+  correo cada 15 min, por eso la prueba usa un correo distinto en cada ejecución.
 - **Cambio de contraseña** (`features/auth`: `changePasswordAction`, `ChangePasswordForm`,
   `AccountView`): el backend invalida los tokens anteriores y devuelve uno nuevo, que la acción
   guarda en la cookie para que la sesión actual siga; las demás sesiones se cierran. «Contraseña
@@ -108,11 +119,25 @@ consumidos desde componentes cliente.
 - Cambiar el rol de un usuario existente (`PATCH /users/{id}/rol`) está en la tabla de
   usuarios: es lo que permite que una cuenta registrada desde la web llegue a usar el panel.
 - **Landing pública** (`/`, `app/(public)/page.tsx` → `features/landing`): presenta el programa a
-  estudiantes y lleva a `/apply`; «Ingresar» va a `/login` (o «Ir al panel» si hay sesión). Animaciones con
-  **anime.js 4** (`animejs`), siempre dentro de `useAnimeScope` (`features/landing/hooks/use-anime-scope.ts`:
-  `createScope` con media query de movimiento reducido, revierte al desmontar). Los estados iniciales se ponen
-  con `utils.set`; el CSS solo oculta `[data-reveal]` mientras la sección vale `data-anim="pending"`. Sin cifras:
-  el contenido está en `features/landing/content.ts`. `proxy.ts` deja pública solo la ruta exacta `/`.
+  estudiantes y lleva a `/apply`. «Personal CIE-U» va a `/login` (o «Ir al panel» si hay sesión); es
+  discreto porque el panel rechaza a los emprendedores. Diseño y orden de secciones en `design.md`
+  («Landing pública»). Piezas:
+  - `components/primitives.tsx`: `LandingButton` (accent/primary/ghost), `Container`, `SectionHeading`,
+    `SectionLead` y `delay()`. No se repiten clases de botón ni de título a mano.
+  - `content.ts`: **todo** el texto visible, las etiquetas de acción (`CTA`) y `APP_DOWNLOAD_URL`.
+  - Animaciones con **anime.js 4** dentro de `useAnimeScope` (`hooks/use-anime-scope.ts`: `createScope` con
+    media query de movimiento reducido, revierte al desmontar, y por defecto **se prepara solo al acercarse**
+    la sección; el hero y la escena fijada pasan `lazy: false`). Las piezas se seleccionan con
+    `data-part` y el helper `part()`, nunca por clases de Tailwind. El CSS solo oculta `[data-reveal]`
+    mientras la sección vale `data-anim="pending"`.
+  - El **h1 del hero entra con CSS** (`.landing-rise`/`.landing-pop` en `globals.css`), no con JS.
+  - **«Pausar animaciones»**: `stores/motion-store.ts` (zustand) + `components/motion-toggle.tsx`. Los bucles
+    de anime.js se registran con `ambient([...])`; los temporizadores consultan `motionPaused()`; los
+    bucles CSS llevan `.landing-ambient` (`html[data-motion="paused"]`).
+  - Cabecera, pie, «Lo esencial», «Personas», «Preguntas» (`<details>`) y el cierre son **Server
+    Components**; la cabecera usa animaciones CSS ligadas al scroll.
+  - Metadatos Open Graph en la página; la URL absoluta sale de `SITE_URL` (`lib/env.ts`).
+  `proxy.ts` deja pública solo la ruta exacta `/`.
 - **El Resumen del panel está en `/panel`** (antes `/`): login y registro redirigen ahí.
 - **Menú agrupado** (`app/(app)/layout.tsx` → `NAV`): Inicio, Programa, Acompañamiento y
   Configuración; cada ítem declara su permiso y los grupos vacíos no se muestran. «Mi cuenta» es la

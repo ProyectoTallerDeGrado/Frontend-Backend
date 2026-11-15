@@ -73,6 +73,18 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Sombras con nombre (landing): ninguna sombra se escribe en crudo en los componentes. */
+@theme {
+  --shadow-float: 0 10px 30px -12px rgb(0 0 0 / 60%);
+  --shadow-note: 0 20px 40px -20px rgb(0 0 0 / 70%);
+  --shadow-card-deep: 0 24px 50px -20px rgb(2 31 80 / 80%);
+  --shadow-phone: 0 40px 80px -30px rgb(2 31 80 / 60%);
+  --shadow-header: 0 10px 30px -20px rgb(0 0 0 / 70%);
+  --shadow-glow-accent: 0 18px 40px -16px var(--accent-bright);
+  --shadow-glow-primary: 0 0 90px -8px var(--primary);
+  --shadow-glow-bulb: 0 0 80px var(--accent-bright);
+}
+
 :root {
   /* Tokens de marca (ver design.md §3.1) */
   --navy-950: #021f50;
@@ -263,6 +275,114 @@ html:has(.landing) {
   html:has(.landing) {
     scroll-behavior: auto;
   }
+}
+
+/*
+ * Entrada del hero solo con CSS: el titular está en el HTML y se ve aunque el JavaScript no haya
+ * cargado (es el LCP). Con «reducir movimiento» la regla global quita la animación y queda visible.
+ */
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5em);
+  }
+}
+
+@keyframes landing-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+}
+
+.landing-rise {
+  animation: landing-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+.landing-pop {
+  animation: landing-pop 0.8s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+/* Resplandor sin `filter: blur` (más barato en celulares). */
+.landing-glow {
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--glow, var(--primary)) var(--glow-strength, 30%), transparent), transparent);
+}
+
+/* «Pausar animaciones»: los bucles de CSS marcados como ambientales se detienen. */
+html[data-motion="paused"] .landing-ambient {
+  animation-play-state: paused !important;
+}
+
+/*
+ * Cabecera de la landing: transparente sobre el hero y sólida al bajar, con la barra de progreso de
+ * lectura, todo ligado al scroll en CSS (sin JavaScript). Sin soporte o con movimiento reducido,
+ * queda siempre sólida y sin barra.
+ */
+@keyframes landing-header-solid {
+  to {
+    background-color: color-mix(in srgb, var(--navy-950) 92%, transparent);
+    box-shadow: var(--shadow-header);
+    backdrop-filter: blur(12px);
+  }
+}
+
+.site-progress {
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .site-header {
+      animation: landing-header-solid linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 48px;
+    }
+    .site-progress {
+      animation: grow-x linear both;
+      animation-timeline: scroll(root);
+    }
+  }
+}
+
+@supports not (animation-timeline: scroll()) {
+  .site-header {
+    background-color: color-mix(in srgb, var(--navy-950) 92%, transparent);
+  }
+  .site-progress {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header {
+    background-color: color-mix(in srgb, var(--navy-950) 92%, transparent);
+  }
+  .site-progress {
+    display: none;
+  }
+}
+
+/* Preguntas frecuentes con <details> nativo: se abre con transición donde el navegador lo permite. */
+html:has(.landing) {
+  interpolate-size: allow-keywords;
+}
+
+.faq-item::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    block-size 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    content-visibility 0.35s allow-discrete;
+}
+
+.faq-item[open]::details-content {
+  block-size: auto;
 }
 
 /* Fila o entrada recién creada. */

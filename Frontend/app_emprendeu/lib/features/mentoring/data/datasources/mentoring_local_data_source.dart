@@ -15,7 +15,11 @@ class MentoringLocalDataSource {
 
   static const _opsKey = '${userDataPrefix}mentoring.pending_ops';
   static const _commitmentsKey = '${userDataPrefix}mentoring.commitments';
-  static const _progressKey = '${userDataPrefix}mentoring.progress';
+  static const _progressKeyPrefix = '${userDataPrefix}mentoring.progress';
+
+  /// Una copia por emprendimiento: así, sin red, no se ven los avances de otro.
+  static String _progressKey(int? ventureId) =>
+      '$_progressKeyPrefix.${ventureId ?? 'default'}';
 
   // --- cola de pendientes ---------------------------------------------------
 
@@ -101,21 +105,22 @@ class MentoringLocalDataSource {
     }
   }
 
-  Future<void> saveProgress(List<ProgressLog> list) => _store.write(
-    _progressKey,
-    jsonEncode([
-      for (final p in list.where((p) => !p.pendingSync))
-        {
-          'id': p.id,
-          'ref': p.clientRef,
-          'text': p.text,
-          'at': p.createdAt.toUtc().toIso8601String(),
-        },
-    ]),
-  );
+  Future<void> saveProgress(List<ProgressLog> list, {int? ventureId}) =>
+      _store.write(
+        _progressKey(ventureId),
+        jsonEncode([
+          for (final p in list.where((p) => !p.pendingSync))
+            {
+              'id': p.id,
+              'ref': p.clientRef,
+              'text': p.text,
+              'at': p.createdAt.toUtc().toIso8601String(),
+            },
+        ]),
+      );
 
-  Future<List<ProgressLog>?> readProgress() async {
-    final raw = await _store.read(_progressKey);
+  Future<List<ProgressLog>?> readProgress({int? ventureId}) async {
+    final raw = await _store.read(_progressKey(ventureId));
     if (raw == null) return null;
     try {
       return [

@@ -31,14 +31,22 @@ export async function getReport(kind: ReportKind, filters: PeriodFilters): Promi
   return reportSchema.parse(await authedFetch(`/indicators/reports/${kind}?${search}`));
 }
 
-/** CU21 · Descarga del CSV completo; reenvía el filtro y usa la sesión de la cookie. */
-export async function downloadReportCsv(kind: ReportKind, filters: PeriodFilters): Promise<Response> {
-  const upstream = await authedDownload(`/indicators/reports/${kind}/export?${periodParams(filters)}`);
+const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+/** CU21 · Descarga del reporte completo (CSV o Excel); reenvía el filtro y usa la sesión de la cookie. */
+export async function downloadReport(
+  kind: ReportKind,
+  filters: PeriodFilters,
+  format: "csv" | "xlsx" = "csv",
+): Promise<Response> {
+  const search = periodParams(filters);
+  search.set("formato", format);
+  const upstream = await authedDownload(`/indicators/reports/${kind}/export?${search}`);
   if (!upstream.ok) return new Response("No se pudo exportar el reporte.", { status: upstream.status });
   return new Response(upstream.body, {
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="reporte-${kind}.csv"`,
+      "Content-Type": format === "xlsx" ? XLSX_TYPE : "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="reporte-${kind}.${format}"`,
     },
   });
 }

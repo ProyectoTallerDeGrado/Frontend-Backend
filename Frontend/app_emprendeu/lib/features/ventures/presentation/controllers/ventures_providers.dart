@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/failure.dart';
 import '../../../../core/error/result.dart';
+import '../../../../core/storage/local_data_cleaner.dart';
+import '../../../../core/storage/providers.dart';
 import '../../../documents/index.dart';
 import '../../domain/entities/milestone.dart';
 import '../../domain/entities/venture.dart';
@@ -48,11 +50,30 @@ final myVenturesProvider = FutureProvider<List<Venture>>(
 );
 
 /// Emprendimiento elegido por el usuario cuando tiene varios (`null` = el primero).
+///
+/// La elección se guarda en el dispositivo (bajo el prefijo `user.`, así se borra
+/// al cerrar sesión) para recordarla al reabrir la app. Si el emprendimiento
+/// guardado ya no es del usuario, `myVentureProvider` usa el primero.
 class SelectedVentureController extends Notifier<int?> {
-  @override
-  int? build() => null;
+  static const storageKey = '${userDataPrefix}ventures.selected';
 
-  void select(int ventureId) => state = ventureId;
+  @override
+  int? build() {
+    _restore();
+    return null;
+  }
+
+  Future<void> _restore() async {
+    final raw = await ref.read(keyValueStoreProvider).read(storageKey);
+    final saved = int.tryParse(raw ?? '');
+    // Si ya eligió mientras se leía, esa elección manda.
+    if (saved != null && ref.mounted && state == null) state = saved;
+  }
+
+  void select(int ventureId) {
+    state = ventureId;
+    ref.read(keyValueStoreProvider).write(storageKey, '$ventureId');
+  }
 }
 
 final selectedVentureIdProvider =

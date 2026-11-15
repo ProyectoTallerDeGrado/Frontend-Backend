@@ -2,6 +2,7 @@ import 'package:app_emprendeu/core/error/failure.dart';
 import 'package:app_emprendeu/core/error/result.dart';
 import 'package:app_emprendeu/features/ai_assistant/domain/entities/chat_message.dart';
 import 'package:app_emprendeu/features/ai_assistant/domain/entities/knowledge_match.dart';
+import 'package:app_emprendeu/features/ai_assistant/domain/entities/local_knowledge_status.dart';
 import 'package:app_emprendeu/features/ai_assistant/domain/usecases/local_coach_usecases.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -33,7 +34,9 @@ void main() {
   late AskLocalCoachUseCase ask;
 
   setUp(() {
-    knowledge = FakeLocalKnowledgeRepository();
+    knowledge = FakeLocalKnowledgeRepository(
+      current: const LocalKnowledgeStatus(documents: 2, fragments: 10),
+    );
     coach = FakeLocalCoachRepository(answer: 'Haz una tabla de costos.');
     ask = AskLocalCoachUseCase(
       knowledge,
@@ -108,6 +111,49 @@ void main() {
     expect(coach.lastPrompt, contains('Coach: Bien, cuéntame más'));
     expect(coach.lastPrompt, endsWith('Pregunta: ¿Y mis costos?'));
     expect(coach.stored, hasLength(4));
+  });
+
+  test(
+    'sin ninguna guía en el celular lo explica sin llamar al modelo',
+    () async {
+      knowledge.current = LocalKnowledgeStatus.empty;
+      final a = await ok('¿Cómo calculo mis costos?');
+      expect(a.answer.text, localCoachNoDocuments);
+      expect(a.answer.suggestMentor, isTrue);
+      expect(coach.generateCalls, 0);
+    },
+  );
+
+  test('un saludo lo responde el modelo sin documentos ni mentor', () async {
+    knowledge.current = LocalKnowledgeStatus.empty;
+    coach.answer = '¡Hola! ¿En qué te ayudo?';
+    final a = await ok('Hola');
+    expect(coach.generateCalls, 1);
+    expect(coach.lastPrompt, isNot(contains('Contexto:\n[')));
+    expect(a.answer.text, '¡Hola! ¿En qué te ayudo?');
+    expect(a.answer.sources, isEmpty);
+    expect(a.answer.suggestMentor, isFalse);
+    expect(coach.stored, hasLength(2));
+  });
+
+  test('reconoce saludos y charla corta, pero no preguntas reales', () {
+    for (final t in [
+      'hola',
+      '¡Hola!',
+      'Buenas tardes coach',
+      'hola, ¿qué puedes hacer?',
+      'Muchas gracias',
+      'ok',
+    ]) {
+      expect(isSmallTalk(t), isTrue, reason: t);
+    }
+    for (final t in [
+      'Hola, ¿cómo calculo mis costos?',
+      '¿Qué es un modelo de negocio?',
+      'costos',
+    ]) {
+      expect(isSmallTalk(t), isFalse, reason: t);
+    }
   });
 
   test('valida el texto antes de buscar', () async {

@@ -378,7 +378,8 @@ class _ModeBar extends ConsumerWidget {
       LocalKnowledgeState(:final error?) when knowledge.status.documents == 0 =>
         error,
       LocalKnowledgeState(:final status) when status.documents == 0 =>
-        'Aún no hay documentos del CIE-U en tu celular.',
+        'Aún no hay guías del CIE-U en tu celular: se descargan con internet '
+            'cuando el CIE-U las carga.',
       LocalKnowledgeState(:final status) =>
         '${status.documents} documentos del CIE-U en tu celular',
     };

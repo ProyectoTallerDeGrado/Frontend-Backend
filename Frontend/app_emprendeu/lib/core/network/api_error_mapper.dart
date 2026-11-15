@@ -36,6 +36,15 @@ Failure mapDioException(DioException e) {
       return const SessionClosedFailure();
     case 'need_already_registered':
       return const NeedAlreadyRegisteredFailure();
+    case 'invalid_code':
+      return const FieldFailure(
+        'code',
+        'El código no es válido o ya venció. Pide uno nuevo.',
+      );
+    case 'email_unavailable':
+      return const UnknownFailure(
+        'No pudimos enviar el correo. Intenta de nuevo en unos minutos.',
+      );
     case 'wrong_password':
       // 400 (no 401): una clave actual equivocada no debe cerrar la sesión.
       return const FieldFailure(

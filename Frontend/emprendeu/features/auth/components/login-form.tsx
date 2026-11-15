@@ -51,6 +51,12 @@ export function LoginForm() {
           )}
         </Button>
         <Link
+          href="/forgot-password"
+          className="inline-flex min-h-11 items-center self-center text-[15px] font-semibold text-primary hover:text-primary-hover"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
+        <Link
           href="/register"
           className="inline-flex min-h-11 items-center self-center text-[15px] font-semibold text-primary hover:text-primary-hover"
         >

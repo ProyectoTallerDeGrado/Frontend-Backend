@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIE = "emprendeu_session";
-const PUBLIC_PATHS = ["/login", "/register", "/apply"];
+const PUBLIC_PATHS = ["/login", "/register", "/apply", "/forgot-password", "/reset-password"];
 /** Rutas públicas exactas: `/` es la landing. */
 const PUBLIC_EXACT = ["/"];
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { authedFetch } from "@/features/auth";
+import { searchEntrepreneurOptions } from "@/features/entrepreneurs";
 import { ApiError } from "@/lib/api-client";
 import { toBoIso } from "@/lib/format";
 
@@ -88,4 +89,13 @@ export async function setAttendanceAction(id: number, entrepreneurId: number, at
   }
   revalidatePath(`/training/${id}`);
   return { ok: true, message: attended ? "Asistencia registrada." : "Ausencia registrada." };
+}
+
+/** CU28: busca emprendedores para agregarlos a una capacitación (el backend limita los resultados). */
+export async function searchEntrepreneursAction(q: string): Promise<{ id: number; name: string }[]> {
+  try {
+    return await searchEntrepreneurOptions(q);
+  } catch {
+    return [];
+  }
 }

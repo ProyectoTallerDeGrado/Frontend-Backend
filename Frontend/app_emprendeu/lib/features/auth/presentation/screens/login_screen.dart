@@ -94,7 +94,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const SizedBox(height: 4),
               Center(
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () => context.go(AuthRoutes.forgotPassword),
                   style: TextButton.styleFrom(
                     minimumSize: const Size(48, 48),
                     foregroundColor: AppColors.onNavyMuted,

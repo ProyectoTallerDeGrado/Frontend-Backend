@@ -31,3 +31,21 @@ class Training {
   bool get cancelled => status == 'cancelada';
   bool get canEnroll => !enrolled && status == 'programada';
 }
+
+/// Una página de la lista de capacitaciones (la lista general viene paginada).
+class TrainingPage {
+  const TrainingPage({
+    required this.items,
+    required this.page,
+    required this.total,
+  });
+
+  final List<Training> items;
+  final int page;
+
+  /// Total de capacitaciones del programa (no solo las de esta página).
+  final int total;
+}
+
+/// Capacitaciones que se piden por página.
+const trainingPageSize = 20;

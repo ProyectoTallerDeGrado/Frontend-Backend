@@ -4,6 +4,7 @@ import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/change_password_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
+import '../../domain/usecases/password_reset_usecases.dart';
 import '../../domain/usecases/register_usecase.dart';
 import '../../domain/usecases/restore_session_usecase.dart';
 
@@ -27,6 +28,14 @@ final registerUseCaseProvider = Provider(
     ref.watch(authRepositoryProvider),
     ref.watch(loginUseCaseProvider),
   ),
+);
+
+final requestPasswordResetUseCaseProvider = Provider(
+  (ref) => RequestPasswordResetUseCase(ref.watch(authRepositoryProvider)),
+);
+
+final resetPasswordUseCaseProvider = Provider(
+  (ref) => ResetPasswordUseCase(ref.watch(authRepositoryProvider)),
 );
 
 final restoreSessionUseCaseProvider = Provider(

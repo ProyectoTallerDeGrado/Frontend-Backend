@@ -143,6 +143,27 @@ export async function addVentureMemberAction(
   return { ok: true, message: "Integrante agregado. Registrado en auditoría." };
 }
 
+/** CU05: cambia el rol de un integrante dentro del equipo (fundador, cofundador o miembro). */
+export async function changeVentureMemberRoleAction(
+  ventureId: number,
+  entrepreneurId: number,
+  role: string,
+  name: string,
+): Promise<{ ok: boolean; message: string }> {
+  if (!(MEMBER_ROLES as readonly string[]).includes(role)) return { ok: false, message: "Elige un rol válido." };
+  try {
+    await authedFetch(`/ventures/${ventureId}/members/${entrepreneurId}`, {
+      method: "PATCH",
+      body: { rol_en_emprendimiento: role },
+    });
+  } catch (error) {
+    return { ok: false, message: ventureMessage(error, "No se pudo cambiar el rol. Intenta de nuevo.") };
+  }
+  revalidatePath("/ventures");
+  revalidatePath("/ventures/[id]", "layout");
+  return { ok: true, message: `Rol de ${name} actualizado. Registrado en auditoría.` };
+}
+
 /** CU05: quita a un emprendedor del equipo (el backend impide dejarlo vacío). */
 export async function removeVentureMemberAction(
   ventureId: number,

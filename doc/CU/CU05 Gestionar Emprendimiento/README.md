@@ -84,9 +84,15 @@ equipo en solo lectura.
 - Resultado al hacer el cambio: backend `uv run pytest` → 83 pasaron, `ruff check` y `ruff format --check` limpios; móvil `flutter analyze` sin problemas y `flutter test` → 86 pasaron, 3 omitidas (integración opt-in); web `pnpm lint` y `pnpm build` sin errores.
 - **No se probó a mano** en el navegador ni en un dispositivo.
 
+## Actualización
+
+- La coordinación ya puede **cambiar el rol de un integrante** (fundador, cofundador, miembro) desde «Equipo»: `PATCH /ventures/{id}/members/{emprendedor_id}` (auditado, prueba en `tests/test_venture_members_api.py`) y selector en `features/ventures/components/team-sheet.tsx`.
+
+## Actualización (móvil)
+
+- El emprendimiento elegido **se recuerda** al reabrir la app: `SelectedVentureController` lo guarda en `KeyValueStore` bajo `user.ventures.selected` (se borra al cerrar sesión; si ya no es del usuario se usa el primero).
+- La copia sin conexión de avances es **una por emprendimiento** (`mentoring/data/datasources/mentoring_local_data_source.dart`), así que sin red no se ven los avances de otro. Pruebas: `test/features/ventures/selected_venture_test.dart` y `test/features/mentoring/data/mentoring_repository_test.dart`.
+
 ## Pendiente
 
-- El emprendimiento elegido en el móvil **no se recuerda** al cerrar la app (vuelve al primero).
-- Sin conexión, la copia guardada de avances es una sola: si se cambia de emprendimiento sin red, puede mostrar los avances del anterior.
 - El XP del Camino de un emprendimiento suma el XP total de sus integrantes, que incluye lo ganado en otros emprendimientos (el XP se guarda por emprendedor).
-- La web no ofrece **cambiar el rol** de un integrante (hay que quitarlo y volver a agregarlo).

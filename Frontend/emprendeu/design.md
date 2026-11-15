@@ -40,27 +40,52 @@ El panel creció a 19 secciones; esta revisión lo ordena sin cambiar la marca.
   `on-navy-dim`, `primary-hover`, `on-accent`, `info-foreground`. No queda hex en crudo en el código.
 - El login dice «Panel del personal del CIE-U» (ya no es solo para el administrador).
 
-### Landing pública (`/`)
+### Landing pública (`/`) — revisada el 2026-11-14
 
 Para estudiantes que emprenden; el Resumen del panel pasó a `/panel`. Concepto **«Tu idea, en órbita»**:
 el núcleo es la idea y lo que gira alrededor es lo que da el CIE-U. Animaciones con anime.js 4.
 
-1. **Hero** (navy, alto de pantalla): titular Sora de hasta 108 px cuyas palabras suben desde un recorte
-   (`splitText` + `stagger`); los tres anillos se dibujan (`svg.createDrawable`), el núcleo «Tu idea» entra
-   con resorte y los satélites (Mentorías, Coach IA, Retos y XP, Capacitaciones, Comunidad) giran sin fin con
-   la etiqueta derecha; la órbita sigue al puntero (`createAnimatable`). Botón «Postula tu emprendimiento»
-   (`accent-bright` sobre `on-accent`) y «Cómo funciona» (ancla).
-2. **El camino**: las cuatro etapas. En escritorio, una ruta SVG se dibuja al ritmo del scroll
-   (`onScroll({ sync })`) con un cometa que la recorre (`svg.createMotionPath`) y cada etapa se enciende al
-   pasar; en móvil, línea vertical que crece.
-3. **Lo que recibes**: bloques de tamaños y colores distintos; cada uno se anima una vez al entrar
-   (sesiones que se agendan, chat del coach que se escribe, XP que sube con su barra, talleres que se marcan,
-   aviso que late). Los valores de esos bloques son de ejemplo de la app, no estadísticas.
-4. **Cómo postular**: tres pasos que se unen con una línea.
-5. **Cierre** navy con órbita en CSS y el mismo botón. Pie con FCEE · UAGRM y el ingreso del personal.
+**Principio: un solo momento grande.** La escena Problema → Giro es el único efecto protagonista; el
+resto se mueve poco y siempre con un propósito. Nada de marquesinas, botones magnéticos ni parallax.
 
-Cabecera fija: transparente sobre el hero, navy con desenfoque al bajar. Con «reducir movimiento» no se
-anima nada y todo queda visible; sin JavaScript también (regla `<noscript>`).
+Orden de la página:
+
+1. **Hero** (navy, alto de pantalla). El titular (Sora, hasta 96 px), el texto y los botones entran con
+   **CSS** (`.landing-rise`, `.landing-pop`), no con JS: el h1 es el LCP y está visible desde el HTML. La
+   palabra resaltada rota (idea → app → tienda…) cada 3,2 s y se detiene al pasar el cursor. La órbita
+   (anillos que se dibujan, núcleo «Tu idea», satélites con lo que da el CIE-U) gira muy lento. Botones
+   «Postula tu emprendimiento» (`accent`) y «Ver cómo funciona» (`ghost`). Debajo, para el estudiante que ya
+   está dentro: «¿Ya estás en el programa? Entra desde la app» (enlace si `APP_DOWNLOAD_URL` existe).
+2. **El problema y el giro** (escena fijada de 220vh, solo escritorio con movimiento): caen las notas, la
+   idea se apaga, el fondo pasa a azul y cada nota se voltea con la respuesta. En móvil, lista de pares.
+3. **El camino**: las cuatro etapas (numeradas porque son una secuencia). Ruta SVG con cometa al ritmo del
+   scroll; el texto nunca baja de 0,6 de opacidad.
+4. **La app**: teléfono fijo con 4 pantallas (Inicio, Camino, Mentorías, Coach IA).
+5. **Y detrás de la app, personas** (`blue-50`): lo que hacen asesores y coordinación.
+6. **Lo esencial** (`#esencial`): lista de definiciones con filete superior (no tarjetas). Solo datos
+   confirmados; fechas de convocatoria y contacto se agregan cuando el CIE-U los dé.
+7. **Cómo postular**: tres pasos unidos por una línea.
+8. **Preguntas** (`#preguntas`): `<details name="faq">` nativo, una abierta a la vez.
+9. **Cierre** navy con órbita en CSS y el mismo botón. **Pie** con las anclas, «Postular» y «Personal CIE-U».
+
+**Cabecera**: transparente sobre el hero y navy al bajar, con barra de progreso de lectura; ambas son
+animaciones CSS ligadas al scroll (`animation-timeline: scroll()`). Sin soporte o con «reducir
+movimiento», queda siempre sólida. «Personal CIE-U» es discreto y en móvil se va al pie: la web es del
+personal; el estudiante usa la app.
+
+**Textos**: todos en `features/landing/content.ts`. Cada acción se nombra igual en toda la página
+(`CTA`: «Postula tu emprendimiento», «Postular» en la cabecera).
+
+**Movimiento y accesibilidad**:
+- Botón fijo **«Pausar animaciones»** (abajo a la izquierda, WCAG 2.2.2): detiene la órbita, la palabra
+  rotatoria, el recorrido del teléfono en móvil y los bucles CSS (`.landing-ambient`). Se recuerda en el
+  navegador. Lo ligado al scroll no se pausa: lo controla quien lee.
+- «Reducir movimiento»: no se anima nada y todo queda visible; sin JavaScript también (`<noscript>`).
+- Enlace «Saltar al contenido» al tabular.
+
+**Forma**: radios por jerarquía (`rounded-lg` en íconos y chips cuadrados, `rounded-xl` en botones y
+tarjetas, grande solo en el teléfono). Sombras con nombre (`shadow-float`, `shadow-note`, `shadow-card-deep`,
+`shadow-phone`, `shadow-glow-*`). Resplandores con `.landing-glow` (gradiente radial), sin `filter: blur`.
 
 ## 1. Alcance
 

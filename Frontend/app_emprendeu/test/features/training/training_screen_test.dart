@@ -63,4 +63,34 @@ void main() {
     expect(find.text('Inscribirme'), findsNothing);
     expect(find.text('Inscrito'), findsOneWidget);
   });
+
+  testWidgets('con muchas capacitaciones se piden por páginas (CU29)', (
+    tester,
+  ) async {
+    final repo = FakeTrainingRepository(
+      trainings: [
+        for (var i = 1; i <= 25; i++)
+          Training(
+            id: i,
+            title: 'Taller $i',
+            status: 'cancelada',
+            enrolled: false,
+          ),
+      ],
+    );
+    await _open(tester, repo);
+    expect(find.text('Taller 1'), findsOneWidget);
+    expect(find.text('Taller 21'), findsNothing);
+    expect(repo.pageCalls, 1);
+
+    final more = find.text('Cargar más');
+    await tester.ensureVisible(more);
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.tap(more);
+    await settle(tester);
+    expect(repo.pageCalls, 2);
+    await tester.ensureVisible(find.text('Taller 25'));
+    expect(find.text('Taller 25'), findsOneWidget);
+    expect(find.text('Cargar más'), findsNothing);
+  });
 }

@@ -10,9 +10,21 @@ class FakeTrainingRepository implements TrainingRepository {
   List<Training> trainings;
   int enrollCalls = 0;
 
+  int pageCalls = 0;
+
   @override
-  Future<Result<List<Training>>> getTrainings() async =>
-      Result.ok(List.of(trainings));
+  Future<Result<TrainingPage>> getTrainings({int page = 1}) async {
+    pageCalls++;
+    final start = (page - 1) * trainingPageSize;
+    final end = (start + trainingPageSize).clamp(0, trainings.length);
+    return Result.ok(
+      TrainingPage(
+        items: start >= trainings.length ? [] : trainings.sublist(start, end),
+        page: page,
+        total: trainings.length,
+      ),
+    );
+  }
 
   @override
   Future<Result<Training>> enroll(int trainingId) async {
