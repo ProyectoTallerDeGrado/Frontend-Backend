@@ -8,7 +8,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-dm-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --font-heading: var(--font-sora);
   --color-navy-950: var(--navy-950);
   --color-navy-900: var(--navy-900);
@@ -64,13 +64,47 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Escala de radios de design.md §3.3: 6 · 8 · 10 (controles chicos) · 12 (input y botón) · 16 (tarjeta) · 20 · 24. */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.2);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-3xl: calc(var(--radius) * 2);
+  --radius-4xl: calc(var(--radius) * 2.4);
+  --color-blue-100: var(--blue-100);
+  --color-neutral-fill: var(--neutral-fill);
+  --color-ink-2: var(--ink-2);
+}
+
+/* Sombras con nombre (landing): ninguna sombra se escribe en crudo en los componentes. */
+@theme {
+  --shadow-float: 0 10px 30px -12px rgb(0 0 0 / 60%);
+  --shadow-note: 0 20px 40px -20px rgb(0 0 0 / 70%);
+  --shadow-card-deep: 0 24px 50px -20px rgb(2 31 80 / 80%);
+  --shadow-phone: 0 40px 80px -30px rgb(2 31 80 / 60%);
+  --shadow-header: 0 10px 30px -20px rgb(0 0 0 / 70%);
+  --shadow-glow-accent: 0 18px 40px -16px var(--accent-bright);
+  --shadow-glow-primary: 0 0 90px -8px var(--primary);
+  --shadow-glow-bulb: 0 0 80px var(--accent-bright);
+
+  /* Panel: dos niveles de superficie y los acentos de acción (design.md §3.3). */
+  --shadow-raised: 0 14px 30px -18px rgb(10 26 68 / 35%);
+  --shadow-overlay: 0 18px 40px -12px rgb(2 31 80 / 60%);
+  --shadow-cta: 0 12px 24px -10px rgb(31 79 214 / 70%);
+  --shadow-knob: 0 1px 3px rgb(0 0 0 / 30%);
+
+  /*
+   * Movimiento: lo que entra desacelera, lo que sale acelera y dura menos, y el rebote se reserva
+   * para confirmar una acción. Duraciones: 120 (toque), 200 (control), 320 (panel), 500 (énfasis).
+   */
+  --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.3, 1.4, 0.5, 1);
+  --duration-tap: 120ms;
+  --duration-control: 200ms;
+  --duration-panel: 320ms;
+  --duration-emphasis: 500ms;
 }
 
 :root {
@@ -78,6 +112,9 @@
   --navy-950: #021f50;
   --navy-900: #0a1a44;
   --blue-50: #eaf0ff;
+  --blue-100: #dce6ff;
+  --neutral-fill: #e7ecf6;
+  --ink-2: #2b3552;
   --on-navy-muted: #c9d6f5;
   --on-navy-faint: #b4c4ee;
   --accent-bright: #ff5468;
@@ -92,7 +129,8 @@
   --warning-foreground: #5e3f00;
   --warning-soft: #fff6dc;
   --warning-border: #f0dda0;
-  --switch-off: #9aa6c4;
+  /* 3,6:1 sobre blanco: un control apagado se sigue distinguiendo (WCAG 1.4.11). */
+  --switch-off: #7584a8;
   --success: #0e7a4f;
   --success-bright: #7fe0b0;
   --gold: #b26a00;
@@ -124,7 +162,7 @@
   --chart-3: #d61f3a;
   --chart-4: #0e7a4f;
   --chart-5: #b26a00;
-  --radius: 0.75rem;
+  --radius: 0.625rem;
   --sidebar: #021f50;
   --sidebar-foreground: #c9d6f5;
   --sidebar-primary: #1f4fd6;
@@ -133,40 +171,6 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgb(255 255 255 / 12%);
   --sidebar-ring: #1f4fd6;
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
@@ -265,10 +269,118 @@ html:has(.landing) {
   }
 }
 
+/*
+ * Entrada del hero solo con CSS: el titular está en el HTML y se ve aunque el JavaScript no haya
+ * cargado (es el LCP). Con «reducir movimiento» la regla global quita la animación y queda visible.
+ */
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5em);
+  }
+}
+
+@keyframes landing-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+}
+
+.landing-rise {
+  animation: landing-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+.landing-pop {
+  animation: landing-pop 0.8s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+/* Resplandor sin `filter: blur` (más barato en celulares). */
+.landing-glow {
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--glow, var(--primary)) var(--glow-strength, 30%), transparent), transparent);
+}
+
+/* «Pausar animaciones»: los bucles de CSS marcados como ambientales se detienen. */
+html[data-motion="paused"] .landing-ambient {
+  animation-play-state: paused !important;
+}
+
+/*
+ * Cabecera de la landing: transparente sobre el hero y sólida al bajar, con la barra de progreso de
+ * lectura, todo ligado al scroll en CSS (sin JavaScript). Sin soporte o con movimiento reducido,
+ * queda siempre sólida y sin barra.
+ */
+@keyframes landing-header-solid {
+  to {
+    background-color: color-mix(in srgb, var(--navy-950) 92%, transparent);
+    box-shadow: var(--shadow-header);
+    backdrop-filter: blur(12px);
+  }
+}
+
+.site-progress {
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .site-header {
+      animation: landing-header-solid linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 48px;
+    }
+    .site-progress {
+      animation: grow-x linear both;
+      animation-timeline: scroll(root);
+    }
+  }
+}
+
+@supports not (animation-timeline: scroll()) {
+  .site-header {
+    background-color: color-mix(in srgb, var(--navy-950) 92%, transparent);
+  }
+  .site-progress {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header {
+    background-color: color-mix(in srgb, var(--navy-950) 92%, transparent);
+  }
+  .site-progress {
+    display: none;
+  }
+}
+
+/* Preguntas frecuentes con <details> nativo: se abre con transición donde el navegador lo permite. */
+html:has(.landing) {
+  interpolate-size: allow-keywords;
+}
+
+.faq-item::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    block-size 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    content-visibility 0.35s allow-discrete;
+}
+
+.faq-item[open]::details-content {
+  block-size: auto;
+}
+
 /* Fila o entrada recién creada. */
 @keyframes flash {
   from {
-    background-color: #dce6ff;
+    background-color: var(--blue-100);
   }
   to {
     background-color: transparent;
@@ -322,6 +434,34 @@ html:has(.landing) {
   100% {
     box-shadow: 0 0 0 0 rgb(31 79 214 / 0%);
   }
+}
+
+/* Avisos: entran con un leve ascenso y salen más rápido de lo que entraron. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+/* Esqueletos de carga: un brillo que cruza la pieza, en vez de parpadear todo el bloque. */
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--muted) 25%, color-mix(in srgb, var(--muted) 55%, var(--card)) 50%, var(--muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
 }
 
 @keyframes fade-up {

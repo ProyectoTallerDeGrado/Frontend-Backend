@@ -41,7 +41,7 @@ export function LoginForm() {
         <Button
           type="submit"
           disabled={pending}
-          className="h-[54px] w-full gap-2.5 rounded-xl text-base font-bold hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-10px_rgba(31,79,214,.7)]"
+          className="h-13 w-full gap-2.5 rounded-xl text-base font-bold hover:-translate-y-0.5 hover:shadow-cta"
         >
           {pending ? "Ingresando…" : "Ingresar al panel"}
           {pending ? (
@@ -50,6 +50,12 @@ export function LoginForm() {
             <ArrowRight aria-hidden="true" className="size-5" />
           )}
         </Button>
+        <Link
+          href="/forgot-password"
+          className="inline-flex min-h-11 items-center self-center text-[15px] font-semibold text-primary hover:text-primary-hover"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
         <Link
           href="/register"
           className="inline-flex min-h-11 items-center self-center text-[15px] font-semibold text-primary hover:text-primary-hover"

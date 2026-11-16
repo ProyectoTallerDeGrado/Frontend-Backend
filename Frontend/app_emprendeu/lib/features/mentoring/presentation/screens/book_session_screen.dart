@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/utils/date_format.dart';
+import '../../../../shared/widgets/motion.dart';
 import '../../domain/entities/mentor.dart';
 import '../../domain/entities/time_slot.dart';
 import '../controllers/booking_providers.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Agendar una mentoría: asesor asignado → día → turno libre → confirmar.
 /// Al confirmar se vuelve a verificar el horario (puede haberse ocupado).
@@ -26,6 +30,7 @@ class _BookSessionScreenState extends ConsumerState<BookSessionScreen> {
   late DateTime _day = _today();
   TimeSlot? _slot;
   bool _submitting = false;
+  bool _booked = false;
   String? _error;
 
   static DateTime _today() {
@@ -52,14 +57,11 @@ class _BookSessionScreenState extends ConsumerState<BookSessionScreen> {
         .book(mentor: mentor, day: _day, slot: slot, topic: _topic.text);
     if (!mounted) return;
     if (failure == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Mentoría agendada: ${longDate(_day)} a las ${slot.label}.',
-          ),
-        ),
-      );
-      context.pop();
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _submitting = false;
+        _booked = true;
+      });
       return;
     }
     setState(() {
@@ -74,6 +76,14 @@ class _BookSessionScreenState extends ConsumerState<BookSessionScreen> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final mentors = ref.watch(mentorsProvider);
+
+    if (_booked) {
+      return _BookedView(
+        mentor: _mentor!.name,
+        when: '${longDate(_day)} a las ${_slot!.label}',
+        onDone: () => context.pop(),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Agendar mentoría')),
@@ -375,12 +385,91 @@ class _Retry extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(message),
-      const SizedBox(height: 8),
-      OutlinedButton(onPressed: onRetry, child: const Text('Reintentar')),
-    ],
+  Widget build(BuildContext context) => ErrorState(
+    message: message,
+    onRetry: onRetry,
+    padding: const EdgeInsets.symmetric(vertical: 8),
   );
+}
+
+/// Confirmación a pantalla completa: la mentoría quedó agendada y con quién.
+class _BookedView extends StatelessWidget {
+  const _BookedView({
+    required this.mentor,
+    required this.when,
+    required this.onDone,
+  });
+
+  final String mentor;
+  final String when;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xxl),
+          child: Column(
+            children: [
+              const Spacer(),
+              RippleBurst(
+                color: AppColors.success,
+                child: PopIn(
+                  child: Container(
+                    width: 96,
+                    height: 96,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.success,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 52,
+                      color: AppColors.onNavy,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxxl),
+              FadeUp(
+                delay: const Duration(milliseconds: 200),
+                child: Semantics(
+                  header: true,
+                  liveRegion: true,
+                  child: Text(
+                    'Mentoría agendada',
+                    textAlign: TextAlign.center,
+                    style: text.headlineMedium,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              FadeUp(
+                delay: const Duration(milliseconds: 300),
+                child: Text(
+                  'Con $mentor, el $when. La verás en tu lista de mentorías.',
+                  textAlign: TextAlign.center,
+                  style: text.bodyLarge?.copyWith(
+                    height: 1.5,
+                    color: AppColors.muted,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: FilledButton(
+                  onPressed: onDone,
+                  child: const Text('Ver mis mentorías'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

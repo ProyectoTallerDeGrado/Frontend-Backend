@@ -115,11 +115,11 @@ class MentoringRepositoryImpl implements MentoringRepository {
     );
     switch (remote) {
       case Ok(:final value):
-        await _local.saveProgress(value);
+        await _local.saveProgress(value, ventureId: ventureId);
         return Result.ok([..._pendingLogs(ops, ventureId), ...value]);
       case Err(:final failure):
         if (failure is NetworkFailure) {
-          final cached = await _local.readProgress();
+          final cached = await _local.readProgress(ventureId: ventureId);
           if (cached != null) {
             return Result.ok([..._pendingLogs(ops, ventureId), ...cached]);
           }

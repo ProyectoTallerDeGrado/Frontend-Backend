@@ -10,6 +10,7 @@ import '../../domain/entities/mentoring_session.dart';
 import '../controllers/booking_providers.dart';
 import '../mentoring_routes.dart';
 import '../widgets/session_card.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Pestaña «Mentorías»: mis sesiones por estado y periodo, y el acceso a agendar.
 class MentoringScreen extends ConsumerStatefulWidget {
@@ -276,15 +277,10 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return ErrorState(
+      message: message,
+      onRetry: onRetry,
       padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Column(
-        children: [
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          OutlinedButton(onPressed: onRetry, child: const Text('Reintentar')),
-        ],
-      ),
     );
   }
 }

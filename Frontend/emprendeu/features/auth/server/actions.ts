@@ -9,6 +9,8 @@ import { authedFetch } from "./authed-fetch";
 import {
   changePasswordSchema,
   fieldErrors,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   loginSchema,
   registerSchema,
 } from "../schemas/auth-schemas";
@@ -34,6 +36,10 @@ function messageFor(error: unknown): string {
       const minutes = Math.max(1, Math.ceil(seconds / 60));
       return `Demasiados intentos. Intenta de nuevo en ${minutes} min.`;
     }
+    case "email_unavailable":
+      return "No pudimos enviar el correo. Intenta de nuevo en unos minutos.";
+    case "invalid_code":
+      return "El código no es válido o ya venció. Pide uno nuevo.";
     case "network_error":
       return "No se pudo conectar con el servidor. Intenta de nuevo.";
     default:
@@ -128,6 +134,42 @@ export async function changePasswordAction(_prev: FormState, formData: FormData)
     success: true,
     message: "Contraseña actualizada. Se cerraron las demás sesiones abiertas con la contraseña anterior.",
   };
+}
+
+/** CU01: pide el código de 6 dígitos. La respuesta no revela si el correo existe. */
+export async function forgotPasswordAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const values = { email: text(formData, "email").trim() };
+  const parsed = forgotPasswordSchema.safeParse(values);
+  if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
+  try {
+    await apiFetch("/auth/forgot-password", { method: "POST", body: { email: parsed.data.email } });
+  } catch (error) {
+    return { message: messageFor(error), values };
+  }
+  redirect(`/reset-password?email=${encodeURIComponent(parsed.data.email)}&enviado=1`);
+}
+
+/** CU01: cambia la contraseña con el código recibido; los tokens anteriores dejan de valer. */
+export async function resetPasswordAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const values = { email: text(formData, "email").trim(), code: text(formData, "code").trim() };
+  const parsed = resetPasswordSchema.safeParse({
+    ...values,
+    newPassword: text(formData, "newPassword"),
+    confirmPassword: text(formData, "confirmPassword"),
+  });
+  if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
+  try {
+    await apiFetch("/auth/reset-password", {
+      method: "POST",
+      body: { email: parsed.data.email, codigo: parsed.data.code, password_nueva: parsed.data.newPassword },
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.code === "invalid_code") {
+      return { errors: { code: "El código no es válido o ya venció. Pide uno nuevo." }, values };
+    }
+    return { message: messageFor(error), values };
+  }
+  redirect("/login?restablecida=1");
 }
 
 export async function logoutAction(): Promise<void> {

@@ -1,3 +1,4 @@
+import Form from "next/form";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
@@ -17,11 +18,14 @@ type SearchBarProps = {
   children?: ReactNode;
 };
 
-/** Buscador de listas: formulario GET (navegable y funciona sin JavaScript). */
+/**
+ * Buscador de listas: `next/form` navega sin recargar la página (se conserva la transición y el
+ * menú no parpadea) y, sin JavaScript, se comporta como un formulario GET normal.
+ */
 export function SearchBar({ action, q, label = "Buscar", placeholder, clearHref, hidden, children }: SearchBarProps) {
   return (
     <div className="mb-5 flex flex-wrap items-end gap-3">
-      <form method="get" action={action} role="search" className="flex flex-[1_1_320px] flex-wrap items-end gap-3">
+      <Form action={action} role="search" className="flex flex-[1_1_320px] flex-wrap items-end gap-3">
         {hidden &&
           Object.entries(hidden).map(([name, value]) =>
             value ? <input key={name} type="hidden" name={name} value={value} /> : null,
@@ -51,12 +55,12 @@ export function SearchBar({ action, q, label = "Buscar", placeholder, clearHref,
         {q && (
           <Link
             href={clearHref}
-            className="inline-flex min-h-12 items-center px-2 text-sm font-semibold text-primary hover:underline"
+            className="inline-flex min-h-12 items-center rounded-lg px-2 text-sm font-semibold text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-primary/30"
           >
             Quitar búsqueda
           </Link>
         )}
-      </form>
+      </Form>
       {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
     </div>
   );

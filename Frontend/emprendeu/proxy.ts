@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const SESSION_COOKIE = "emprendeu_session";
-const PUBLIC_PATHS = ["/login", "/register", "/apply"];
-/** Rutas públicas exactas: `/` es la landing. */
-const PUBLIC_EXACT = ["/"];
+const PUBLIC_PATHS = ["/login", "/register", "/apply", "/forgot-password", "/reset-password"];
+/** Rutas públicas exactas: `/` es la landing; el resto son sus metadatos (buscadores y enlaces compartidos). */
+const PUBLIC_EXACT = ["/", "/opengraph-image", "/icon.png", "/robots.txt", "/sitemap.xml"];
 
 /**
  * Primera barrera: sin cookie de sesión no se entra a rutas privadas.

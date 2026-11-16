@@ -9,8 +9,10 @@ import '../../../ventures/index.dart';
 import '../../domain/entities/completion_result.dart';
 import '../../domain/entities/journey.dart';
 import '../controllers/gamification_providers.dart';
+import '../widgets/celebration_dialog.dart';
 import '../widgets/challenge_sheet.dart';
 import '../widgets/journey_path.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Camino gamificado (pestaña «Camino»).
 class JourneyScreen extends ConsumerStatefulWidget {
@@ -47,13 +49,7 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
       if (mounted) setState(() => _bubble = null);
     });
     if (result.newBadges.isNotEmpty || result.leveledUp) {
-      final parts = [
-        if (result.leveledUp) '¡Subiste al nivel ${result.level}!',
-        if (result.newBadges.isNotEmpty)
-          'Nueva insignia: ${result.newBadges.join(', ')}.',
-      ];
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(parts.join(' '))));
+      showCelebration(context, result);
     }
   }
 
@@ -338,16 +334,10 @@ class _JourneyError extends StatelessWidget {
       );
     }
     return Center(
-      child: Padding(
+      child: ErrorState(
+        message: failure.message,
+        onRetry: onRetry,
         padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(failure.message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            OutlinedButton(onPressed: onRetry, child: const Text('Reintentar')),
-          ],
-        ),
       ),
     );
   }

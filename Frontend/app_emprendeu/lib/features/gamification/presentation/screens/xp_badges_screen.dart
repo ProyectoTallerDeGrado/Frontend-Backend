@@ -7,6 +7,7 @@ import '../widgets/badge_tile.dart';
 import '../widgets/xp_empty_state.dart';
 import '../widgets/xp_level_card.dart';
 import '../widgets/xp_movement_row.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// «Experiencia e insignias» (CU08): XP acumulado, nivel, insignias y movimientos.
 class XpBadgesScreen extends ConsumerWidget {
@@ -24,22 +25,11 @@ class XpBadgesScreen extends ConsumerWidget {
           error: (error, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    error is Failure
-                        ? error.message
-                        : 'No se pudo cargar tu progreso.',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () =>
-                        ref.invalidate(gamificationProfileProvider),
-                    child: const Text('Reintentar'),
-                  ),
-                ],
+              child: ErrorState(
+                message: error is Failure
+                    ? error.message
+                    : 'No se pudo cargar tu progreso.',
+                onRetry: () => ref.invalidate(gamificationProfileProvider),
               ),
             ),
           ),
@@ -63,11 +53,7 @@ class XpBadgesScreen extends ConsumerWidget {
                 if (p.badges.isEmpty)
                   const Text('Todavía no hay insignias en el catálogo.')
                 else
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [for (final b in p.badges) BadgeTile(badge: b)],
-                  ),
+                  BadgeGrid(badges: p.badges),
                 const SizedBox(height: 18),
                 Text('Movimientos de XP', style: text.titleSmall),
                 const SizedBox(height: 4),

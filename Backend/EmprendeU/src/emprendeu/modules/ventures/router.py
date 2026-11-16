@@ -123,6 +123,22 @@ async def add_member(
     return await service.add_member(user, emprendimiento_id, body)
 
 
+@router.patch(
+    "/ventures/{emprendimiento_id}/members/{emprendedor_id}",
+    response_model=list[s.MemberOut],
+)
+async def change_member_role(
+    emprendimiento_id: int,
+    emprendedor_id: int,
+    body: s.MemberRoleUpdate,
+    service: Svc,
+    user: Annotated[CurrentUser, staff("emprendedores:modificacion")],
+) -> list[s.MemberOut]:
+    return await service.change_member_role(
+        user, emprendimiento_id, emprendedor_id, body
+    )
+
+
 @router.delete(
     "/ventures/{emprendimiento_id}/members/{emprendedor_id}",
     response_model=list[s.MemberOut],

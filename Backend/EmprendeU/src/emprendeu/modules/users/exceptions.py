@@ -101,3 +101,12 @@ class SystemRoleProtected(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("Los roles del sistema no se pueden renombrar ni eliminar.")
+
+
+class InvalidResetCode(DomainError):
+    """El codigo no existe, vencio, ya se uso o se agotaron los intentos (400)."""
+
+    code = "invalid_code"
+
+    def __init__(self) -> None:
+        super().__init__("El codigo no es valido o ya vencio. Pide uno nuevo.")

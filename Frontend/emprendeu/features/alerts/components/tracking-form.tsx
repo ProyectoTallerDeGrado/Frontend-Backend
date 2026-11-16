@@ -48,7 +48,7 @@ export function TrackingForm({ initial, canEdit, canEvaluate }: Props) {
       else toast.error(result.message);
     });
 
-  const stepper = "flex size-11 items-center justify-center rounded-[10px] bg-background outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30 disabled:opacity-50";
+  const stepper = "flex size-11 items-center justify-center rounded-lg bg-background outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30 disabled:opacity-50";
 
   return (
     <div className="flex flex-wrap items-start gap-6">
@@ -218,7 +218,7 @@ export function TrackingForm({ initial, canEdit, canEvaluate }: Props) {
             type="button"
             disabled={!canEdit || pending}
             onClick={apply}
-            className="h-[50px] gap-2 rounded-xl bg-accent-bright text-[15px] font-bold text-on-accent hover:bg-accent-bright/90"
+            className="h-13 gap-2 rounded-xl bg-accent-bright text-[15px] font-bold text-on-accent hover:bg-accent-bright/90"
           >
             {pending && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
             Confirmar y aplicar

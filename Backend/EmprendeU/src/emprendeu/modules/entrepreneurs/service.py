@@ -85,11 +85,21 @@ class EntrepreneurService:
         found = await self._repo.get_by_user(usuario_id)
         return await self._ref(found) if found else None
 
+    async def names_by_entrepreneur(self, emprendedor_ids: list[int]) -> dict[int, str]:
+        """Nombre completo por `emprendedor_id` (para listas de otros modulos)."""
+        return await self._repo.names_by_entrepreneur(emprendedor_ids)
+
     async def link_venture(
         self, emprendedor_id: int, emprendimiento_id: int, rol: str | None = "fundador"
     ) -> bool:
         """Vincula al emprendedor. Falso si ya era integrante (no duplica)."""
         return await self._repo.link(emprendedor_id, emprendimiento_id, rol)
+
+    async def set_member_role(
+        self, emprendedor_id: int, emprendimiento_id: int, rol: str | None
+    ) -> bool:
+        """Cambia el rol dentro del equipo. Falso si no era integrante."""
+        return await self._repo.set_role(emprendedor_id, emprendimiento_id, rol)
 
     async def unlink_venture(self, emprendedor_id: int, emprendimiento_id: int) -> bool:
         """Quita al emprendedor del emprendimiento. Falso si no era integrante."""

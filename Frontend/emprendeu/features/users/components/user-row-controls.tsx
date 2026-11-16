@@ -47,7 +47,7 @@ export function UserRoleControl({ userId, name, role, roles, editable }: RolePro
     return (
       <span
         className="inline-block rounded-full px-3 py-[5px] text-[13px] font-bold"
-        style={{ background: meta?.bg ?? "#E7ECF6", color: meta?.fg ?? "#2B3552" }}
+        style={{ background: meta?.bg ?? "var(--neutral-fill)", color: meta?.fg ?? "var(--ink-2)" }}
       >
         {roleLabel(role)}
       </span>
@@ -69,11 +69,11 @@ export function UserRoleControl({ userId, name, role, roles, editable }: RolePro
             else toast.error(result.message);
           })
         }
-        className="h-10 max-w-full cursor-pointer rounded-full border-0 px-3 text-[13px] font-bold outline-none focus-visible:ring-3 focus-visible:ring-primary/40 disabled:opacity-60"
-        style={{ background: meta?.bg ?? "#E7ECF6", color: meta?.fg ?? "#2B3552" }}
+        className="h-11 max-w-full cursor-pointer rounded-full border-0 px-3 text-[13px] font-bold outline-none focus-visible:ring-3 focus-visible:ring-primary/40 disabled:opacity-60"
+        style={{ background: meta?.bg ?? "var(--neutral-fill)", color: meta?.fg ?? "var(--ink-2)" }}
       >
         {roles.map((r) => (
-          <option key={r.rol_id} value={r.nombre} style={{ background: "#fff", color: "#0E1730" }}>
+          <option key={r.rol_id} value={r.nombre} style={{ background: "var(--card)", color: "var(--foreground)" }}>
             {roleLabel(r.nombre)}
           </option>
         ))}

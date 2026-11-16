@@ -7,6 +7,7 @@ import '../../../../core/utils/date_format.dart';
 import '../../domain/entities/mentoring_session.dart';
 import '../controllers/booking_providers.dart';
 import '../widgets/session_card.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Detalle de una mentoría; si está programada se puede cancelar (CU23).
 class SessionDetailScreen extends ConsumerStatefulWidget {
@@ -83,22 +84,12 @@ class _SessionDetailScreenState extends ConsumerState<SessionDetailScreen> {
                   padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (error, _) => Column(
-                  children: [
-                    Text(
-                      error is Failure
-                          ? error.message
-                          : 'No se pudo cargar la mentoría.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: () => ref.invalidate(
-                        sessionDetailProvider(widget.sessionId),
-                      ),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
+                error: (error, _) => ErrorState(
+                  message: error is Failure
+                      ? error.message
+                      : 'No se pudo cargar la mentoría.',
+                  onRetry: () =>
+                      ref.invalidate(sessionDetailProvider(widget.sessionId)),
                 ),
                 data: (s) => Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

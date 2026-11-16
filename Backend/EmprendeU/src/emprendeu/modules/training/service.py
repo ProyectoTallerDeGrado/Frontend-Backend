@@ -125,20 +125,24 @@ class TrainingService:
         return row
 
     @staticmethod
-    def _participant_out(p: CapacitacionParticipante) -> s.ParticipantOut:
+    def _participant_out(
+        p: CapacitacionParticipante, name: str | None = None
+    ) -> s.ParticipantOut:
         return s.ParticipantOut(
             capacitacion_participante_id=p.capacitacion_participante_id,
             emprendedor_id=p.emprendedor_id,
+            nombre=name,
             asistencia=p.asistencia,
             fecha_registro=p.fecha_registro,
         )
 
     async def participants(self, capacitacion_id: int) -> list[s.ParticipantOut]:
         await self._training(capacitacion_id)
-        return [
-            self._participant_out(p)
-            for p in await self._repo.participants(capacitacion_id)
-        ]
+        rows = await self._repo.participants(capacitacion_id)
+        names = await self._entrepreneurs.names_by_entrepreneur(
+            [p.emprendedor_id for p in rows]
+        )
+        return [self._participant_out(p, names.get(p.emprendedor_id)) for p in rows]
 
     async def set_attendance(
         self, capacitacion_id: int, emprendedor_id: int, body: s.AttendanceUpdate

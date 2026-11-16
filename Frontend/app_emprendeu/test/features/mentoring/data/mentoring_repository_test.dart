@@ -6,6 +6,7 @@ import 'package:app_emprendeu/features/mentoring/data/models/mentoring_dto.dart'
 import 'package:app_emprendeu/features/mentoring/data/models/pending_op.dart';
 import 'package:app_emprendeu/features/mentoring/data/repositories/mentoring_repository_impl.dart';
 import 'package:app_emprendeu/features/mentoring/domain/entities/commitment.dart';
+import 'package:app_emprendeu/features/mentoring/domain/entities/progress_log.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -180,5 +181,33 @@ void main() {
 
     expect(result.failureOrNull, isA<NetworkFailure>());
     expect(await repo.pendingCount(), 1);
+  });
+
+  test('sin red cada emprendimiento ve sus propios avances (CU05)', () async {
+    ProgressDto dto(int id, String text) => ProgressDto(
+      seguimientoId: id,
+      observaciones: text,
+      fecha: DateTime(2026, 11, 1),
+    );
+    when(() => remote.progress(ventureId: 1))
+        .thenAnswer((_) async => [dto(1, 'Avance del café')]);
+    when(() => remote.progress(ventureId: 2))
+        .thenAnswer((_) async => [dto(2, 'Avance del taller')]);
+    await repo.getProgressLogs(ventureId: 1);
+    await repo.getProgressLogs(ventureId: 2);
+
+    when(() => remote.progress(ventureId: any(named: 'ventureId')))
+        .thenThrow(_offline);
+    final first = await repo.getProgressLogs(ventureId: 1);
+    final second = await repo.getProgressLogs(ventureId: 2);
+
+    expect(
+      (first as Ok<List<ProgressLog>>).value.single.text,
+      'Avance del café',
+    );
+    expect(
+      (second as Ok<List<ProgressLog>>).value.single.text,
+      'Avance del taller',
+    );
   });
 }

@@ -17,8 +17,8 @@ const KINDS: { kind: ReportKind; label: string; hint: string }[] = [
   { kind: "indicadores", label: "Indicadores", hint: "Valores registrados por emprendimiento." },
 ];
 
-function exportHref(kind: ReportKind, filters: PeriodFilters): string {
-  const search = new URLSearchParams({ kind });
+function exportHref(kind: ReportKind, filters: PeriodFilters, format: "csv" | "xlsx"): string {
+  const search = new URLSearchParams({ kind, formato: format });
   if (filters.desde) search.set("desde", filters.desde);
   if (filters.hasta) search.set("hasta", filters.hasta);
   if (filters.etapa) search.set("etapa", String(filters.etapa));
@@ -70,17 +70,26 @@ export async function ReportsScreen({ kind, filters }: { kind: ReportKind; filte
           <p className="text-[13px] text-muted-foreground">
             {current.hint}{" "}
             {report.truncado
-              ? `Vista previa: primeras ${report.filas.length} de ${report.total} filas; el CSV las incluye todas.`
+              ? `Vista previa: primeras ${report.filas.length} de ${report.total} filas; la exportación las incluye todas.`
               : `${report.total} fila${report.total === 1 ? "" : "s"}.`}
           </p>
         </div>
-        <a
-          href={exportHref(kind, filters)}
-          className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground outline-none hover:bg-primary/90 focus-visible:ring-3 focus-visible:ring-primary/30"
-        >
-          <Download aria-hidden="true" className="size-4" />
-          Exportar CSV
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={exportHref(kind, filters, "xlsx")}
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground outline-none hover:bg-primary/90 focus-visible:ring-3 focus-visible:ring-primary/30"
+          >
+            <Download aria-hidden="true" className="size-4" />
+            Exportar Excel
+          </a>
+          <a
+            href={exportHref(kind, filters, "csv")}
+            className="inline-flex h-11 items-center gap-2 rounded-xl border border-border-strong px-5 text-sm font-bold outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30"
+          >
+            <Download aria-hidden="true" className="size-4" />
+            Exportar CSV
+          </a>
+        </div>
       </div>
 
       <div className="relative overflow-x-auto rounded-2xl border border-border bg-card">

@@ -53,5 +53,6 @@ class AttendanceUpdate(BaseModel):
 class ParticipantOut(BaseModel):
     capacitacion_participante_id: int
     emprendedor_id: int
+    nombre: str | None = None
     asistencia: bool | None  # None = pendiente de registrar
     fecha_registro: datetime | None

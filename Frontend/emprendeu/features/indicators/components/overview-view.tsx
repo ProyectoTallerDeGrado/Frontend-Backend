@@ -29,7 +29,7 @@ export function OverviewView({ overview, links = {} }: Props) {
     <div className="flex flex-col gap-6">
       <section
         aria-label="Programa"
-        className="relative isolate overflow-hidden rounded-[20px] bg-navy-950 px-6 py-7 text-white sm:px-9 sm:py-9"
+        className="relative isolate overflow-hidden rounded-3xl bg-navy-950 px-6 py-7 text-white sm:px-9 sm:py-9"
       >
         <OrbitArt satellites={overview.emprendimientos_activos} />
         <div className="relative max-w-[560px]">

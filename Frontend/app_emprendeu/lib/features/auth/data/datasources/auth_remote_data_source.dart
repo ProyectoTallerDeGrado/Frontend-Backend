@@ -39,6 +39,21 @@ class AuthRemoteDataSource {
     return LoginResponseDto.fromJson(response.data!);
   }
 
+  Future<void> requestPasswordReset(String email) async {
+    await _dio.post<void>('/auth/forgot-password', data: {'email': email});
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    await _dio.post<void>(
+      '/auth/reset-password',
+      data: {'email': email, 'codigo': code, 'password_nueva': newPassword},
+    );
+  }
+
   Future<AuthUserDto> me(String token) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/auth/me',

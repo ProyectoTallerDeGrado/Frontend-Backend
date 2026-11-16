@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/connectivity/online_controller.dart';
 import '../controllers/mentoring_providers.dart';
 
@@ -59,8 +60,25 @@ class ConnectionPill extends ConsumerWidget {
 }
 
 /// Aviso bajo el encabezado: sin conexión (con pendientes), sincronizando o todo sincronizado.
-class SyncBanner extends ConsumerWidget {
+class SyncBanner extends StatelessWidget {
   const SyncBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // El banner empuja el contenido con suavidad al aparecer y al irse, en vez de saltar.
+    return AnimatedSize(
+      duration: MediaQuery.of(context).disableAnimations
+          ? Duration.zero
+          : AppMotion.panel,
+      curve: AppMotion.enter,
+      alignment: Alignment.topCenter,
+      child: const _SyncBannerBody(),
+    );
+  }
+}
+
+class _SyncBannerBody extends ConsumerWidget {
+  const _SyncBannerBody();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

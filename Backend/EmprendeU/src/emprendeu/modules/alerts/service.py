@@ -346,6 +346,31 @@ class AlertService:
         existing.add((venture_id, kind))
         found[kind] = found.get(kind, 0) + 1
 
+    async def raise_wellbeing_risk(self, emprendedor_id: int) -> int:
+        """Alerta inmediata: un mensaje al coach mostro senales de riesgo.
+
+        Una por emprendimiento del emprendedor, salvo que ya tenga abierta una alerta de
+        sentimiento. No guarda ni cita el mensaje. Devuelve cuantas creo.
+        """
+        existing = await self._repo.open_keys()
+        found: dict[str, int] = {}
+        for vid in await self._entrepreneurs.venture_ids_of_entrepreneur(
+            emprendedor_id
+        ):
+            await self._raise(
+                found,
+                existing,
+                vid,
+                SENTIMENT,
+                "Señal de riesgo en el coach",
+                "Un integrante escribio al coach con senales de desanimo fuerte o de "
+                "querer abandonar. Conviene que su asesor lo contacte pronto. Es una "
+                "senal orientativa, no un diagnostico; el mensaje no se guarda.",
+                "alta",
+            )
+        await self._repo.commit()
+        return sum(found.values())
+
     async def evaluate(self, actor_id: int | None = None) -> s.EvaluationResult:
         """Detecta riesgo de desercion y crea alertas (sin cambiar el emprendimiento)."""
         settings = await self._settings()

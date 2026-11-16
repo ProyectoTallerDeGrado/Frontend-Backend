@@ -4,6 +4,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, status
 
+from emprendeu.core.client_ip import client_ip
+from emprendeu.core.mailer import Mailer, get_mailer
 from emprendeu.core.pagination import Page, PageParamsDep
 from emprendeu.modules.users.dependencies import (
     CurrentUserDep,
@@ -20,10 +22,13 @@ from emprendeu.modules.users.permissions import (
 from emprendeu.modules.users.schemas import (
     CurrentUserOut,
     EstadoUpdate,
+    ForgotPasswordRequest,
     LoginRequest,
+    MessageResponse,
     PasswordChange,
     PermissionMatrix,
     RegisterRequest,
+    ResetPasswordRequest,
     RoleCreate,
     RoleEdit,
     RoleOut,
@@ -50,7 +55,7 @@ def _current_out(user: Usuario, current: CurrentUser) -> CurrentUserOut:
 async def login(
     body: LoginRequest, service: UserServiceDep, request: Request
 ) -> TokenResponse:
-    ip = request.client.host if request.client else None
+    ip = client_ip(request)
     user, token, expires_in = await service.login(body.email, body.password, ip)
     current = await service.current_user(user)
     return TokenResponse(
@@ -58,6 +63,34 @@ async def login(
         expires_in=expires_in,
         user=_current_out(user, current),
     )
+
+
+@auth_router.post(
+    "/forgot-password",
+    response_model=MessageResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    service: UserServiceDep,
+    request: Request,
+    mailer: Annotated[Mailer, Depends(get_mailer)],
+) -> MessageResponse:
+    """Pide un codigo por correo. La respuesta es igual exista o no la cuenta."""
+    ip = client_ip(request)
+    await service.request_password_reset(body.email, mailer, ip)
+    return MessageResponse(
+        mensaje="Si el correo esta registrado, te enviamos un codigo de 6 digitos."
+    )
+
+
+@auth_router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(
+    body: ResetPasswordRequest, service: UserServiceDep
+) -> MessageResponse:
+    """Cambia la clave con el codigo recibido; los tokens anteriores dejan de valer."""
+    await service.reset_password(body.email, body.codigo, body.password_nueva)
+    return MessageResponse(mensaje="Contrasena actualizada. Ya puedes iniciar sesion.")
 
 
 @auth_router.post(

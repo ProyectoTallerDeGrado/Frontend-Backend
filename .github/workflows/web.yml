@@ -1,0 +1,30 @@
+name: web
+
+on:
+  push:
+    paths: ["Frontend/emprendeu/**", ".github/workflows/web.yml"]
+  pull_request:
+    paths: ["Frontend/emprendeu/**", ".github/workflows/web.yml"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend/emprendeu
+    steps:
+      - uses: actions/checkout@v4
+      # La version de pnpm sale de `packageManager` en package.json.
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: Frontend/emprendeu/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: Frontend/emprendeu/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+      # El build no llama al backend: API_URL solo se usa al atender peticiones.
+      - run: pnpm build

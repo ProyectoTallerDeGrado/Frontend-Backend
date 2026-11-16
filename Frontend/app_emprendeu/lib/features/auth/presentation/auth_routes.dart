@@ -2,8 +2,10 @@ import 'package:go_router/go_router.dart';
 
 import 'screens/account_screen.dart';
 import 'screens/change_password_screen.dart';
+import 'screens/forgot_password_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/reset_password_screen.dart';
 import 'screens/splash_screen.dart';
 
 /// Rutas de la feature (se agregan en `app/router.dart`).
@@ -11,6 +13,8 @@ abstract final class AuthRoutes {
   static const splash = '/splash';
   static const login = '/login';
   static const register = '/register';
+  static const forgotPassword = '/forgot-password';
+  static const resetPassword = '/reset-password';
   static const account = '/account';
   static const changePassword = '/account/password';
 }
@@ -27,6 +31,15 @@ final List<RouteBase> authRoutes = [
   GoRoute(
     path: AuthRoutes.register,
     builder: (context, state) => const RegisterScreen(),
+  ),
+  GoRoute(
+    path: AuthRoutes.forgotPassword,
+    builder: (context, state) => const ForgotPasswordScreen(),
+  ),
+  GoRoute(
+    path: AuthRoutes.resetPassword,
+    builder: (context, state) =>
+        ResetPasswordScreen(email: state.uri.queryParameters['email'] ?? ''),
   ),
 ];
 

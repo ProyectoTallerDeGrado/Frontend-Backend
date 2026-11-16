@@ -22,6 +22,7 @@ export const trainingPageSchema = z.object({
 export const participantSchema = z.object({
   capacitacion_participante_id: z.number(),
   emprendedor_id: z.number(),
+  nombre: z.string().nullable(),
   asistencia: z.boolean().nullable(),
   fecha_registro: z.string().nullable(),
 });

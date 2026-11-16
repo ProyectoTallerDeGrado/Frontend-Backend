@@ -155,3 +155,26 @@ export async function deleteRoleAction(roleId: number, roleName: string): Promis
   revalidatePath("/users");
   return { ok: true, message: `Rol eliminado: ${roleName}. Registrado en auditoría.` };
 }
+
+/** CU03: renombra un rol personalizado o cambia su descripción (los roles del sistema están protegidos). */
+export async function editRoleAction(
+  roleId: number,
+  input: { nombre: string; descripcion: string },
+): Promise<ActionResult> {
+  const nombre = input.nombre.trim();
+  if (nombre.length < 3) return { ok: false, message: "El nombre debe tener al menos 3 caracteres." };
+  try {
+    await authedFetch(`/roles/${roleId}`, {
+      method: "PATCH",
+      body: { nombre, descripcion: input.descripcion.trim() || null },
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 422) {
+      return { ok: false, message: "Usa solo letras, números, espacios, guiones y guion bajo en el nombre." };
+    }
+    return fail(error);
+  }
+  revalidatePath("/roles");
+  revalidatePath("/users");
+  return { ok: true, message: `Rol actualizado: ${nombre}. Registrado en auditoría.` };
+}

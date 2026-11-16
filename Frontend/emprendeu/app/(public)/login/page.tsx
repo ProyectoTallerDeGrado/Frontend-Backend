@@ -7,6 +7,6 @@ export const metadata: Metadata = { title: "Ingreso · CIE-U" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   if (await getSession()) redirect("/panel");
-  const { registrado } = await searchParams;
-  return <LoginView registered={registrado === "1"} />;
+  const { registrado, restablecida } = await searchParams;
+  return <LoginView registered={registrado === "1"} reset={restablecida === "1"} />;
 }

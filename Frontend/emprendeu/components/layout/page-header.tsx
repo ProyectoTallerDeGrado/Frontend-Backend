@@ -14,12 +14,12 @@ type PageHeaderProps = {
 
 export function PageHeader({ title, subtitle, actions, back, meta }: PageHeaderProps) {
   return (
-    <header className="mb-7 flex animate-[fade-up_.45s_ease_both] flex-col gap-4">
+    <header className="mb-7 flex flex-col gap-4">
       {back && (
         <Link
           href={back.href}
           transitionTypes={["nav-back"]}
-          className="-ml-1 inline-flex min-h-9 w-fit items-center gap-1 rounded-lg pr-2 text-sm font-semibold text-muted-foreground outline-none transition-colors hover:text-primary focus-visible:ring-3 focus-visible:ring-primary/30"
+          className="-ml-1 inline-flex min-h-11 w-fit items-center gap-1 rounded-lg pr-2 text-sm font-semibold text-muted-foreground outline-none transition-colors hover:text-primary focus-visible:ring-3 focus-visible:ring-primary/30"
         >
           <ChevronLeft aria-hidden="true" className="size-4" />
           {back.label}

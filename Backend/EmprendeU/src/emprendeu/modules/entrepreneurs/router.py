@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from emprendeu.core.client_ip import client_ip
 from emprendeu.core.pagination import Page, PageParamsDep
 from emprendeu.db.session import get_session
 from emprendeu.modules.entrepreneurs.admission_service import (
@@ -103,7 +104,7 @@ async def apply(
     body: AdmissionCreate, session: SessionDep, request: Request
 ) -> AdmissionReceived:
     """Postulacion publica (sin sesion), limitada por IP."""
-    ip = request.client.host if request.client else None
+    ip = client_ip(request)
     return await AdmissionService(session, limiter=get_admission_limiter()).submit(
         body, ip
     )

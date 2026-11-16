@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -159,6 +160,7 @@ class _CommitmentTile extends ConsumerWidget {
                 '${c.done ? 'Marcar como pendiente' : 'Marcar como cumplido'}: ${c.description}',
             child: InkResponse(
               onTap: () async {
+                HapticFeedback.selectionClick();
                 final failure = await ref
                     .read(commitmentsProvider.notifier)
                     .toggle(c);
@@ -181,7 +183,7 @@ class _CommitmentTile extends ConsumerWidget {
                       border: Border.all(
                         color: c.done
                             ? AppColors.success
-                            : const Color(0xFF9AA6C4),
+                            : AppColors.outlineOff,
                         width: 2,
                       ),
                       borderRadius: BorderRadius.circular(9),

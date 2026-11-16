@@ -76,7 +76,9 @@ void main() {
   testWidgets('sin información suficiente sugiere un mentor', (tester) async {
     final world = await _openCoach(
       tester,
-      knowledge: FakeLocalKnowledgeRepository(),
+      knowledge: FakeLocalKnowledgeRepository(
+        current: const LocalKnowledgeStatus(documents: 3, fragments: 20),
+      ),
     );
     await _ask(tester, 'Receta de pasta');
     expect(find.text(localCoachFallback), findsOneWidget);

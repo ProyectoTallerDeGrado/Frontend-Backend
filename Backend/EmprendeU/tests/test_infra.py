@@ -2,9 +2,12 @@
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from starlette.requests import Request
 
+from emprendeu.core.client_ip import client_ip
 from emprendeu.core.errors import Unauthorized
 from emprendeu.core.pagination import Page, PageParams
+from emprendeu.core.ratelimit import SlidingWindowLimiter
 from emprendeu.core.security import (
     create_access_token,
     decode_access_token,
@@ -140,3 +143,28 @@ def test_el_secreto_debe_ser_fuerte_en_cualquier_entorno(
             Settings()  # type: ignore[call-arg]
     monkeypatch.setenv("JWT_SECRET", "a-1" * 11)  # 33 caracteres, no es el de ejemplo
     assert Settings().environment == environment  # type: ignore[call-arg]
+
+
+def _request(peer: str, forwarded: str | None = None) -> Request:
+    headers = [(b"x-forwarded-for", forwarded.encode())] if forwarded else []
+    return Request({"type": "http", "client": (peer, 1234), "headers": headers})
+
+
+def test_client_ip_solo_cree_al_proxy_de_confianza() -> None:
+    # Desde un proxy de confianza vale la IP reenviada (la ultima que no es un proxy).
+    assert client_ip(_request("127.0.0.1", "203.0.113.7")) == "203.0.113.7"
+    assert client_ip(_request("127.0.0.1", "10.9.9.9, 203.0.113.7, 127.0.0.1")) == (
+        "203.0.113.7"
+    )
+    # Sin cabecera, o con basura, queda la IP de quien conecta.
+    assert client_ip(_request("127.0.0.1")) == "127.0.0.1"
+    assert client_ip(_request("127.0.0.1", "no-es-una-ip")) == "127.0.0.1"
+    # Un cliente cualquiera no puede hacerse pasar por otra IP.
+    assert client_ip(_request("198.51.100.4", "203.0.113.7")) == "198.51.100.4"
+
+
+def test_limitador_borra_las_claves_vencidas() -> None:
+    limiter = SlidingWindowLimiter(max_attempts=2, window_seconds=0)
+    limiter.hit("a")
+    assert not limiter.is_blocked("a")
+    assert limiter._hits == {}

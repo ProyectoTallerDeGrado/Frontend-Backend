@@ -208,4 +208,56 @@ void main() {
       expect(repo.changePasswordCalls, 0);
     });
   });
+
+  testWidgets('CU01: recuperar la contraseña con el código del correo', (
+    tester,
+  ) async {
+    final repo = FakeAuthRepository();
+    await _pump(tester, repo);
+
+    await _tap(tester, '¿Olvidaste tu contraseña?');
+    expect(find.text('Recupera tu contraseña.'), findsOneWidget);
+
+    // El correo es obligatorio y válido antes de llamar al servidor.
+    await _tap(tester, 'Enviar código');
+    expect(find.text('Ingresa tu correo electrónico.'), findsOneWidget);
+    expect(repo.resetRequestCalls, 0);
+
+    await _enter(tester, 'tu@correo.com', 'camila@correo.com');
+    await _tap(tester, 'Enviar código');
+    expect(repo.resetRequestCalls, 1);
+    expect(find.text('Crea una contraseña nueva.'), findsOneWidget);
+
+    // El correo viaja prellenado; falta el código y la clave nueva.
+    await _enter(tester, '123456', '654321');
+    await _enter(tester, 'Mínimo 8 caracteres', 'nueva-clave-99');
+    await _enter(tester, 'Repite tu contraseña', 'nueva-clave-99');
+    await _tap(tester, 'Restablecer');
+    expect(repo.resetCalls, 1);
+    expect(repo.lastResetEmail, 'camila@correo.com');
+    expect(repo.lastResetCode, '654321');
+    expect(find.text('Tu emprendimiento, acompañado.'), findsOneWidget);
+  });
+
+  testWidgets('CU01: un código vencido se explica en el campo', (tester) async {
+    final repo = FakeAuthRepository()
+      ..resetResult = const Result.err(
+        FieldFailure(
+          'code',
+          'El código no es válido o ya venció. Pide uno nuevo.',
+        ),
+      );
+    await _pump(tester, repo);
+    await _tap(tester, '¿Olvidaste tu contraseña?');
+    await _enter(tester, 'tu@correo.com', 'camila@correo.com');
+    await _tap(tester, 'Enviar código');
+    await _enter(tester, '123456', '000000');
+    await _enter(tester, 'Mínimo 8 caracteres', 'nueva-clave-99');
+    await _enter(tester, 'Repite tu contraseña', 'nueva-clave-99');
+    await _tap(tester, 'Restablecer');
+    expect(
+      find.text('El código no es válido o ya venció. Pide uno nuevo.'),
+      findsOneWidget,
+    );
+  });
 }

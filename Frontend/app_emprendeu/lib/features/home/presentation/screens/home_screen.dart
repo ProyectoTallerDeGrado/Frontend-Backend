@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/utils/date_format.dart';
+import '../../../../shared/widgets/motion.dart';
 import '../../../auth/index.dart';
 import '../../../gamification/index.dart';
 import '../../../mentoring/index.dart';
 import '../../../ventures/index.dart';
 import '../widgets/next_challenge_card.dart';
 import '../widgets/progress_card.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Inicio del emprendedor: composición de las features `ventures`, `gamification` y `mentoring`.
 class HomeScreen extends ConsumerWidget {
@@ -99,20 +101,11 @@ class HomeScreen extends ConsumerWidget {
                 error: (e, _) => [
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Column(
-                      children: [
-                        Text(
-                          e is Failure
-                              ? e.message
-                              : 'No se pudo cargar tu información.',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton(
-                          onPressed: () => ref.invalidate(myVenturesProvider),
-                          child: const Text('Reintentar'),
-                        ),
-                      ],
+                    child: ErrorState(
+                      message: e is Failure
+                          ? e.message
+                          : 'No se pudo cargar tu información.',
+                      onRetry: () => ref.invalidate(myVenturesProvider),
                     ),
                   ),
                 ],
@@ -131,9 +124,9 @@ class HomeScreen extends ConsumerWidget {
       const SizedBox(height: 18),
       profile.when(
         data: (p) => ProgressCard(profile: p, stageName: venture.stageName),
-        loading: () => const SizedBox(
-          height: 144,
-          child: Center(child: CircularProgressIndicator()),
+        loading: () => Semantics(
+          label: 'Cargando tu progreso',
+          child: const Skeleton(height: 144, radius: 24),
         ),
         error: (_, _) => const SizedBox.shrink(),
       ),

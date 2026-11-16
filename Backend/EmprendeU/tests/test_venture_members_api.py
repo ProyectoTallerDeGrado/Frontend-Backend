@@ -145,6 +145,38 @@ async def test_cu05_equipo_del_emprendimiento(
         await client.delete(f"{API}/ventures/{vid}/members/{luis}", headers=rosa_h)
     ).status_code == 403
 
+    # cambiar el rol de un integrante: solo la coordinacion, con 404 si no es del equipo
+    changed = await client.patch(
+        f"{API}/ventures/{vid}/members/{luis}",
+        json={"rol_en_emprendimiento": "miembro"},
+        headers=coord,
+    )
+    assert changed.status_code == 200
+    assert {m["emprendedor_id"]: m["rol_en_emprendimiento"] for m in changed.json()}[
+        luis
+    ] == "miembro"
+    assert (
+        await client.patch(
+            f"{API}/ventures/{vid}/members/{luis}",
+            json={"rol_en_emprendimiento": "fundador"},
+            headers=rosa_h,
+        )
+    ).status_code == 403
+    assert (
+        await client.patch(
+            f"{API}/ventures/{vid}/members/999999",
+            json={"rol_en_emprendimiento": "miembro"},
+            headers=coord,
+        )
+    ).status_code == 404
+    assert (
+        await client.patch(
+            f"{API}/ventures/{vid}/members/{luis}",
+            json={"rol_en_emprendimiento": "jefe"},
+            headers=coord,
+        )
+    ).status_code == 422
+
     # quitar: el que sale deja de verlo; nunca queda vacio
     removed = await client.delete(f"{API}/ventures/{vid}/members/{luis}", headers=coord)
     assert removed.status_code == 200 and luis not in [

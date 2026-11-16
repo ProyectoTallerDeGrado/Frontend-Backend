@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/failure.dart';
+import '../../../../shared/widgets/motion.dart';
 import '../../../mentoring/index.dart';
 import '../../domain/usecases/assistant_usecases.dart';
 import '../assistant_routes.dart';
@@ -12,6 +13,7 @@ import '../controllers/assistant_providers.dart';
 import '../controllers/local_ai_providers.dart';
 import '../controllers/local_coach_providers.dart';
 import '../widgets/message_bubble.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 const _suggestions = [
   '¿Cómo calculo mis costos?',
@@ -147,22 +149,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                 error: (error, _) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          error is Failure
-                              ? error.message
-                              : 'No se pudo cargar el chat.',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        OutlinedButton(
-                          onPressed: () =>
-                              ref.invalidate(coachChatControllerProvider),
-                          child: const Text('Reintentar'),
-                        ),
-                      ],
+                    child: ErrorState(
+                      message: error is Failure
+                          ? error.message
+                          : 'No se pudo cargar el chat.',
+                      onRetry: () =>
+                          ref.invalidate(coachChatControllerProvider),
                     ),
                   ),
                 ),
@@ -191,12 +183,12 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                               ),
                             )
                           else if (state.sending)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Text(
-                                'El coach está escribiendo…',
-                                style: text.bodySmall?.copyWith(
-                                  color: AppColors.muted,
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 10),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: TypingDots(
+                                  semanticsLabel: 'El coach está escribiendo',
                                 ),
                               ),
                             ),
@@ -246,7 +238,7 @@ class _EmptyChat extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.smart_toy_outlined,
+              Icons.auto_awesome_outlined,
               size: 40,
               color: AppColors.primary,
             ),
@@ -328,29 +320,57 @@ class _ComposerState extends State<_Composer> {
   @override
   Widget build(BuildContext context) {
     final canSend = !widget.sending && widget.controller.text.trim().isNotEmpty;
+    // Burbuja de chat (design.md §3.6): más redonda que un campo de formulario.
+    OutlineInputBorder bubble(Color color, [double width = 1.5]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide(color: color, width: width),
+        );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 8, 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      padding: const EdgeInsets.fromLTRB(16, 4, 12, 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              enabled: !widget.sending,
-              minLines: 1,
-              maxLines: 4,
-              maxLength: maxCoachMessageLength,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'Escribe tu pregunta',
-                counterText: '',
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: widget.controller,
+                  enabled: !widget.sending,
+                  minLines: 1,
+                  maxLines: 4,
+                  maxLength: maxCoachMessageLength,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    hintText: 'Escribe tu pregunta',
+                    counterText: '',
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 13,
+                    ),
+                    border: bubble(AppColors.borderStrong),
+                    enabledBorder: bubble(AppColors.borderStrong),
+                    disabledBorder: bubble(AppColors.border),
+                    focusedBorder: bubble(AppColors.primary, 2),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                tooltip: 'Enviar',
+                onPressed: canSend ? () => widget.onSend() : null,
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                icon: const Icon(Icons.send),
+              ),
+            ],
           ),
-          IconButton.filled(
-            tooltip: 'Enviar',
-            onPressed: canSend ? () => widget.onSend() : null,
-            icon: const Icon(Icons.send),
+          const SizedBox(height: 8),
+          Text(
+            'La IA no sustituye a un asesor o mentor especializado.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(fontSize: 12, color: AppColors.muted),
           ),
         ],
       ),
@@ -378,7 +398,8 @@ class _ModeBar extends ConsumerWidget {
       LocalKnowledgeState(:final error?) when knowledge.status.documents == 0 =>
         error,
       LocalKnowledgeState(:final status) when status.documents == 0 =>
-        'Aún no hay documentos del CIE-U en tu celular.',
+        'Aún no hay guías del CIE-U en tu celular: se descargan con internet '
+            'cuando el CIE-U las carga.',
       LocalKnowledgeState(:final status) =>
         '${status.documents} documentos del CIE-U en tu celular',
     };

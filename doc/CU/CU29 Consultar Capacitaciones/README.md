@@ -15,7 +15,7 @@ El emprendedor ve las capacitaciones del programa, se inscribe y consulta su pro
 ## Qué se hizo
 
 - Backend: `GET /training` (lista), `GET /training/me` (ahora incluye `asistencia`) y `POST /training/{id}/enroll`.
-- Móvil: feature `training` (Perfil → «Capacitaciones», ruta `/training`) con insignia «Inscrito», «Asististe» o «No asististe» y botón «Inscribirme» solo en las programadas.
+- Móvil: feature `training` (Perfil → «Capacitaciones», ruta `/training`) con la lista **paginada** («Cargar más», 20 por página) e insignia «Inscrito», «Asististe» o «No asististe» y botón «Inscribirme» solo en las programadas.
 
 ## Dónde está implementado
 
@@ -31,8 +31,8 @@ El emprendedor ve las capacitaciones del programa, se inscribe y consulta su pro
 ## Verificación
 
 - `Backend/EmprendeU/tests/test_training_documents_api.py`
-- `Frontend/app_emprendeu/test/features/training/training_screen_test.dart`
+- `Frontend/app_emprendeu/test/features/training/training_screen_test.dart` (incluye la paginación)
 
 ## Pendiente
 
-- Solo se carga la primera página (100) de la lista general.
+- Ninguno conocido. Probar a mano en el dispositivo.

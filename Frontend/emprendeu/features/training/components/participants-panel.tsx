@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, LoaderCircle, UserPlus, X } from "lucide-react";
 
 import { Field, FormError, inputClass, useRunner } from "@/components/forms/form-bits";
 import { Button } from "@/components/ui/button";
 
-import { addParticipantAction, setAttendanceAction } from "../server/actions";
+import { addParticipantAction, searchEntrepreneursAction, setAttendanceAction } from "../server/actions";
 import type { Participant } from "../types";
 
 const card = "rounded-2xl border border-border bg-card p-6";
@@ -50,32 +50,72 @@ function Row({ trainingId, participant, name, canEdit }: { trainingId: number; p
   );
 }
 
-function AddForm({ trainingId, options }: { trainingId: number; options: { id: number; name: string }[] }) {
-  const [id, setId] = useState("");
-  const { pending, error, run } = useRunner(() => setId(""));
+type Option = { id: number; name: string };
+
+function AddForm({ trainingId, enrolled }: { trainingId: number; enrolled: Set<number> }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Option[]>([]);
+  const [chosen, setChosen] = useState<Option | null>(null);
+  const { pending, error, run } = useRunner(() => {
+    setChosen(null);
+    setQuery("");
+  });
+
+  // Busca mientras escribe (con una pausa para no llamar en cada tecla).
+  useEffect(() => {
+    if (chosen) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const found = await searchEntrepreneursAction(query);
+      if (!cancelled) setResults(found.filter((o) => !enrolled.has(o.id)));
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, chosen, enrolled]);
+
   return (
     <form
       noValidate
       className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        run(() => addParticipantAction(trainingId, Number(id)));
+        if (chosen) run(() => addParticipantAction(trainingId, chosen.id));
       }}
     >
-      <Field label="Emprendedor">
+      <Field label="Buscar emprendedor" hint="Por nombre, correo o documento.">
         {(fid) => (
-          <select id={fid} value={id} onChange={(e) => setId(e.target.value)} className={inputClass}>
-            <option value="">Elige un emprendedor…</option>
-            {options.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+          <input
+            id={fid}
+            value={chosen ? chosen.name : query}
+            onChange={(e) => {
+              setChosen(null);
+              setQuery(e.target.value);
+            }}
+            autoComplete="off"
+            className={inputClass}
+          />
         )}
       </Field>
+      {!chosen && (
+        <ul aria-label="Resultados" className="flex max-h-56 flex-col overflow-y-auto rounded-xl border border-border">
+          {results.length === 0 && <li className="px-4 py-3 text-sm text-muted-foreground">Sin resultados.</li>}
+          {results.map((o) => (
+            <li key={o.id} className="border-t border-muted first:border-t-0">
+              <button
+                type="button"
+                onClick={() => setChosen(o)}
+                className="min-h-11 w-full px-4 py-2 text-left text-sm font-semibold outline-none hover:bg-blue-50 focus-visible:bg-blue-50"
+              >
+                {o.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <FormError message={error} />
-      <Button type="submit" disabled={pending || !id} className="h-12 gap-2 self-start rounded-xl px-6 text-[15px] font-bold">
+      <Button type="submit" disabled={pending || !chosen} className="h-12 gap-2 self-start rounded-xl px-6 text-[15px] font-bold">
         {pending ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <UserPlus aria-hidden="true" className="size-[18px]" />}
         Agregar participante
       </Button>
@@ -87,19 +127,16 @@ function AddForm({ trainingId, options }: { trainingId: number; options: { id: n
 export function ParticipantsPanel({
   trainingId,
   participants,
-  options,
   canEdit,
   canAdd,
   closed,
 }: {
   trainingId: number;
   participants: Participant[];
-  options: { id: number; name: string }[];
   canEdit: boolean;
   canAdd: boolean;
   closed: boolean;
 }) {
-  const names = new Map(options.map((o) => [o.id, o.name]));
   const enrolled = new Set(participants.map((p) => p.emprendedor_id));
   return (
     <div className="flex flex-wrap items-start gap-6">
@@ -114,7 +151,7 @@ export function ParticipantsPanel({
                 key={p.capacitacion_participante_id}
                 trainingId={trainingId}
                 participant={p}
-                name={names.get(p.emprendedor_id) ?? `Emprendedor #${p.emprendedor_id}`}
+                name={p.nombre ?? `Emprendedor #${p.emprendedor_id}`}
                 canEdit={canEdit}
               />
             ))}
@@ -129,7 +166,7 @@ export function ParticipantsPanel({
           ) : (
             <>
               <p className="mb-5 text-sm leading-normal text-muted-foreground">Un emprendedor no puede repetirse en la misma capacitación.</p>
-              <AddForm trainingId={trainingId} options={options.filter((o) => !enrolled.has(o.id))} />
+              <AddForm trainingId={trainingId} enrolled={enrolled} />
             </>
           )}
         </aside>

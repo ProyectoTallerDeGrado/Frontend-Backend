@@ -81,7 +81,8 @@ lib/
 │   ├── app.dart              # MaterialApp.router
 │   ├── router.dart           # go_router: rutas de cada feature + barra inferior (StatefulShellRoute)
 │   ├── providers.dart        # raíz de composición: une las implementaciones `data` de cada feature
-│   └── theme/                # ThemeData, tokens de color y tipografía
+│   └── theme/                # ThemeData completo (AppBar, botones, inputs, chips, tarjetas, hojas, diálogos),
+│                             # app_colors.dart y app_tokens.dart (AppSpacing, AppRadii, AppMotion)
 ├── core/
 │   ├── config/               # env, base url, flavors
 │   ├── network/              # cliente Dio, AuthInterceptor, eventos de sesión, mapeo de errores
@@ -104,7 +105,8 @@ lib/
 │           ├── widgets/      # widgets propios de la feature
 │           └── controllers/  # notifiers/providers de Riverpod + estado de la pantalla
 └── shared/
-    └── widgets/              # AppShell y AppBottomNav; widgets reutilizables entre features
+    └── widgets/              # AppShell y AppBottomNav; motion.dart (FadeUp, PopIn, RippleBurst, TypingDots,
+                              # Skeleton) y state_views.dart (ErrorState, EmptyState)
 test/                         # espejo exacto de lib/
 ```
 
@@ -155,6 +157,20 @@ test/                         # espejo exacto de lib/
   «cargando»).
 - Las pantallas con scroll tienen *pull to refresh* y las listas `AsyncValue` muestran
   cargando / error con `Failure.message` / vacío.
+
+### Tema, movimiento y estados
+
+- **El tema manda.** `AppTheme` estiliza todos los componentes de Material: un `OutlinedButton`, un chip o un
+  `TextField` sin estilo propio ya salen con la marca. No copies `styleFrom` ni `OutlineInputBorder` en las pantallas;
+  solo se sobrescribe lo que de verdad difiere (campos sobre navy, la burbuja del Coach).
+- **Movimiento** (`shared/widgets/motion.dart`, duraciones y curvas en `AppMotion`): todo respeta
+  `MediaQuery.disableAnimations`. `FadeUp` es para lo que **llega** (un resultado, un banner), no para cada fila de
+  una lista. Las animaciones de entrada son finitas y sin `Timer` (los retrasos van en un `Interval`).
+- **Celebración**: subir de nivel o ganar una insignia abre `showCelebration` (`gamification`), a pantalla completa y
+  con háptica; agendar una mentoría termina en una pantalla de confirmación. Un `SnackBar` queda para avisos menores.
+- **Errores y vacíos**: `ErrorState` y `EmptyState` (`shared/widgets/state_views.dart`). No se arma otro
+  «texto + Reintentar» a mano.
+- **Cambio de pestaña** con un fundido corto en `AppShell` (no remonta las ramas) y háptica en la barra inferior.
 
 ### Sin conexión (cola y sincronización)
 
@@ -225,7 +241,10 @@ test/                         # espejo exacto de lib/
   (`coachModeProvider`); unos chips «En tu celular / En línea» permiten cambiar. Las reglas viven en
   `AskLocalCoachUseCase` (`domain`, Dart puro): busca los `topK` = 4 fragmentos más parecidos, descarta los de
   similitud < `LOCAL_AI_MIN_SIMILARITY` (0,45 por defecto, **sin calibrar con datos reales**: ajústalo en dispositivo)
-  y, si no queda ninguno, responde el mismo texto que el servidor **sin llamar al modelo**. Pide un mentor si no hay
+  y, si no queda ninguno, responde el mismo texto que el servidor **sin llamar al modelo** (o, si el celular aún no
+  tiene ninguna guía del CIE-U, `localCoachNoDocuments`, que lo explica). Los **saludos y la charla corta**
+  («hola», «gracias», «¿qué puedes hacer?»; `isSmallTalk`) no pasan por la búsqueda: los contesta el modelo con un
+  prompt corto, sin fuentes ni sugerencia de mentor. Pide un mentor si no hay
   fuentes o el tema es financiero/legal (mismas palabras clave que el backend). El prompt lleva el contexto
   `[Título] texto`, los últimos 6 turnos y la pregunta; si piden un plan, lo da en pasos con tiempos. La respuesta se
   ve **mientras se escribe** (`ChatState.partial`).
@@ -236,7 +255,7 @@ test/                         # espejo exacto de lib/
     usan. Se guarda por documento en `coach_knowledge_index.json` (directorio de soporte de la app, `Float32` en
     base64), y si cambia el modelo de embeddings el índice se descarta. La búsqueda es coseno por fuerza bruta en
     memoria (suficiente para miles de fragmentos). Se sincroniza al terminar de instalar la IA y al abrir el Coach si
-    pasaron 12 h (`LocalKnowledgeController.syncIfStale`).
+    pasaron 12 h (`LocalKnowledgeController.syncIfStale`); mientras el índice esté vacío, cada vez que se abre.
   - **Conversación local:** una sola, en `KeyValueStore` bajo `user.coach.local_conversation` (máx. 100 mensajes; se
     borra al cerrar sesión). «Nueva conversación» la borra. No llega al servidor, así que **no alimenta el análisis de
     sentimiento ni las alertas** (RF07); en línea todo sigue igual.
@@ -262,7 +281,7 @@ test/                         # espejo exacto de lib/
   vacío (el seed demo lo crea, las migraciones no) la pantalla lo explica.
 - **Capacitaciones** (CU29, requiere conexión): feature `training`. Perfil → «Capacitaciones» (`/training`) combina
   `GET /training` con `GET /training/me` para marcar la inscripción y la asistencia propia (`asistencia`: `null` = sin
-  registrar); «Inscribirme» llama a `POST /training/{id}/enroll` y solo aparece en las `programadas`.
+  registrar); la lista es **paginada** (20 por página, «Cargar más»: `TrainingsController.loadMore`); «Inscribirme» llama a `POST /training/{id}/enroll` y solo aparece en las `programadas`.
 - **Documentos** (CU30, requiere conexión): Perfil → «Documentos» (`/venture/documents`, feature `documents`) lista todos los
   archivos del emprendimiento, sube con `EvidencePicker` y elimina los propios (`DELETE /documents/{id}`). «Abrir»
   (`OpenDocumentUseCase`) descarga con `GET /documents/{id}/download` a `userFilesDirectory()/documents/<id>_<nombre>`
@@ -272,8 +291,8 @@ test/                         # espejo exacto de lib/
   que el emprendedor ya subió: «Mis archivos para la IA» → «Agregar archivo» → «Desde los documentos de tu
   emprendimiento» (solo lista PDF, DOCX, TXT y MD).
 - **Varios emprendimientos** (CU05): la coordinación puede poner a un emprendedor en más de un equipo.
-  `myVenturesProvider` trae la lista, `selectedVentureIdProvider` guarda el elegido (en memoria: al reabrir la app vuelve
-  al primero) y `myVentureProvider` es el elegido o el primero. `VentureSwitcher` aparece en Inicio y en «Mi
+  `myVenturesProvider` trae la lista, `selectedVentureIdProvider` guarda el elegido (también en el dispositivo, bajo `user.ventures.selected`: al reabrir la app se
+  recuerda; si ya no es suyo, usa el primero) y `myVentureProvider` es el elegido o el primero. `VentureSwitcher` aparece en Inicio y en «Mi
   emprendimiento» solo con dos o más. Las features que dependen del emprendimiento (Camino, Mentorías, avances sin
   conexión, Coach) leen `currentVentureIdProvider` por el barrel de `ventures` y envían `emprendimiento_id`; para
   recargar los emprendimientos se invalida `myVenturesProvider`. «Mi emprendimiento» lista el equipo en solo lectura.
@@ -287,6 +306,12 @@ test/                         # espejo exacto de lib/
   adjuntar evidencia (PDF, imagen u hoja de documento) y marcarlo cumplido. La evidencia es la feature `documents`:
   `POST /documents` multipart con `hito_id`. Si el hito se guarda pero la subida falla, el hito **se conserva**, se avisa y
   la evidencia se puede adjuntar después desde la tarjeta del hito.
+- **Recuperación de contraseña** (CU01, requiere conexión): «¿Olvidaste tu contraseña?» del login → `/forgot-password`
+  (`RequestPasswordResetUseCase`, `POST /auth/forgot-password`) → `/reset-password?email=` (`ResetPasswordUseCase`: valida
+  que el código sean 6 dígitos y llama a `POST /auth/reset-password`) → login con un aviso. Ambas rutas son públicas en el
+  `redirect` del router. El servidor responde igual exista o no la cuenta; `invalid_code` llega como `FieldFailure('code')`
+  y se muestra en el campo del código, y `email_unavailable` como un mensaje claro. No inicia sesión: hay que entrar con la
+  contraseña nueva.
 - **Cambio de contraseña** (`/account/password`, desde la pestaña Perfil): `ChangePasswordUseCase`
   llama a `POST /auth/change-password`, **guarda el token nuevo** (el anterior deja de valer en
   el servidor) y la sesión sigue. «Contraseña actual incorrecta» es un 400 (`FieldFailure`), no

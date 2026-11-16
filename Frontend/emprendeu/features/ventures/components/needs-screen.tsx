@@ -9,6 +9,7 @@ import { formatDateTime } from "@/lib/format";
 import { NEEDS_PAGE_SIZE, listNeeds } from "../server/queries";
 import type { NeedFilters } from "../types";
 import { ResolveNeedButton } from "./resolve-need-button";
+import { filterPillClass } from "@/components/data/filter-pills";
 
 const ESTADOS = [
   { value: "", label: "Todas" },
@@ -31,9 +32,6 @@ function hrefFor(f: NeedFilters): string {
   return query ? `/needs?${query}` : "/needs";
 }
 
-const pill = (active: boolean) =>
-  `inline-flex min-h-11 items-center rounded-full border-[1.5px] px-4 text-sm font-semibold outline-none transition-all focus-visible:ring-3 focus-visible:ring-primary/30 ${active ? "border-navy-900 bg-navy-900 text-white" : "border-border-strong bg-card text-foreground hover:bg-blue-50"}`;
-
 /** CU24 · Bandeja del personal: necesidades y dificultades que reportan los emprendedores. */
 export async function NeedsScreen({ filters }: { filters: NeedFilters }) {
   const user = await requireSession();
@@ -54,7 +52,7 @@ export async function NeedsScreen({ filters }: { filters: NeedFilters }) {
             key={e.value}
             href={hrefFor({ ...filters, estado: e.value ? (e.value as NeedFilters["estado"]) : undefined, page: 1 })}
             aria-current={(filters.estado ?? "") === e.value ? "true" : undefined}
-            className={pill((filters.estado ?? "") === e.value)}
+            className={filterPillClass((filters.estado ?? "") === e.value)}
           >
             {e.label}
           </Link>
@@ -66,7 +64,7 @@ export async function NeedsScreen({ filters }: { filters: NeedFilters }) {
             key={t.value}
             href={hrefFor({ ...filters, tipo: t.value ? (t.value as NeedFilters["tipo"]) : undefined, page: 1 })}
             aria-current={(filters.tipo ?? "") === t.value ? "true" : undefined}
-            className={pill((filters.tipo ?? "") === t.value)}
+            className={filterPillClass((filters.tipo ?? "") === t.value)}
           >
             {t.label}
           </Link>

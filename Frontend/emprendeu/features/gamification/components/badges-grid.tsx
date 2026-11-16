@@ -2,7 +2,8 @@ import { Award } from "lucide-react";
 
 import type { Badge } from "../types";
 
-const COLORS = ["#1F4FD6", "#0A1A44", "#D61F3A", "#0E7A4F", "#7A3FD1", "#B26A00"];
+// Colores de marca en rotación (tokens de globals.css); sin tonos fuera de la paleta.
+const COLORS = ["var(--primary)", "var(--navy-900)", "var(--chart-3)", "var(--success)", "var(--info-foreground)", "var(--gold)"];
 
 export function BadgesGrid({ badges }: { badges: Badge[] }) {
   return (

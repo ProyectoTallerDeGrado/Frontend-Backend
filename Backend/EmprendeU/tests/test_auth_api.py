@@ -169,3 +169,137 @@ async def test_cambiar_clave_invalida_los_tokens_anteriores(
     assert fresh.status_code == 200
     again = {"Authorization": f"Bearer {fresh.json()['access_token']}"}
     assert (await client.get(f"{API}/auth/me", headers=again)).status_code == 200
+
+
+async def test_recuperar_contrasena_con_codigo(
+    client: AsyncClient, make_user: MakeUser, login
+) -> None:
+    await make_user(email="rec@test.com")
+    old = await login("rec@test.com")
+    mailer = client._transport.app.state.fake_mailer  # type: ignore[attr-defined]
+
+    asked = await client.post(
+        f"{API}/auth/forgot-password", json={"email": "rec@test.com"}
+    )
+    assert asked.status_code == 202 and len(mailer.sent) == 1
+    assert mailer.sent[0][0] == "rec@test.com"
+    code = mailer.last_code()
+
+    # un codigo equivocado no sirve y el correcto sigue vigente
+    wrong = await client.post(
+        f"{API}/auth/reset-password",
+        json={
+            "email": "rec@test.com",
+            "codigo": "000000",
+            "password_nueva": "nueva-clave-99",
+        },
+    )
+    assert wrong.status_code == 400 and wrong.json()["error"]["code"] == "invalid_code"
+
+    ok = await client.post(
+        f"{API}/auth/reset-password",
+        json={
+            "email": "rec@test.com",
+            "codigo": code,
+            "password_nueva": "nueva-clave-99",
+        },
+    )
+    assert ok.status_code == 200
+
+    # los tokens anteriores dejan de valer y la clave nueva entra
+    assert (await client.get(f"{API}/auth/me", headers=old)).status_code == 401
+    assert (
+        await client.post(
+            f"{API}/auth/login",
+            json={"email": "rec@test.com", "password": "nueva-clave-99"},
+        )
+    ).status_code == 200
+
+    # el codigo es de un solo uso
+    again = await client.post(
+        f"{API}/auth/reset-password",
+        json={
+            "email": "rec@test.com",
+            "codigo": code,
+            "password_nueva": "otra-clave-123",
+        },
+    )
+    assert again.status_code == 400
+
+
+async def test_recuperar_contrasena_no_revela_cuentas_y_limita(
+    client: AsyncClient, make_user: MakeUser
+) -> None:
+    await make_user(email="x@test.com")
+    await make_user(email="off@test.com", estado="deshabilitada")
+    mailer = client._transport.app.state.fake_mailer  # type: ignore[attr-defined]
+
+    bodies = []
+    for email in ("x@test.com", "nadie@test.com", "off@test.com"):
+        r = await client.post(f"{API}/auth/forgot-password", json={"email": email})
+        assert r.status_code == 202
+        bodies.append(r.json())
+    assert bodies[0] == bodies[1] == bodies[2]
+    assert [m[0] for m in mailer.sent] == ["x@test.com"]  # solo la cuenta habilitada
+
+    # limite de solicitudes por correo
+    for _ in range(2):
+        await client.post(f"{API}/auth/forgot-password", json={"email": "x@test.com"})
+    blocked = await client.post(
+        f"{API}/auth/forgot-password", json={"email": "x@test.com"}
+    )
+    assert blocked.status_code == 429
+
+
+async def test_recuperar_contrasena_agota_intentos_y_vence(
+    client: AsyncClient, make_user: MakeUser, session
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import update
+
+    from emprendeu.modules.users.models import RestablecimientoPassword
+
+    await make_user(email="int@test.com")
+    mailer = client._transport.app.state.fake_mailer  # type: ignore[attr-defined]
+    await client.post(f"{API}/auth/forgot-password", json={"email": "int@test.com"})
+    code = mailer.last_code()
+    body = {
+        "email": "int@test.com",
+        "codigo": "123456",
+        "password_nueva": "nueva-clave-99",
+    }
+    if code == "123456":
+        body["codigo"] = "654321"
+    for _ in range(5):
+        assert (
+            await client.post(f"{API}/auth/reset-password", json=body)
+        ).status_code == 400
+    # tras 5 fallos el codigo correcto ya no sirve
+    dead = await client.post(
+        f"{API}/auth/reset-password", json={**body, "codigo": code}
+    )
+    assert dead.status_code == 400
+
+    # un codigo vencido tampoco
+    await client.post(f"{API}/auth/forgot-password", json={"email": "int@test.com"})
+    await session.execute(
+        update(RestablecimientoPassword).values(
+            expira=datetime.now(UTC) - timedelta(minutes=1)
+        )
+    )
+    expired = await client.post(
+        f"{API}/auth/reset-password", json={**body, "codigo": mailer.last_code()}
+    )
+    assert expired.status_code == 400
+
+
+async def test_recuperar_contrasena_con_smtp_caido(
+    client: AsyncClient, make_user: MakeUser
+) -> None:
+    await make_user(email="smtp@test.com")
+    client._transport.app.state.fake_mailer.down = True  # type: ignore[attr-defined]
+    r = await client.post(
+        f"{API}/auth/forgot-password", json={"email": "smtp@test.com"}
+    )
+    assert r.status_code == 503 and r.json()["error"]["code"] == "email_unavailable"

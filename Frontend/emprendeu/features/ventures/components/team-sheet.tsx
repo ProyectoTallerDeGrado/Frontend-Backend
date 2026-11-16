@@ -6,10 +6,10 @@ import { LoaderCircle, Trash2, Users } from "lucide-react";
 import { Field, FormError, FormSheet, inputClass, useRunner } from "@/components/forms/form-bits";
 import { Button } from "@/components/ui/button";
 
-import { addVentureMemberAction, removeVentureMemberAction } from "../server/actions";
+import { addVentureMemberAction, changeVentureMemberRoleAction, removeVentureMemberAction } from "../server/actions";
 import { MEMBER_ROLES, type MemberRole } from "../schemas/ventures-schemas";
 import type { Venture, VentureMember } from "../types";
-import { ROLE_LABELS, roleLabel } from "../roles";
+import { ROLE_LABELS } from "../roles";
 import type { Option } from "./team-picker";
 
 function fullName(m: VentureMember): string {
@@ -22,6 +22,7 @@ function TeamManager({ venture, entrepreneurs }: { venture: Venture; entrepreneu
   const [role, setRole] = useState<MemberRole>("miembro");
   const adding = useRunner(() => setEntrepreneurId(null));
   const removing = useRunner();
+  const changing = useRunner();
   const inTeam = new Set(members.map((m) => m.emprendedor_id));
   const available = entrepreneurs.filter((o) => !inTeam.has(o.id));
   const onlyOne = members.length <= 1;
@@ -37,11 +38,23 @@ function TeamManager({ venture, entrepreneurs }: { venture: Venture; entrepreneu
             <li key={m.emprendedor_id} className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{fullName(m)}</p>
-                <p className="truncate text-[13px] text-muted-foreground">
-                  {roleLabel(m.rol_en_emprendimiento)}
-                  {m.email ? ` · ${m.email}` : ""}
-                </p>
+                <p className="truncate text-[13px] text-muted-foreground">{m.email ?? ""}</p>
               </div>
+              <select
+                aria-label={`Rol de ${fullName(m)} en el equipo`}
+                value={m.rol_en_emprendimiento ?? "miembro"}
+                disabled={changing.pending}
+                onChange={(e) =>
+                  changing.run(() => changeVentureMemberRoleAction(venture.emprendimiento_id, m.emprendedor_id, e.target.value, fullName(m)))
+                }
+                className="h-11 rounded-xl border-[1.5px] border-border-strong bg-card px-2 text-sm"
+              >
+                {MEMBER_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </select>
               <Button
                 type="button"
                 variant="ghost"
@@ -59,7 +72,7 @@ function TeamManager({ venture, entrepreneurs }: { venture: Venture; entrepreneu
         {onlyOne && (
           <p className="text-[13px] text-muted-foreground">Para quitar a este integrante, agrega antes a otro.</p>
         )}
-        <FormError message={removing.error} />
+        <FormError message={removing.error ?? changing.error} />
       </section>
 
       <form
@@ -103,7 +116,7 @@ function TeamManager({ venture, entrepreneurs }: { venture: Venture; entrepreneu
           )}
         </Field>
         <FormError message={adding.error} />
-        <Button type="submit" disabled={adding.pending || entrepreneurId === null} className="h-[50px] rounded-xl text-[15px] font-bold">
+        <Button type="submit" disabled={adding.pending || entrepreneurId === null} className="h-13 rounded-xl text-[15px] font-bold">
           {adding.pending && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
           Agregar al equipo
         </Button>

@@ -52,6 +52,37 @@ export const changePasswordSchema = z
     message: "La contraseña nueva debe ser distinta de la actual.",
   });
 
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, "Ingresa tu correo electrónico.")
+    .pipe(z.email("Ingresa un correo válido.")),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    email: z
+      .string()
+      .trim()
+      .min(1, "Ingresa tu correo electrónico.")
+      .pipe(z.email("Ingresa un correo válido.")),
+    code: z
+      .string()
+      .trim()
+      .regex(/^\d{6}$/, "El código tiene 6 dígitos."),
+    newPassword: z
+      .string()
+      .min(1, "Crea una contraseña nueva.")
+      .min(MIN_PASSWORD_LENGTH, `Usa al menos ${MIN_PASSWORD_LENGTH} caracteres.`)
+      .max(128, "Usa como máximo 128 caracteres."),
+    confirmPassword: z.string().min(1, "Repite la contraseña nueva."),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Las contraseñas no coinciden.",
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 

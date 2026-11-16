@@ -9,6 +9,7 @@ import { formatWhen } from "@/lib/format";
 import { ALERTS_PAGE_SIZE, listAlerts } from "../server/queries";
 import type { AlertFilters } from "../types";
 import { AlertActions } from "./alert-actions";
+import { filterPillClass } from "@/components/data/filter-pills";
 
 const STATES = [
   { value: "", label: "Todas" },
@@ -46,9 +47,6 @@ function href(filters: AlertFilters, page?: number): string {
   return query ? `/alerts?${query}` : "/alerts";
 }
 
-const pill = (active: boolean) =>
-  `inline-flex min-h-11 items-center rounded-full border-[1.5px] px-4 text-sm font-semibold outline-none transition-all focus-visible:ring-3 focus-visible:ring-primary/30 ${active ? "border-navy-900 bg-navy-900 text-white" : "border-border-strong bg-card text-foreground hover:bg-blue-50"}`;
-
 /** CU13 · Bandeja de alertas de seguimiento para coordinación y asesores. */
 export async function AlertsScreen({ filters }: { filters: AlertFilters }) {
   const user = await requireSession();
@@ -73,7 +71,7 @@ export async function AlertsScreen({ filters }: { filters: AlertFilters }) {
                 key={s.value}
                 href={href({ ...filters, estado: s.value || undefined, page: 1 })}
                 aria-current={active ? "true" : undefined}
-                className={pill(active)}
+                className={filterPillClass(active)}
               >
                 {s.label}
               </Link>
@@ -88,7 +86,7 @@ export async function AlertsScreen({ filters }: { filters: AlertFilters }) {
                 key={t.value}
                 href={href({ ...filters, tipo: t.value || undefined, page: 1 })}
                 aria-current={active ? "true" : undefined}
-                className={pill(active)}
+                className={filterPillClass(active)}
               >
                 {t.label}
               </Link>

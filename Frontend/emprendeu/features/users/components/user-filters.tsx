@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 
 import { roleLabel } from "../roles";
 import type { Role } from "../types";
+import { filterPillClass } from "@/components/data/filter-pills";
 
 type UserFiltersProps = { q: string; rol: string; roles: Role[] };
 
@@ -36,9 +37,6 @@ export function UserFilters({ q, rol, roles }: UserFiltersProps) {
     return () => clearTimeout(id);
   }, [value, rol, router, pathname]);
 
-  const pill = (active: boolean) =>
-    `inline-flex min-h-11 items-center rounded-full border-[1.5px] px-4 text-sm font-semibold outline-none transition-all focus-visible:ring-3 focus-visible:ring-primary/30 ${active ? "border-navy-900 bg-navy-900 text-white" : "border-border-strong bg-card text-foreground hover:bg-blue-50"}`;
-
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="relative max-w-[420px] min-w-[240px] flex-[1_1_280px]">
@@ -56,7 +54,7 @@ export function UserFilters({ q, rol, roles }: UserFiltersProps) {
         />
       </div>
       <div className="flex flex-wrap gap-2">
-        <Link href={href(value.trim(), "")} aria-current={rol === "" ? "true" : undefined} className={pill(rol === "")}>
+        <Link href={href(value.trim(), "")} aria-current={rol === "" ? "true" : undefined} className={filterPillClass(rol === "")}>
           Todos
         </Link>
         {roles.map((r) => (
@@ -64,7 +62,7 @@ export function UserFilters({ q, rol, roles }: UserFiltersProps) {
             key={r.rol_id}
             href={href(value.trim(), r.nombre)}
             aria-current={rol === r.nombre ? "true" : undefined}
-            className={pill(rol === r.nombre)}
+            className={filterPillClass(rol === r.nombre)}
           >
             {roleLabel(r.nombre)}
           </Link>

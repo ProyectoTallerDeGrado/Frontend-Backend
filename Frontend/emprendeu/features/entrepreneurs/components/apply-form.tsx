@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { CircleCheck, LoaderCircle } from "lucide-react";
 
@@ -24,6 +25,13 @@ export function ApplyForm() {
       <div role="status" className="flex flex-col items-start gap-3 rounded-2xl bg-success-tint p-6 text-success-foreground">
         <CircleCheck aria-hidden="true" className="size-8" />
         <p className="text-base font-semibold">{result.message}</p>
+        <p className="text-[15px] leading-relaxed">
+          Revisa tu correo en los próximos días (también la carpeta de no deseados). Si te admiten, recibirás tu cuenta
+          y las indicaciones para instalar la app del emprendedor.
+        </p>
+        <Link href="/" className="mt-1 inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
+          Volver al inicio
+        </Link>
       </div>
     );
   }
@@ -76,7 +84,7 @@ export function ApplyForm() {
         {(id) => <textarea id={id} value={values.description} onChange={set("description")} maxLength={4000} className={textareaClass} />}
       </Field>
       <FormError message={result && !result.ok && !result.fieldErrors ? result.message : null} />
-      <Button type="submit" disabled={pending} className="h-[54px] gap-2 rounded-xl text-base font-bold">
+      <Button type="submit" disabled={pending} className="h-13 gap-2 rounded-xl text-base font-bold">
         {pending && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
         Enviar postulación
       </Button>

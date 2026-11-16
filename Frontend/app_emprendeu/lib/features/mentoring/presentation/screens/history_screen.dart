@@ -7,6 +7,7 @@ import '../../../../core/utils/date_format.dart';
 import '../../domain/entities/history_event.dart';
 import '../../domain/entities/history_filter.dart';
 import '../controllers/booking_providers.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 const _kinds = <HistoryKind, (String, IconData)>{
   HistoryKind.session: ('Sesión', Icons.event_available),
@@ -142,20 +143,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (error, _) => Column(
-                  children: [
-                    Text(
-                      error is Failure
-                          ? error.message
-                          : 'No se pudo cargar el historial.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: () => ref.invalidate(historyProvider),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
+                error: (error, _) => ErrorState(
+                  message: error is Failure
+                      ? error.message
+                      : 'No se pudo cargar el historial.',
+                  onRetry: () => ref.invalidate(historyProvider),
                 ),
                 data: (items) => items.isEmpty
                     ? Padding(

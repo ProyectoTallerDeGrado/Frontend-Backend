@@ -4,11 +4,11 @@ Cada carpeta documenta un caso de uso **ya iniciado**: qué se hizo, dónde est�
 por qué se hizo así, cómo se verificó y qué falta. Los casos que aún no se empezaron no
 tienen carpeta.
 
-Estado revisado el **2026-11-13** contra el código de `main`. Ese día se ejecutaron las suites:
+Estado revisado el **2026-11-15** contra el código de `main`. Ese día se ejecutaron las suites:
 
-- Backend: `uv run pytest -q` → **101 passed** (PostgreSQL con pgvector).
-- Móvil: `flutter test` → **125 passed, 4 skipped** (las pruebas de integración opt-in).
-- Web: `pnpm lint`, `tsc` y `pnpm build` sin errores; no tiene pruebas automatizadas todavía (fase 7 del plan).
+- Backend: `uv run pytest -q` → **116 passed** (PostgreSQL con pgvector).
+- Móvil: `flutter test` → **193 passed, 4 skipped** (las pruebas de integración opt-in).
+- Web: `pnpm lint`, `tsc` y `pnpm build` sin errores; `pnpm test` (Vitest) → **24 passed**; `pnpm test:e2e` (Playwright, contra el backend con datos demo) → **11 passed**.
 
 > «Completado» aquí significa: endpoint con prueba automatizada que pasa y pantalla en el
 > cliente que le toca (regla de alcance: web para el personal, app para el emprendedor).

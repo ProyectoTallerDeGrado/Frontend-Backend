@@ -35,7 +35,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         return location == AuthRoutes.splash ? null : AuthRoutes.splash;
       }
       final isPublic =
-          location == AuthRoutes.login || location == AuthRoutes.register;
+          location == AuthRoutes.login ||
+          location == AuthRoutes.register ||
+          location == AuthRoutes.forgotPassword ||
+          location == AuthRoutes.resetPassword;
       if (auth.value == null) return isPublic ? null : AuthRoutes.login;
       return (isPublic || location == AuthRoutes.splash)
           ? HomeRoutes.home

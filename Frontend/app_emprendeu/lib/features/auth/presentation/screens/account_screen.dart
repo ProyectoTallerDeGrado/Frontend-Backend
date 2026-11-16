@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_tokens.dart';
 import '../../../ai_assistant/index.dart';
 import '../../../documents/index.dart';
 import '../../../gamification/index.dart';
@@ -12,7 +13,7 @@ import '../../../ventures/index.dart';
 import '../auth_routes.dart';
 import '../controllers/auth_controller.dart';
 
-/// Pestaña «Perfil»: cuenta, emprendimiento, XP e insignias, y cierre de sesión.
+/// Pestaña «Perfil»: identidad, emprendimiento, XP e insignias, accesos y cierre de sesión.
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
 
@@ -22,133 +23,201 @@ class AccountScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     if (user == null) return const SizedBox.shrink();
 
-    Widget row(String label, String value) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(
-              label,
-              style: text.bodyMedium?.copyWith(
-                fontSize: 14,
-                color: AppColors.muted,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: text.bodyMedium?.copyWith(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    final outlined = OutlinedButton.styleFrom(
-      foregroundColor: AppColors.ink,
-      side: const BorderSide(color: AppColors.borderStrong, width: 1.5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      textStyle: text.bodyMedium?.copyWith(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screen,
+            AppSpacing.xxl,
+            AppSpacing.screen,
+            AppSpacing.xxl,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Sesión iniciada',
-                style: text.bodyMedium?.copyWith(color: AppColors.muted),
+              Semantics(
+                header: true,
+                child: Text('Perfil', style: text.headlineMedium),
               ),
-              const SizedBox(height: 4),
-              Text('Hola, ${user.nombre}', style: text.headlineMedium),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Column(
-                  children: [
-                    row('Nombre', user.fullName),
-                    row('Correo', user.email),
-                    row('Rol', 'Emprendedor'),
-                  ],
-                ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  ExcludeSemantics(
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.navy900,
+                      ),
+                      child: Text(
+                        _initials(user.fullName),
+                        style: text.titleMedium?.copyWith(
+                          color: AppColors.onNavy,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user.fullName, style: text.titleMedium),
+                        const SizedBox(height: 2),
+                        Text(
+                          user.email,
+                          style: text.bodyMedium?.copyWith(
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.xl),
               const MyVentureCard(),
               const SizedBox(height: 14),
               const XpBadgesSection(),
               const SizedBox(height: 14),
               const LocalAiSection(),
               const SizedBox(height: 14),
-              if (ref.watch(myVentureProvider).value != null) ...[
-                SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push(NeedsRoutes.list),
-                    icon: const Icon(Icons.support_agent_outlined, size: 18),
-                    label: const Text('Necesidades y dificultades'),
-                    style: outlined,
+              _MenuGroup(
+                rows: [
+                  if (ref.watch(myVentureProvider).value != null) ...[
+                    _MenuRow(
+                      icon: Icons.support_agent_outlined,
+                      label: 'Necesidades y dificultades',
+                      onTap: () => context.push(NeedsRoutes.list),
+                    ),
+                    _MenuRow(
+                      icon: Icons.folder_open_outlined,
+                      label: 'Documentos',
+                      onTap: () => context.push(DocumentsRoutes.list),
+                    ),
+                  ],
+                  _MenuRow(
+                    icon: Icons.school_outlined,
+                    label: 'Capacitaciones',
+                    onTap: () => context.push(TrainingRoutes.list),
                   ),
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push(DocumentsRoutes.list),
-                    icon: const Icon(Icons.folder_open_outlined, size: 18),
-                    label: const Text('Documentos'),
-                    style: outlined,
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
-              SizedBox(
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: () => context.push(TrainingRoutes.list),
-                  icon: const Icon(Icons.school_outlined, size: 18),
-                  label: const Text('Capacitaciones'),
-                  style: outlined,
-                ),
+                ],
               ),
               const SizedBox(height: 14),
-              SizedBox(
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: () => context.push(AuthRoutes.changePassword),
-                  icon: const Icon(Icons.lock_outline, size: 18),
-                  label: const Text('Cambiar contraseña'),
-                  style: outlined,
-                ),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: () =>
-                      ref.read(authControllerProvider.notifier).logout(),
-                  icon: const Icon(Icons.logout, size: 18),
-                  label: const Text('Cerrar sesión'),
-                  style: outlined,
-                ),
+              _MenuGroup(
+                rows: [
+                  _MenuRow(
+                    icon: Icons.lock_outline,
+                    label: 'Cambiar contraseña',
+                    onTap: () => context.push(AuthRoutes.changePassword),
+                  ),
+                  _MenuRow(
+                    icon: Icons.logout,
+                    label: 'Cerrar sesión',
+                    leaves: true,
+                    onTap: () =>
+                        ref.read(authControllerProvider.notifier).logout(),
+                  ),
+                ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _initials(String fullName) {
+  final parts = fullName
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((p) => p.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return '?';
+  final letters = parts.length == 1
+      ? parts.first.substring(0, 1)
+      : parts.first.substring(0, 1) + parts.last.substring(0, 1);
+  return letters.toUpperCase();
+}
+
+/// Grupo de accesos del Perfil: una tarjeta con filas separadas por una línea.
+class _MenuGroup extends StatelessWidget {
+  const _MenuGroup({required this.rows});
+
+  final List<_MenuRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) const Divider(indent: 52),
+            rows[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.leaves = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  /// La acción saca de la app (cerrar sesión): no lleva flecha de «ir a».
+  final bool leaves;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = leaves ? AppColors.error : AppColors.ink;
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, size: 22, color: leaves ? color : AppColors.muted),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                ),
+                if (!leaves)
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 22,
+                    color: AppColors.borderStrong,
+                  ),
+              ],
+            ),
           ),
         ),
       ),

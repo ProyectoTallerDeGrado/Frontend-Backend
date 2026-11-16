@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/theme/app_colors.dart';
 
@@ -43,7 +44,10 @@ class AppBottomNav extends StatelessWidget {
                     selected: i == currentIndex,
                     label: items[i].label,
                     child: InkWell(
-                      onTap: () => onSelected(i),
+                      onTap: () {
+                        if (i != currentIndex) HapticFeedback.selectionClick();
+                        onSelected(i);
+                      },
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

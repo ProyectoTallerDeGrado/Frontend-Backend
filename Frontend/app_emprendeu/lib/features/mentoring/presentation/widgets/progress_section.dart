@@ -270,6 +270,7 @@ class _LogSheetState extends ConsumerState<_LogSheet> {
             Row(
               children: [
                 Expanded(
+                  flex: 10,
                   child: SizedBox(
                     height: 52,
                     child: OutlinedButton(

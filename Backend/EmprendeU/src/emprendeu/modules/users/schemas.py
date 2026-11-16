@@ -50,6 +50,20 @@ class RoleUpdate(BaseModel):
     rol: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: Email
+
+
+class ResetPasswordRequest(BaseModel):
+    email: Email
+    codigo: Annotated[str, Field(pattern=r"^\d{6}$")]
+    password_nueva: Password
+
+
+class MessageResponse(BaseModel):
+    mensaje: str
+
+
 class PasswordChange(BaseModel):
     password_actual: Annotated[str, Field(min_length=1, max_length=128)]
     password_nueva: Password

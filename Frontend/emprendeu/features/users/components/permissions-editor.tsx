@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PERMISSION_ACTIONS, PERMISSION_MODULES, SYSTEM_ROLES, roleLabel } from "../roles";
 import { deleteRoleAction, savePermissionsAction } from "../server/actions";
 import type { PermissionMatrix, Role } from "../types";
+import { EditRoleSheet } from "./edit-role-sheet";
 import { NewRoleDrawer } from "./new-role-drawer";
 
 type Props = { roles: Role[]; matrices: Record<number, PermissionMatrix>; canEdit: boolean };
@@ -92,6 +93,8 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
             </p>
           </div>
           {canEdit && isCustom && (
+            <div className="flex flex-wrap gap-2">
+            <EditRoleSheet key={role.rol_id} role={role} />
             <Button
               type="button"
               variant="outline"
@@ -103,6 +106,7 @@ export function PermissionsEditor({ roles, matrices, canEdit }: Props) {
               <Trash2 aria-hidden="true" className="size-4" />
               Eliminar rol
             </Button>
+            </div>
           )}
         </div>
         <div className="relative overflow-x-auto overflow-y-hidden">

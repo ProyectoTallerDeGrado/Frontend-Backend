@@ -1,17 +1,19 @@
 """HTTP del coach IA (prefijo /ai)."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+import structlog
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.config import get_settings
 from emprendeu.core.pagination import Page, PageParamsDep
-from emprendeu.db.session import get_session
+from emprendeu.db.session import SessionFactory, get_session, get_session_factory
 from emprendeu.modules.ai_assistant import schemas as s
 from emprendeu.modules.ai_assistant.llm import LLMClient, get_llm
-from emprendeu.modules.ai_assistant.service import AssistantService
+from emprendeu.modules.ai_assistant.risk_alerts import AlertRiskNotifier
+from emprendeu.modules.ai_assistant.service import AssistantService, PendingAnalysis
 from emprendeu.modules.users import (
     CurrentUser,
     require_permission,
@@ -25,7 +27,20 @@ def _svc(
     session: Annotated[AsyncSession, Depends(get_session)],
     llm: Annotated[LLMClient, Depends(get_llm)],
 ) -> AssistantService:
-    return AssistantService(session, llm)
+    return AssistantService(session, llm, AlertRiskNotifier(session))
+
+
+async def _refine_sentiment(
+    factory: SessionFactory, llm: LLMClient, pending: PendingAnalysis
+) -> None:
+    """Tarea en segundo plano tras responder: afina el animo con el modelo y avisa si
+    hay riesgo. Usa su propia sesion y nunca propaga un error (la respuesta ya salio)."""
+    try:
+        async with factory() as session:
+            service = AssistantService(session, llm, AlertRiskNotifier(session))
+            await service.refine_sentiment(pending)
+    except Exception:  # noqa: BLE001 - no hay a quien responderle
+        structlog.get_logger("ai.sentiment").exception("refinado_fallido")
 
 
 Svc = Annotated[AssistantService, Depends(_svc)]
@@ -40,8 +55,13 @@ async def chat(
     body: s.ChatRequest,
     service: Svc,
     user: Annotated[CurrentUser, perm("ia:registro")],
+    background: BackgroundTasks,
+    factory: Annotated[SessionFactory, Depends(get_session_factory)],
+    llm: Annotated[LLMClient, Depends(get_llm)],
 ) -> s.ChatReply:
-    return await service.chat(user, body)
+    outcome = await service.chat_detailed(user, body)
+    background.add_task(_refine_sentiment, factory, llm, outcome.pending)
+    return outcome.reply
 
 
 @router.get("/conversations/me", response_model=list[s.ConversationOut])
@@ -153,3 +173,35 @@ async def sentiment(
     _: Annotated[CurrentUser, Depends(require_staff_permission("ia:consulta"))],
 ) -> list[s.SentimentPoint]:
     return await service.sentiment_series(emprendedor_id)
+
+
+@router.post("/sentiment/sync", response_model=s.SentimentSyncResult)
+async def sync_sentiment(
+    body: s.SentimentSync,
+    service: Svc,
+    user: Annotated[CurrentUser, perm("ia:registro")],
+) -> s.SentimentSyncResult:
+    """Animo de los mensajes al coach local del celular: solo la clasificacion."""
+    return await service.sync_sentiment(user, body)
+
+
+@router.get("/wellbeing", response_model=s.WellbeingReport)
+async def wellbeing(
+    service: Svc,
+    actor: Annotated[CurrentUser, Depends(require_staff_permission("ia:consulta"))],
+    desde: date | None = None,
+    hasta: date | None = None,
+) -> s.WellbeingReport:
+    """Animo de los emprendedores (indice, emocion y tema), sin texto de sus mensajes."""
+    return await service.wellbeing(actor, desde, hasta)
+
+
+@router.get("/wellbeing/{emprendedor_id}", response_model=s.WellbeingDetail)
+async def wellbeing_detail(
+    emprendedor_id: int,
+    service: Svc,
+    actor: Annotated[CurrentUser, Depends(require_staff_permission("ia:consulta"))],
+    desde: date | None = None,
+    hasta: date | None = None,
+) -> s.WellbeingDetail:
+    return await service.wellbeing_detail(actor, emprendedor_id, desde, hasta)

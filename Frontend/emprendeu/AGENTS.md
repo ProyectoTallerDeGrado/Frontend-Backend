@@ -32,7 +32,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 | Utilidad `cn` | paquete `cn`, reexportado en `lib/utils.ts` | |
 | Gestor | **pnpm** 12.9.1 | usa `pnpm`, nunca `npm`/`yarn` |
 
-`zod` (validación de `features/auth`) y `server-only` ya están instalados. Sin librería de datos ni de formularios todavía.
+`zod` (validación de `features/auth`) y `server-only` ya están instalados. Sin librería de datos ni de formularios todavía. Pruebas: `vitest` y `@playwright/test`.
 Si el estado de servidor lo justifica, `@tanstack/react-query` **solo** para datos
 consumidos desde componentes cliente.
 
@@ -61,7 +61,15 @@ consumidos desde componentes cliente.
   siendo la autoridad (devuelve 403).
 - **Composición entre features** solo por barrel: `catalogs/page.tsx` junta `ventures`
   (etapas) y `gamification` (retos, insignias); `(app)/page.tsx` junta `indicators` y `audit`.
-- **Avisos** con un store de zustand (`components/layout/toast-store.ts`) y `<Toaster />`.
+- **Avisos** con un store de zustand (`components/layout/toast-store.ts`) y `<Toaster />`: entran con `toast-in`, salen
+  con `toast-out` (el store marca `leaving` antes de quitarlos), tienen botón de cerrar y un error dura más (6 s) que
+  una confirmación (3,2 s).
+- **Carga**: `components/data/skeleton.tsx` (`PageSkeleton`, variantes `table`, `kpis` y `section`) da a cada
+  `loading.tsx` la forma de lo que viene. El de `(app)` es la tabla; `/panel` y `/dashboard` usan `kpis` y las pestañas de
+  la ficha, `section`.
+- **Búsqueda sin recarga**: `SearchBar` usa `next/form` (navegación del lado del cliente; sin JavaScript sigue siendo un GET).
+- **Filtros-píldora**: `FilterPills` o, si la pantalla arma sus enlaces, `filterPillClass(active)` del mismo archivo.
+  No se copia la cadena de clases.
 - **Interruptor del diseño:** `components/ui/toggle-switch.tsx` (44×26, área de clic de 44 px).
 - **Fechas** en hora de Bolivia (`lib/format.ts`: «Hoy, 08:12», «Hace 3 días»).
 - **Mentorías** (`features/mentoring`): `AssignmentsScreen` (coordinación habilita asesores y los asigna a
@@ -101,6 +109,18 @@ consumidos desde componentes cliente.
   `POST /ai/knowledge/upload` desde una server action con `FormData` (`lib/api-client.ts` admite `FormData` y un plazo
   mayor, 120 s, porque calcular embeddings tarda; `next.config.ts` sube el límite de las server actions a 11 MB). Si el
   servicio de IA no responde, el intento queda visible en estado «Error».
+- **Recuperación de contraseña** (CU01, `features/auth`): «¿Olvidaste tu contraseña?» en el login → `/forgot-password`
+  (`forgotPasswordAction`, pide el código al backend) → `/reset-password` (`resetPasswordAction`: correo, código de
+  6 dígitos y contraseña nueva) → `/login?restablecida=1`. Ambas rutas son públicas (`proxy.ts`). El backend responde
+  igual exista o no el correo, así que la pantalla nunca revela cuentas; un código malo o vencido se muestra en el campo
+  del código. React limpia el formulario tras cada envío: los valores que deben conservarse viajan en `state.values`.
+- **Reportes** (CU21): «Exportar Excel» y «Exportar CSV» usan el mismo *route handler* (`/reports/export?formato=xlsx|csv`).
+- **Pruebas** (fase 7): `pnpm test` (Vitest: esquemas y utilidades, archivos `*.test.ts` junto al código) y
+  `pnpm test:e2e` (Playwright, `e2e/`). Las E2E necesitan el backend arriba **con los datos de demostración**
+  (`uv run python -m emprendeu.db.seed`) y `API_URL` apuntándole; levantan la web en el puerto 3100. Usan el Chromium
+  completo (`channel: "chromium"`): `npx playwright install chromium`. El backend limita la recuperación a 3 solicitudes por
+  correo cada 15 min, por eso la prueba usa un correo distinto en cada ejecución. `e2e/landing.spec.ts` (portada,
+  postulación, menú móvil, movimiento reducido, metadatos) no necesita el backend.
 - **Cambio de contraseña** (`features/auth`: `changePasswordAction`, `ChangePasswordForm`,
   `AccountView`): el backend invalida los tokens anteriores y devuelve uno nuevo, que la acción
   guarda en la cookie para que la sesión actual siga; las demás sesiones se cierran. «Contraseña
@@ -108,11 +128,43 @@ consumidos desde componentes cliente.
 - Cambiar el rol de un usuario existente (`PATCH /users/{id}/rol`) está en la tabla de
   usuarios: es lo que permite que una cuenta registrada desde la web llegue a usar el panel.
 - **Landing pública** (`/`, `app/(public)/page.tsx` → `features/landing`): presenta el programa a
-  estudiantes y lleva a `/apply`; «Ingresar» va a `/login` (o «Ir al panel» si hay sesión). Animaciones con
-  **anime.js 4** (`animejs`), siempre dentro de `useAnimeScope` (`features/landing/hooks/use-anime-scope.ts`:
-  `createScope` con media query de movimiento reducido, revierte al desmontar). Los estados iniciales se ponen
-  con `utils.set`; el CSS solo oculta `[data-reveal]` mientras la sección vale `data-anim="pending"`. Sin cifras:
-  el contenido está en `features/landing/content.ts`. `proxy.ts` deja pública solo la ruta exacta `/`.
+  estudiantes y lleva a `/apply`. «Personal CIE-U» va a `/login` (o «Ir al panel» si hay sesión); es
+  discreto porque el panel rechaza a los emprendedores. Diseño y orden de secciones en `design.md`
+  («Landing pública»). Piezas:
+  - `components/primitives.tsx`: `LandingButton` (accent/primary/ghost), `Container`, `SectionHeading`,
+    `SectionLead` y `delay()`. No se repiten clases de botón ni de título a mano.
+  - `content.ts`: **todo** el texto visible, las etiquetas de acción (`CTA`) y `APP_DOWNLOAD_URL`.
+  - Animaciones con **anime.js 4** dentro de `useAnimeScope` (`hooks/use-anime-scope.ts`: `createScope` con
+    media query de movimiento reducido, revierte al desmontar, y por defecto **se prepara solo al acercarse**
+    la sección; el hero y la escena fijada pasan `lazy: false`). Las piezas se seleccionan con
+    `data-part` y el helper `part()`, nunca por clases de Tailwind. El CSS solo oculta `[data-reveal]`
+    mientras la sección vale `data-anim="pending"`.
+  - El **h1 del hero entra con CSS** (`.landing-rise`/`.landing-pop` en `globals.css`), no con JS.
+  - **«Pausar animaciones»**: `stores/motion-store.ts` (zustand) + `components/motion-toggle.tsx`. Los bucles
+    de anime.js se registran con `ambient([...])`; los temporizadores consultan `motionPaused()`; los
+    bucles CSS llevan `.landing-ambient` (`html[data-motion="paused"]`).
+  - Cabecera, pie, «Lo esencial», «Personas», «Preguntas» (`<details>`) y el cierre son **Server
+    Components**; la cabecera usa animaciones CSS ligadas al scroll.
+  - Metadatos Open Graph en la página; la URL absoluta sale de `SITE_URL` (`lib/env.ts`). La imagen
+    para compartir es `app/opengraph-image.tsx` (1200 × 630, generada), el icono `app/icon.png`, y hay
+    `app/robots.ts` y `app/sitemap.ts` (solo `/` y `/apply` son indexables). `Faq` emite los datos
+    estructurados `FAQPage` desde el mismo `FAQ` de `content.ts`.
+  - **Menú móvil** (`components/mobile-menu.tsx`, cliente): bajo `lg` reemplaza los enlaces de la
+    cabecera; se cierra al elegir o con Escape. «Pausar animaciones» muestra solo el icono bajo `sm`.
+  - La portada **no depende del backend**: si `getSession()` falla, se muestra como sin sesión.
+  `proxy.ts` deja públicas la ruta exacta `/` y sus metadatos (`/opengraph-image`, `/icon.png`,
+  `/robots.txt`, `/sitemap.xml`).
+- **Postulación** (`/apply`, `ApplyView` en `features/entrepreneurs`): pantalla dividida con el
+  `BrandPanel` de `auth` (variante `compact`, con su propio mensaje) y los pasos `APPLY_STEPS` que
+  exporta el barrel de `landing`; enlace «Volver al inicio» y, al enviar, qué pasa después.
+- **Páginas de estado**: `app/not-found.tsx` y `app/error.tsx` usan `components/layout/status-screen.tsx`;
+  dentro del panel, `app/(app)/error.tsx` (el menú sigue en pantalla) y `app/(app)/loading.tsx`. En
+  Next 16 el error recibe `retry` (no `reset`).
+- **IP del visitante**: `lib/api-client.ts` reenvía en `X-Forwarded-For` la IP de quien visita (la
+  última de la cabecera entrante), para que los límites por IP del backend cuenten por persona y no
+  por el servidor de la web. El backend solo la cree si la web está en su `TRUSTED_PROXIES`.
+- **Cabeceras de seguridad** en `next.config.ts` (`X-Frame-Options`, `nosniff`, `Referrer-Policy`,
+  `Permissions-Policy` y HSTS en producción).
 - **El Resumen del panel está en `/panel`** (antes `/`): login y registro redirigen ahí.
 - **Menú agrupado** (`app/(app)/layout.tsx` → `NAV`): Inicio, Programa, Acompañamiento y
   Configuración; cada ítem declara su permiso y los grupos vacíos no se muestran. «Mi cuenta» es la
@@ -124,6 +176,9 @@ consumidos desde componentes cliente.
   la primera pestaña visible. Las acciones de `ventures` revalidan también `/ventures/[id]` (layout).
 - **Transición entre páginas**: `components/layout/page-transition.tsx` envuelve el contenido en el
   `<ViewTransition>` de React con la ruta como `key` (clase `.page` en `globals.css`).
+- **Radios, sombras y movimiento** salen de `globals.css`: `rounded-xl` = 12 px (botón, input), `rounded-2xl` = 16 px
+  (tarjeta); sombras `shadow-raised`, `shadow-overlay`, `shadow-cta`, `shadow-knob`; curvas `ease-enter`, `ease-exit`,
+  `ease-spring`. `Button` tiene tres alturas: `default` (36), `lg` (44) y `xl` (52).
 - **Tokens**: no hay hex en crudo en `features/` ni `components/` (`grep -rnE '\[#[0-9a-fA-F]{3,6}\]'`
   debe salir vacío). Los pares de estado son `danger-*`, `warning-*`, `success*`, `info-foreground`.
 
@@ -177,7 +232,7 @@ components/
 ├── layout/                   # shell, sidebar agrupado, menú móvil, PageHeader, SectionHeader, transición de página
 ├── forms/                    # piezas de formulario en hojas laterales (form-bits)
 └── data/                     # presentación de datos sin negocio: DataTable, SearchBar, FilterPills,
-                              # StatusPill, EmptyState, TabNav, CountUp
+                              # StatusPill, EmptyState, TabNav, CountUp, Skeleton/PageSkeleton
 lib/                          # api-client ✅, env ✅, constants, utils (sin negocio)
 hooks/                        # hooks genéricos reutilizables
 proxy.ts                   ✅ # (Next 16) antiguo middleware: protege rutas privadas

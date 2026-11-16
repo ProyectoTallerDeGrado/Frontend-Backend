@@ -79,6 +79,27 @@ async def test_limite_de_postulaciones_por_ip(client: AsyncClient) -> None:
     assert blocked.json()["error"]["code"] == "rate_limited"
 
 
+async def test_limite_cuenta_por_persona_detras_de_la_web(client: AsyncClient) -> None:
+    """La web reenvia la IP de cada visitante: una persona bloqueada no bloquea a otra."""
+    ana = {"X-Forwarded-For": "203.0.113.10"}
+    luis = {"X-Forwarded-For": "203.0.113.20"}
+    for i in range(5):
+        r = await client.post(
+            f"{API}/admissions",
+            json=_application(email=f"a{i}@correo.com"),
+            headers=ana,
+        )
+        assert r.status_code == 201
+    blocked = await client.post(
+        f"{API}/admissions", json=_application(email="a9@correo.com"), headers=ana
+    )
+    assert blocked.status_code == 429
+    other = await client.post(
+        f"{API}/admissions", json=_application(email="l1@correo.com"), headers=luis
+    )
+    assert other.status_code == 201
+
+
 async def test_admitir_crea_cuenta_emprendimiento_y_es_definitivo(
     client: AsyncClient, make_user: MakeUser, login
 ) -> None:

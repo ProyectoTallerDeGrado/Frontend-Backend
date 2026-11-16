@@ -6,11 +6,13 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
     Identity,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -135,3 +137,30 @@ class RolUsuario(Base):
 
     rol: Mapped[Rol] = relationship(back_populates="usuarios")
     usuario: Mapped[Usuario] = relationship(back_populates="roles")
+
+
+class RestablecimientoPassword(Base):
+    """Codigo de un solo uso para restablecer la contrasena (guardado con hash)."""
+
+    __tablename__ = "restablecimientos_password"
+    __table_args__ = (Index("ix_restablecimientos_password_usuarioid", "usuarioid"),)
+
+    restablecimiento_id: Mapped[int] = mapped_column(
+        "restablecimientoid", BigInteger, Identity(always=False), primary_key=True
+    )
+    usuario_id: Mapped[int] = mapped_column(
+        "usuarioid",
+        BigInteger,
+        ForeignKey(
+            "usuario.usuarioid",
+            ondelete="CASCADE",
+            name="fk_restablecimientos_password_usuarioid",
+        ),
+    )
+    codigo_hash: Mapped[str] = mapped_column(String(255))
+    expira: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    usado: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    intentos: Mapped[int] = mapped_column(Integer, server_default="0")
+    fecha_creacion: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), server_default=func.current_timestamp()
+    )

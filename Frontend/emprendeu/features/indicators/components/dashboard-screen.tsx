@@ -70,14 +70,17 @@ export async function DashboardScreen({ filters }: { filters: PeriodFilters }) {
         <section className={`${card} min-w-[300px] flex-[1_1_420px]`}>
           <h2 className="mb-4 font-heading text-lg font-semibold">Emprendimientos por etapa</h2>
           <ul className="flex flex-col gap-3.5">
-            {d.por_etapa.map((s) => (
+            {d.por_etapa.map((s, i) => (
               <li key={s.etapa_id}>
                 <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
                   <span className={`font-semibold ${s.etapa_id === filters.etapa ? "text-primary" : ""}`}>{s.etapa}</span>
                   <span className="font-bold">{s.total}</span>
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${(s.total / biggest) * 100}%` }} />
+                  <div
+                    className="h-full origin-left animate-[grow-x_.9s_cubic-bezier(.2,.8,.2,1)_both] rounded-full bg-primary"
+                    style={{ width: `${(s.total / biggest) * 100}%`, animationDelay: `${200 + i * 110}ms` }}
+                  />
                 </div>
               </li>
             ))}

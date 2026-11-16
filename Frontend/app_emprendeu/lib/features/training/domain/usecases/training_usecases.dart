@@ -6,7 +6,8 @@ class GetTrainingsUseCase {
   const GetTrainingsUseCase(this._repository);
   final TrainingRepository _repository;
 
-  Future<Result<List<Training>>> call() => _repository.getTrainings();
+  Future<Result<TrainingPage>> call({int page = 1}) =>
+      _repository.getTrainings(page: page);
 }
 
 class EnrollInTrainingUseCase {

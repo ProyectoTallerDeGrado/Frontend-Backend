@@ -3,6 +3,7 @@ import 'package:app_emprendeu/core/error/result.dart';
 import 'package:app_emprendeu/features/auth/domain/entities/auth_session.dart';
 import 'package:app_emprendeu/features/auth/domain/usecases/change_password_usecase.dart';
 import 'package:app_emprendeu/features/auth/domain/usecases/login_usecase.dart';
+import 'package:app_emprendeu/features/auth/domain/usecases/password_reset_usecases.dart';
 import 'package:app_emprendeu/features/auth/domain/usecases/register_usecase.dart';
 import 'package:app_emprendeu/features/auth/domain/usecases/restore_session_usecase.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../fake_auth_repository.dart';
 
 void main() {
+  passwordResetTests();
   group('LoginUseCase', () {
     test('guarda el token solo si la cuenta es de emprendedor', () async {
       final repo = FakeAuthRepository();
@@ -141,6 +143,42 @@ void main() {
       final result = await RestoreSessionUseCase(repo)();
       expect(result.valueOrNull, isNull);
       expect(repo.token, isNull);
+    });
+  });
+}
+
+void passwordResetTests() {
+  group('Recuperación de contraseña (CU01)', () {
+    test('pide el código con el correo sin espacios', () async {
+      final repo = FakeAuthRepository();
+      final result = await RequestPasswordResetUseCase(repo)(
+        ' ana@correo.com ',
+      );
+      expect(result, isA<Ok<void>>());
+      expect(repo.lastResetEmail, 'ana@correo.com');
+    });
+
+    test('un código que no tiene 6 dígitos no llega al servidor', () async {
+      final repo = FakeAuthRepository();
+      final result = await ResetPasswordUseCase(repo)(
+        email: 'ana@correo.com',
+        code: '12ab',
+        newPassword: 'nueva-clave-99',
+      );
+      expect(failureOf(result), isA<FieldFailure>());
+      expect(repo.resetCalls, 0);
+    });
+
+    test('con un código válido cambia la contraseña', () async {
+      final repo = FakeAuthRepository();
+      final result = await ResetPasswordUseCase(repo)(
+        email: ' ana@correo.com',
+        code: ' 123456 ',
+        newPassword: 'nueva-clave-99',
+      );
+      expect(result, isA<Ok<void>>());
+      expect(repo.lastResetCode, '123456');
+      expect(repo.lastResetPassword, 'nueva-clave-99');
     });
   });
 }

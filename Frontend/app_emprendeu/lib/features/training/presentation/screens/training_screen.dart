@@ -6,6 +6,7 @@ import '../../../../core/error/failure.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../domain/entities/training.dart';
 import '../controllers/training_providers.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Capacitaciones del programa: inscribirse y ver la asistencia propia (CU29).
 class TrainingScreen extends ConsumerWidget {
@@ -23,7 +24,9 @@ class TrainingScreen extends ConsumerWidget {
             ref.invalidate(trainingsProvider);
             await ref
                 .read(trainingsProvider.future)
-                .catchError((_) => <Training>[]);
+                .catchError(
+                  (_) => const TrainingList(items: [], page: 1, total: 0),
+                );
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -39,22 +42,13 @@ class TrainingScreen extends ConsumerWidget {
                   padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (error, _) => Column(
-                  children: [
-                    Text(
-                      error is Failure
-                          ? error.message
-                          : 'No se pudieron cargar las capacitaciones.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: () => ref.invalidate(trainingsProvider),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
+                error: (error, _) => ErrorState(
+                  message: error is Failure
+                      ? error.message
+                      : 'No se pudieron cargar las capacitaciones.',
+                  onRetry: () => ref.invalidate(trainingsProvider),
                 ),
-                data: (items) => items.isEmpty
+                data: (list) => list.items.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: 32),
                         child: Text(
@@ -67,7 +61,9 @@ class TrainingScreen extends ConsumerWidget {
                       )
                     : Column(
                         children: [
-                          for (final t in items) _TrainingTile(training: t),
+                          for (final t in list.items)
+                            _TrainingTile(training: t),
+                          if (list.hasMore) const _LoadMore(),
                         ],
                       ),
               ),
@@ -162,7 +158,7 @@ class _TrainingTile extends ConsumerWidget {
               child: FilledButton(
                 onPressed: () async {
                   final failure = await ref
-                      .read(trainingControllerProvider.notifier)
+                      .read(trainingsProvider.notifier)
                       .enroll(t.id);
                   if (failure != null && context.mounted) {
                     ScaffoldMessenger.of(context)
@@ -177,4 +173,41 @@ class _TrainingTile extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// «Cargar más»: pide la página siguiente de la lista.
+class _LoadMore extends ConsumerStatefulWidget {
+  const _LoadMore();
+
+  @override
+  ConsumerState<_LoadMore> createState() => _LoadMoreState();
+}
+
+class _LoadMoreState extends ConsumerState<_LoadMore> {
+  bool _loading = false;
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    final failure = await ref.read(trainingsProvider.notifier).loadMore();
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (failure != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(failure.message)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 48,
+    child: OutlinedButton(
+      onPressed: _loading ? null : _load,
+      child: _loading
+          ? const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Text('Cargar más'),
+    ),
+  );
 }

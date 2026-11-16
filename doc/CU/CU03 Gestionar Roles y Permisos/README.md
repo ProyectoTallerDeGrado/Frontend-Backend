@@ -64,9 +64,12 @@ El administrador consulta los roles, edita la matriz de permisos `módulo × acc
 - Resultado verificado al hacer el cambio: `uv run pytest` → 81 pasaron; `ruff check` y `ruff format --check` limpios; en la web `tsc --noEmit` y `pnpm lint` sin errores.
 - **No se probó en el navegador** la interfaz nueva (Nuevo rol, Eliminar rol, selector de roles en `/users`).
 
+## Actualización
+
+- La web ya permite **renombrar** un rol personalizado (botón «Renombrar» en Roles y permisos: `features/users/components/edit-role-sheet.tsx`, `editRoleAction`). Los roles del sistema siguen protegidos.
+
 ## Pendiente
 
-- La interfaz no ofrece **renombrar** un rol (`PATCH /roles/{id}` existe en el backend).
 - La web no tiene runner de tests: faltan pruebas de componentes (casillas deshabilitadas sin permiso, botón «Nuevo rol» oculto).
 - No hay **permisos por usuario**: un usuario tiene un solo rol.
 - La **app móvil** guarda `permisos` del usuario pero no filtra pantallas con ellos.

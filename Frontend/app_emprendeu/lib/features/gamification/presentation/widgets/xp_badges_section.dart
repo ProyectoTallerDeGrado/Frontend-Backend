@@ -8,6 +8,7 @@ import '../controllers/gamification_providers.dart';
 import '../gamification_routes.dart';
 import 'xp_empty_state.dart';
 import 'xp_level_card.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Resumen de XP, nivel e insignias en la pestaña Perfil (CU08). El detalle
 /// completo está en la pantalla «Experiencia e insignias» (`/xp`).
@@ -23,18 +24,11 @@ class XpBadgesSection extends ConsumerWidget {
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (error, _) => Column(
-        children: [
-          Text(
-            error is Failure ? error.message : 'No se pudo cargar tu progreso.',
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: () => ref.invalidate(gamificationProfileProvider),
-            child: const Text('Reintentar'),
-          ),
-        ],
+      error: (error, _) => ErrorState(
+        message: error is Failure
+            ? error.message
+            : 'No se pudo cargar tu progreso.',
+        onRetry: () => ref.invalidate(gamificationProfileProvider),
       ),
       data: (p) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,

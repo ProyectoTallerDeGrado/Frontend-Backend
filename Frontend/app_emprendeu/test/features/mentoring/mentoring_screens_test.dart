@@ -83,8 +83,9 @@ void main() {
 
     expect(booking.bookCalls, 1);
     expect(booking.lastTopic, 'Precios');
-    // vuelve a la lista, con el aviso y la sesión nueva
-    expect(find.textContaining('Mentoría agendada'), findsOneWidget);
+    // confirma a pantalla completa y, al seguir, vuelve a la lista con la sesión nueva
+    expect(find.text('Mentoría agendada'), findsOneWidget);
+    await _tap(tester, find.text('Ver mis mentorías'));
     expect(find.text('Precios'), findsOneWidget);
   });
 

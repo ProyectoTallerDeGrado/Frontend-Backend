@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from emprendeu.modules.users.models import (
     Permiso,
+    RestablecimientoPassword,
     Rol,
     RolPermiso,
     RolUsuario,
@@ -64,6 +65,36 @@ class UserRepository:
     async def touch_last_access(self, usuario: Usuario) -> None:
         usuario.ultimo_acceso = datetime.now(UTC)
         await self._session.flush()
+
+    async def invalidate_resets(self, usuario_id: int) -> None:
+        """Deja sin uso los codigos de restablecimiento vigentes de la cuenta."""
+        await self._session.execute(
+            update(RestablecimientoPassword)
+            .where(
+                RestablecimientoPassword.usuario_id == usuario_id,
+                RestablecimientoPassword.usado.is_(False),
+            )
+            .values(usado=True)
+        )
+
+    async def add_reset(self, row: RestablecimientoPassword) -> None:
+        self._session.add(row)
+        await self._session.flush()
+
+    async def active_reset(
+        self, usuario_id: int, moment: datetime
+    ) -> RestablecimientoPassword | None:
+        stmt = (
+            select(RestablecimientoPassword)
+            .where(
+                RestablecimientoPassword.usuario_id == usuario_id,
+                RestablecimientoPassword.usado.is_(False),
+                RestablecimientoPassword.expira > moment,
+            )
+            .order_by(RestablecimientoPassword.restablecimiento_id.desc())
+            .limit(1)
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def set_password(self, usuario: Usuario, password_hash: str) -> None:
         moment = datetime.now(UTC)

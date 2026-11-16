@@ -45,16 +45,16 @@ Mentorías y el Perfil completo).
   esquema parte de `Backend/EmprendeU/database/EmprendeU_postgresql.sql`, hoy reemplazado por la referencia
   `database/cieu_schema_completo.sql`, y evoluciona solo con migraciones de Alembic (ver `AGENTS.md` del backend).
   **Backend completo** (fases 0 a 9): los 11 módulos exponen HTTP bajo `/api/v1`, con
-  auditoría, 78 tests contra PostgreSQL real, Docker y CI. Detalle en
+  auditoría, 119 tests contra PostgreSQL real, Docker y CI (hay un workflow por app: `backend`, `web` y `mobile`). Detalle en
   `Backend/EmprendeU/AGENTS.md` §4 y `ROADMAP.md`.
 - **Web**: tokens de marca, fuentes, auth conectada (cookie `httpOnly`, `proxy.ts`) y el
   **panel de administración completo** (Resumen, Usuarios, Roles y permisos, Parámetros,
-  Catálogos y XP, Auditoría) conectado al backend, con permisos por rol. Mentorías (asignaciones, disponibilidad y sesiones), Emprendimientos (avanzar etapa e historial), Alertas, Dashboard, Reportes (vista previa y CSV), Emprendedores (registro con documento único), Emprendimientos (crear, editar, progreso), Base de conocimiento del coach (subir documentos y ver su estado) y Mi cuenta. Capacitaciones (crear, editar,
+  Catálogos y XP, Auditoría) conectado al backend, con permisos por rol. Mentorías (asignaciones, disponibilidad y sesiones), Emprendimientos (avanzar etapa e historial), Alertas, Dashboard, Reportes (vista previa y CSV), Emprendedores (registro con documento único), Emprendimientos (crear, editar, progreso), Base de conocimiento del coach (subir documentos y ver su estado) y Mi cuenta. Recuperación de contraseña, exportación de reportes a Excel, Capacitaciones (crear, editar,
   participantes y asistencia) y documentos del emprendimiento (subir, descargar, eliminar).
 - **Móvil**: tema, router con barra inferior, `core/` (red, errores, almacenamiento, conectividad) y
   las features `auth`, `ventures`, `gamification` (Camino), `mentoring` (compromisos y avances con cola
   sin conexión) y `home` (Inicio), todas **conectadas al backend**. Mentorías (agendar y ver las sesiones, con
-  filtros por estado y periodo), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia (`documents`) el Coach IA (chat con fuentes; **también en el celular sin internet**: IA descargable desde Perfil con RAG local sobre los documentos del CIE-U y los archivos propios del emprendedor, que no salen del teléfono) cambio de contraseña, capacitaciones (inscribirse y ver la asistencia) y documentos del emprendimiento (ver, subir, abrir/descargar, eliminar). Tiene tests de integración opt-in contra el backend real.
+  filtros por estado y periodo), recuperación de contraseña por correo (código de 6 dígitos), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia (`documents`) el Coach IA (chat con fuentes; **también en el celular sin internet**: IA descargable desde Perfil con RAG local sobre los documentos del CIE-U y los archivos propios del emprendedor, que no salen del teléfono) cambio de contraseña, capacitaciones (inscribirse y ver la asistencia) y documentos del emprendimiento (ver, subir, abrir/descargar, eliminar). Tiene tests de integración opt-in contra el backend real.
 - **Diseño visual**: `Frontend/emprendeu/design.md` (panel de administración) y
   `Frontend/app_emprendeu/design.md` (app del emprendedor), basados en el mockup del CIE-U.
 
@@ -129,7 +129,7 @@ uv sync --locked                          # instala ejecución + dev
 cp .env.example .env                      # y ajustar DATABASE_URL y JWT_SECRET (>= 32 caracteres)
 uv run alembic upgrade head               # crea el schema cieu y todas las tablas
 uv run uvicorn emprendeu.main:app --reload --port 8000
-uv run pytest                             # 78 tests (necesita PostgreSQL con pgvector)
+uv run pytest                             # 119 tests (necesita PostgreSQL con pgvector)
 uv run ruff check . && uv run ruff format --check .
 uv run python -m emprendeu.modules.users.cli create-admin --email ... --nombre "..."
 
@@ -139,6 +139,8 @@ cp .env.example .env.local          # API_URL del backend
 pnpm dev
 pnpm build
 pnpm lint
+pnpm test                           # Vitest (esquemas y utilidades)
+pnpm test:e2e                       # Playwright: necesita backend con datos demo y API_URL
 
 # Móvil  (cwd: Frontend/app_emprendeu)
 flutter pub get

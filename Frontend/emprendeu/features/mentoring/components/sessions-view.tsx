@@ -5,6 +5,7 @@ import { formatDateTime } from "@/lib/format";
 
 import type { Session, SessionFilters, VentureOption } from "../types";
 import { CommitSheet, CompleteSessionSheet, RecommendSheet, RegisterSessionSheet } from "./session-forms";
+import { filterPillClass } from "@/components/data/filter-pills";
 
 type Props = {
   sessions: Session[];
@@ -40,8 +41,6 @@ function hrefFor(basePath: string, filters: SessionFilters, page?: number): stri
 }
 
 function Filters({ filters, basePath }: { filters: SessionFilters; basePath: string }) {
-  const pill = (active: boolean) =>
-    `inline-flex min-h-11 items-center rounded-full border-[1.5px] px-4 text-sm font-semibold outline-none transition-all focus-visible:ring-3 focus-visible:ring-primary/30 ${active ? "border-navy-900 bg-navy-900 text-white" : "border-border-strong bg-card text-foreground hover:bg-blue-50"}`;
   const dateInput =
     "h-11 rounded-xl border-[1.5px] border-border-strong bg-card px-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15";
 
@@ -55,7 +54,7 @@ function Filters({ filters, basePath }: { filters: SessionFilters; basePath: str
               key={s.value}
               href={hrefFor(basePath, { ...filters, estado: s.value || undefined })}
               aria-current={active ? "true" : undefined}
-              className={pill(active)}
+              className={filterPillClass(active)}
             >
               {s.label}
             </Link>

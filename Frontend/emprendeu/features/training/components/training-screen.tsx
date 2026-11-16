@@ -9,6 +9,7 @@ import { formatDateTime } from "@/lib/format";
 import { TRAINING_PAGE_SIZE, listTrainings } from "../server/queries";
 import type { TrainingFilters } from "../types";
 import { TrainingFormSheet } from "./training-form";
+import { filterPillClass } from "@/components/data/filter-pills";
 
 const ESTADOS = [
   { value: "", label: "Todas" },
@@ -24,9 +25,6 @@ function hrefFor(f: TrainingFilters): string {
   const query = search.toString();
   return query ? `/training?${query}` : "/training";
 }
-
-const pill = (active: boolean) =>
-  `inline-flex min-h-11 items-center rounded-full border-[1.5px] px-4 text-sm font-semibold outline-none transition-all focus-visible:ring-3 focus-visible:ring-primary/30 ${active ? "border-navy-900 bg-navy-900 text-white" : "border-border-strong bg-card text-foreground hover:bg-blue-50"}`;
 
 /** CU27 · Lista de capacitaciones del programa; coordinación las crea y edita. */
 export async function TrainingScreen({ filters }: { filters: TrainingFilters }) {
@@ -49,7 +47,7 @@ export async function TrainingScreen({ filters }: { filters: TrainingFilters }) 
             key={e.value}
             href={hrefFor({ estado: e.value || undefined })}
             aria-current={(filters.estado ?? "") === e.value ? "true" : undefined}
-            className={pill((filters.estado ?? "") === e.value)}
+            className={filterPillClass((filters.estado ?? "") === e.value)}
           >
             {e.label}
           </Link>

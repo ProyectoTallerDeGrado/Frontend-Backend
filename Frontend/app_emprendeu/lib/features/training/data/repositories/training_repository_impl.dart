@@ -30,18 +30,23 @@ class TrainingRepositoryImpl implements TrainingRepository {
   }
 
   @override
-  Future<Result<List<Training>>> getTrainings() => _guard(() async {
+  Future<Result<TrainingPage>> getTrainings({int page = 1}) => _guard(() async {
     final mine = {for (final t in await _remote.mine()) t.capacitacionId: t};
-    final all = await _remote.all();
-    final ids = {for (final t in all) t.capacitacionId};
-    return [
-      for (final t in all)
-        mine[t.capacitacionId]?.toEntity(enrolled: true) ??
-            t.toEntity(enrolled: false),
-      // Las ya realizadas o canceladas en las que participó pueden no salir en la lista general.
-      for (final t in mine.values)
-        if (!ids.contains(t.capacitacionId)) t.toEntity(enrolled: true),
-    ];
+    final all = await _remote.all(page: page, pageSize: trainingPageSize);
+    final ids = {for (final t in all.items) t.capacitacionId};
+    return TrainingPage(
+      page: page,
+      total: all.total,
+      items: [
+        for (final t in all.items)
+          mine[t.capacitacionId]?.toEntity(enrolled: true) ??
+              t.toEntity(enrolled: false),
+        // Sus capacitaciones que no salen en la lista general; van en la primera página.
+        if (page == 1)
+          for (final t in mine.values)
+            if (!ids.contains(t.capacitacionId)) t.toEntity(enrolled: true),
+      ],
+    );
   });
 
   @override

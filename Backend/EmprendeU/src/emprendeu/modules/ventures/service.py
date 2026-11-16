@@ -344,6 +344,39 @@ class VentureService:
         await self._repo.commit()
         return await self.list_members(user, emprendimiento_id)
 
+    async def change_member_role(
+        self,
+        user: CurrentUser,
+        emprendimiento_id: int,
+        emprendedor_id: int,
+        body: s.MemberRoleUpdate,
+    ) -> list[s.MemberOut]:
+        venture = await self._venture(emprendimiento_id)
+        current = {
+            m.emprendedor_id: m
+            for m in await self.list_members(user, emprendimiento_id)
+        }
+        if emprendedor_id not in current:
+            raise MemberNotFound
+        before = current[emprendedor_id].rol_en_emprendimiento
+        await self._entrepreneurs.set_member_role(
+            emprendedor_id, emprendimiento_id, body.rol_en_emprendimiento
+        )
+        await self._audit.record(
+            user.usuario_id,
+            "negocio.emprendimiento",
+            venture.nombre,
+            tabla="emprendimiento_emprendedores",
+            id_registro=emprendimiento_id,
+            antes={"emprendedor_id": emprendedor_id, "rol": before},
+            despues={
+                "accion": "cambiar_rol_integrante",
+                "rol": body.rol_en_emprendimiento,
+            },
+        )
+        await self._repo.commit()
+        return await self.list_members(user, emprendimiento_id)
+
     async def remove_member(
         self, user: CurrentUser, emprendimiento_id: int, emprendedor_id: int
     ) -> list[s.MemberOut]:

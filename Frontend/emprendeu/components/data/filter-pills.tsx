@@ -4,6 +4,15 @@ import { cn } from "@/lib/utils";
 
 export type FilterOption = { label: string; href: string; active: boolean; count?: number };
 
+/** Clases de una píldora de filtro. Las pantallas que arman sus propios enlaces usan esto, no una copia. */
+export const filterPillClass = (active: boolean) =>
+  cn(
+    "inline-flex min-h-11 items-center gap-2 rounded-full border-[1.5px] px-4 text-sm font-semibold outline-none transition-[background,color,border-color] duration-200 focus-visible:ring-3 focus-visible:ring-primary/30",
+    active
+      ? "border-navy-900 bg-navy-900 text-white"
+      : "border-border-strong bg-card text-foreground hover:border-primary/40 hover:bg-blue-50",
+  );
+
 /** Filtros-píldora navegables (cada opción es un enlace con `aria-current`). */
 export function FilterPills({ label, options }: { label: string; options: FilterOption[] }) {
   return (
@@ -13,12 +22,7 @@ export function FilterPills({ label, options }: { label: string; options: Filter
           key={option.href}
           href={option.href}
           aria-current={option.active ? "true" : undefined}
-          className={cn(
-            "inline-flex min-h-11 items-center gap-2 rounded-full border-[1.5px] px-4 text-sm font-semibold outline-none transition-[background,color,border-color] duration-200 focus-visible:ring-3 focus-visible:ring-primary/30",
-            option.active
-              ? "border-navy-900 bg-navy-900 text-white"
-              : "border-border-strong bg-card text-foreground hover:border-primary/40 hover:bg-blue-50",
-          )}
+          className={filterPillClass(option.active)}
         >
           {option.label}
           {option.count !== undefined && (
