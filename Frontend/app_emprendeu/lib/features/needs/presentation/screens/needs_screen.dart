@@ -8,6 +8,7 @@ import '../../../../core/utils/date_format.dart';
 import '../../domain/entities/venture_need.dart';
 import '../controllers/needs_providers.dart';
 import '../needs_routes.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Lo que el emprendedor reportó al CIE-U: necesidades y dificultades (CU24).
 class NeedsScreen extends ConsumerWidget {
@@ -57,20 +58,11 @@ class NeedsScreen extends ConsumerWidget {
                   padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (error, _) => Column(
-                  children: [
-                    Text(
-                      error is Failure
-                          ? error.message
-                          : 'No se pudieron cargar tus reportes.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: () => ref.invalidate(myNeedsProvider),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
+                error: (error, _) => ErrorState(
+                  message: error is Failure
+                      ? error.message
+                      : 'No se pudieron cargar tus reportes.',
+                  onRetry: () => ref.invalidate(myNeedsProvider),
                 ),
                 data: (items) => items.isEmpty
                     ? Padding(

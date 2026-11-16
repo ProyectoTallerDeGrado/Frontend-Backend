@@ -9,6 +9,7 @@ import '../../../ventures/index.dart';
 import '../../domain/entities/own_document.dart';
 import '../../domain/usecases/own_documents_usecases.dart';
 import '../controllers/own_documents_providers.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// «Mis archivos para la IA»: archivos del emprendedor que la IA del celular
 /// usa para responder y recomendar. Nunca salen del teléfono.
@@ -36,22 +37,11 @@ class OwnDocumentsScreen extends ConsumerWidget {
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  error is Failure
-                      ? error.message
-                      : 'No se pudieron cargar tus archivos.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () =>
-                      ref.invalidate(ownDocumentsControllerProvider),
-                  child: const Text('Reintentar'),
-                ),
-              ],
+            child: ErrorState(
+              message: error is Failure
+                  ? error.message
+                  : 'No se pudieron cargar tus archivos.',
+              onRetry: () => ref.invalidate(ownDocumentsControllerProvider),
             ),
           ),
         ),

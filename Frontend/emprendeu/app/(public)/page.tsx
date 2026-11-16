@@ -19,12 +19,13 @@ export const metadata: Metadata = {
     title,
     description,
     url: "/",
-    images: [{ url: "/brand/cie-u-logo.png", alt: "Logo del CIE-U" }],
   },
-  twitter: { card: "summary", title, description, images: ["/brand/cie-u-logo.png"] },
+  // La imagen sale de `app/opengraph-image.tsx` (1200 × 630).
+  twitter: { card: "summary_large_image", title, description },
 };
 
 export default async function LandingPage() {
-  const session = await getSession();
+  // La portada no depende del backend: si no responde, se muestra como a un visitante sin sesión.
+  const session = await getSession().catch(() => null);
   return <LandingView signedIn={Boolean(session)} />;
 }

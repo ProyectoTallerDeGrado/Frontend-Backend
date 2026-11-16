@@ -37,7 +37,7 @@ export function ChallengesTable({ challenges, canEdit }: { challenges: Challenge
     });
 
   const btn =
-    "flex size-11 items-center justify-center rounded-[10px] bg-background outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30 disabled:opacity-50";
+    "flex size-11 items-center justify-center rounded-lg bg-background outline-none hover:bg-blue-50 focus-visible:ring-3 focus-visible:ring-primary/30 disabled:opacity-50";
 
   return (
     <>

@@ -377,6 +377,14 @@ class UserService:
         """Usuarios con rol asesor y cuenta habilitada (para el modulo mentoring)."""
         return await self._repo.list_by_role("asesor")
 
+    async def emails_by_roles(self, roles: tuple[str, ...]) -> list[str]:
+        """Correos de las cuentas habilitadas con alguno de esos roles (sin repetir)."""
+        emails: dict[str, None] = {}
+        for rol in roles:
+            for user in await self._repo.list_by_role(rol):
+                emails[user.email] = None
+        return list(emails)
+
     async def names_by_ids(self, ids: list[int]) -> dict[int, str]:
         return await self._repo.names_by_ids(ids)
 

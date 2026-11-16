@@ -21,6 +21,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -108,6 +109,29 @@ class AnalisisSentimiento(Base):
             "indice BETWEEN -1 AND 1", name="analisis_sentimiento_indice_check"
         ),
         UniqueConstraint("mensajes_iaid", name="uq_analisis_sentimiento_mensajes_iaid"),
+        # Las claves validas viven en `sentiment.py` (EMOTIONS, TOPICS).
+        CheckConstraint(
+            "emocion IS NULL OR emocion IN ('motivacion', 'tranquilidad', 'neutral', "
+            "'preocupacion', 'estres', 'frustracion', 'desanimo')",
+            name="ck_analisis_sentimiento_emocion",
+        ),
+        CheckConstraint(
+            "tema IS NULL OR tema IN ('finanzas', 'ventas_clientes', 'equipo', "
+            "'tiempo_estudios', 'producto', 'tramites', 'personal', 'otro')",
+            name="ck_analisis_sentimiento_tema",
+        ),
+        CheckConstraint(
+            "origen IN ('servidor', 'local')", name="ck_analisis_sentimiento_origen"
+        ),
+        CheckConstraint(
+            "metodo IN ('lexico', 'modelo')", name="ck_analisis_sentimiento_metodo"
+        ),
+        # Un resultado del coach local se sincroniza una sola vez.
+        UniqueConstraint(
+            "emprendedorid",
+            "referencia_cliente",
+            name="uq_analisis_sentimiento_emprendedor_referencia",
+        ),
         Index("ix_analisis_sentimiento_emprendedorid", "emprendedorid"),
         Index("ix_analisis_sentimiento_mensajes_iaid", "mensajes_iaid"),
     )
@@ -135,6 +159,14 @@ class AnalisisSentimiento(Base):
             name="fk_analisis_sentimiento_mensajes_iaid",
         ),
     )
+    # Sin texto del mensaje (RF07): solo la clasificacion.
+    emocion: Mapped[str | None] = mapped_column(String(20))
+    tema: Mapped[str | None] = mapped_column(String(30))
+    riesgo: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    # `servidor`: coach en linea. `local`: coach del celular, sincronizado despues.
+    origen: Mapped[str] = mapped_column(String(10), server_default="servidor")
+    metodo: Mapped[str] = mapped_column(String(10), server_default="lexico")
+    referencia_cliente: Mapped[str | None] = mapped_column(String(64))
 
     mensaje: Mapped[MensajeIa | None] = relationship(back_populates="analisis")
 

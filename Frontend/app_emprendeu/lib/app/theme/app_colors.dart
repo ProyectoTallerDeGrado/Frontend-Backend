@@ -43,6 +43,9 @@ abstract final class AppColors {
   static const surface = Color(0xFFFFFFFF);
   static const border = Color(0xFFE1E6F0);
   static const borderStrong = Color(0xFFCBD3E6);
+
+  /// Borde de un control sin marcar (casilla, interruptor apagado).
+  static const outlineOff = Color(0xFF9AA6C4);
   static const divider = Color(0xFFEEF2FA);
   static const neutralFill = Color(0xFFE7ECF6);
 }

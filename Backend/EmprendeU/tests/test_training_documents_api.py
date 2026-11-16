@@ -172,6 +172,17 @@ async def test_documentos_rechaza_tipos_y_tamano(
         bad.status_code == 415
         and bad.json()["error"]["code"] == "file_type_not_allowed"
     )
+    # Un ejecutable renombrado a .pdf o a .txt tampoco entra: se mira el contenido.
+    for name, mime in (("plan.pdf", "application/pdf"), ("notas.txt", "text/plain")):
+        disguised = await client.post(
+            f"{API}/documents",
+            files={"file": (name, b"MZ\x90\x00\x03\x00\x00\x00", mime)},
+            data={"emprendimiento_id": str(vid)},
+            headers=h["e"],
+        )
+        assert disguised.status_code == 415, name
+        assert disguised.json()["error"]["code"] == "file_type_not_allowed"
+    assert not list(Path(__import__("os").environ["UPLOAD_DIR"]).glob("*"))
     foreign = await client.post(
         f"{API}/documents",
         files={"file": ("a.txt", b"x", "text/plain")},

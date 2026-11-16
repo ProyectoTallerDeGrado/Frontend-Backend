@@ -356,9 +356,9 @@ async def test_indice_descargable_para_el_coach_local(
     assert gone.status_code == 404
     assert gone.json()["error"]["code"] == "knowledge_not_found"
 
-    # el asesor no tiene `ia:consulta`
-    denied = await client.get(f"{API}/ai/knowledge/index", headers=h["asesor"])
-    assert denied.status_code == 403
+    # el asesor tiene `ia:consulta` desde la pantalla de Bienestar (migracion 588bb2ff36ff)
+    allowed = await client.get(f"{API}/ai/knowledge/index", headers=h["asesor"])
+    assert allowed.status_code == 200
 
 
 async def test_las_fuentes_del_chat_traen_el_id_del_documento(

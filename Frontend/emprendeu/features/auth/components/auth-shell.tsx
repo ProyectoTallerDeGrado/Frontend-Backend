@@ -14,7 +14,7 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
     <div className="flex min-h-screen flex-wrap">
       <BrandPanel />
       <main className="flex min-w-0 flex-[1_1_480px] items-center justify-center px-8 py-12">
-        <div className="w-full max-w-[420px] animate-[fade-up_.8s_.15s_cubic-bezier(.2,.7,.2,1)_both]">
+        <div className="w-full max-w-[420px]">
           <h2 className="mb-2 font-heading text-[28px] font-bold tracking-[-.01em] text-foreground">
             {title}
           </h2>

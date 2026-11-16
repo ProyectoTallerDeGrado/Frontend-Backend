@@ -683,18 +683,40 @@ async def seed(session: AsyncSession) -> bool:
                 fecha_generacion=_ts(-2),
             )
         )
-    # Serie de sentimiento de Camila (baja), Lucía (estable).
-    for w, (a, b) in enumerate(
-        [(0.55, 0.60), (0.40, 0.62), (0.05, 0.58), (-0.25, 0.64)]
-    ):
-        for local, idx in (("camila", a), ("emprendedor", b)):
-            session.add(
-                AnalisisSentimiento(
-                    emprendedor_id=entrepreneurs[local].emprendedor_id,
-                    indice=Decimal(str(idx)),
-                    fecha=_ts(-28 + 7 * w),
+    # Animo en el coach (pantalla de Bienestar): Camila va bajando y Lucía se mantiene.
+    # Tres mensajes por semana; solo la clasificacion, nunca el texto.
+    mood: dict[str, list[tuple[float, str, str]]] = {
+        "camila": [
+            (0.55, "motivacion", "producto"),
+            (0.40, "tranquilidad", "ventas_clientes"),
+            (0.05, "preocupacion", "finanzas"),
+            (-0.25, "estres", "finanzas"),
+            (-0.55, "desanimo", "tiempo_estudios"),
+        ],
+        "emprendedor": [
+            (0.60, "motivacion", "ventas_clientes"),
+            (0.62, "motivacion", "producto"),
+            (0.58, "tranquilidad", "equipo"),
+            (0.64, "motivacion", "ventas_clientes"),
+            (0.61, "tranquilidad", "producto"),
+        ],
+    }
+    for local, weeks in mood.items():
+        for w, (idx, emocion, tema) in enumerate(weeks):
+            for n, shift in enumerate((-0.08, 0.0, 0.08)):
+                session.add(
+                    AnalisisSentimiento(
+                        emprendedor_id=entrepreneurs[local].emprendedor_id,
+                        indice=Decimal(str(round(idx + shift, 2))),
+                        fecha=_ts(-29 + 7 * w + n),
+                        emocion=emocion,
+                        tema=tema,
+                        # El ultimo mensaje de Camila trae una senal de riesgo.
+                        riesgo=local == "camila" and w == len(weeks) - 1 and n == 2,
+                        origen="local" if n == 1 else "servidor",
+                        metodo="lexico" if n == 1 else "modelo",
+                    )
                 )
-            )
 
     # --- indicadores ---------------------------------------------------------
     for key, rows in INDICATORS.items():

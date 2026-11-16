@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, status
 
+from emprendeu.core.client_ip import client_ip
 from emprendeu.core.mailer import Mailer, get_mailer
 from emprendeu.core.pagination import Page, PageParamsDep
 from emprendeu.modules.users.dependencies import (
@@ -54,7 +55,7 @@ def _current_out(user: Usuario, current: CurrentUser) -> CurrentUserOut:
 async def login(
     body: LoginRequest, service: UserServiceDep, request: Request
 ) -> TokenResponse:
-    ip = request.client.host if request.client else None
+    ip = client_ip(request)
     user, token, expires_in = await service.login(body.email, body.password, ip)
     current = await service.current_user(user)
     return TokenResponse(
@@ -76,7 +77,7 @@ async def forgot_password(
     mailer: Annotated[Mailer, Depends(get_mailer)],
 ) -> MessageResponse:
     """Pide un codigo por correo. La respuesta es igual exista o no la cuenta."""
-    ip = request.client.host if request.client else None
+    ip = client_ip(request)
     await service.request_password_reset(body.email, mailer, ip)
     return MessageResponse(
         mensaje="Si el correo esta registrado, te enviamos un codigo de 6 digitos."

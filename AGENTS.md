@@ -45,7 +45,7 @@ Mentorías y el Perfil completo).
   esquema parte de `Backend/EmprendeU/database/EmprendeU_postgresql.sql`, hoy reemplazado por la referencia
   `database/cieu_schema_completo.sql`, y evoluciona solo con migraciones de Alembic (ver `AGENTS.md` del backend).
   **Backend completo** (fases 0 a 9): los 11 módulos exponen HTTP bajo `/api/v1`, con
-  auditoría, 78 tests contra PostgreSQL real, Docker y CI. Detalle en
+  auditoría, 119 tests contra PostgreSQL real, Docker y CI (hay un workflow por app: `backend`, `web` y `mobile`). Detalle en
   `Backend/EmprendeU/AGENTS.md` §4 y `ROADMAP.md`.
 - **Web**: tokens de marca, fuentes, auth conectada (cookie `httpOnly`, `proxy.ts`) y el
   **panel de administración completo** (Resumen, Usuarios, Roles y permisos, Parámetros,
@@ -129,7 +129,7 @@ uv sync --locked                          # instala ejecución + dev
 cp .env.example .env                      # y ajustar DATABASE_URL y JWT_SECRET (>= 32 caracteres)
 uv run alembic upgrade head               # crea el schema cieu y todas las tablas
 uv run uvicorn emprendeu.main:app --reload --port 8000
-uv run pytest                             # 78 tests (necesita PostgreSQL con pgvector)
+uv run pytest                             # 119 tests (necesita PostgreSQL con pgvector)
 uv run ruff check . && uv run ruff format --check .
 uv run python -m emprendeu.modules.users.cli create-admin --email ... --nombre "..."
 

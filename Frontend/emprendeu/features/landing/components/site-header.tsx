@@ -2,11 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { CTA, NAV_LINKS } from "../content";
+import { MobileMenu } from "./mobile-menu";
 import { Container, LandingButton } from "./primitives";
 
 /**
  * Cabecera fija: transparente sobre el hero, sólida al bajar y con barra de progreso de lectura.
  * Todo eso es CSS ligado al scroll (`.site-header`, `.site-progress` en `globals.css`): sin JavaScript.
+ * Bajo `lg` los enlaces de sección van en `MobileMenu` (la única pieza cliente de la cabecera).
  */
 export function SiteHeader({ signedIn }: { signedIn: boolean }) {
   return (
@@ -38,6 +40,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
           <LandingButton href="/apply" size="sm">
             {CTA.applyShort}
           </LandingButton>
+          <MobileMenu staffHref={signedIn ? "/panel" : "/login"} staffLabel={signedIn ? CTA.panel : CTA.staff} />
         </div>
       </Container>
       <span aria-hidden="true" className="site-progress absolute bottom-0 left-0 h-[3px] w-full bg-accent-bright" />

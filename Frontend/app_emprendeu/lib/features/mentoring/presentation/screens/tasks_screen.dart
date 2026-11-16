@@ -6,6 +6,7 @@ import '../../../../core/error/failure.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../domain/entities/task.dart';
 import '../controllers/booking_providers.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Tareas y compromisos pendientes: lo que debes hacer, con tipo, estado y fechas (CU22).
 class TasksScreen extends ConsumerStatefulWidget {
@@ -148,20 +149,11 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                   padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (error, _) => Column(
-                  children: [
-                    Text(
-                      error is Failure
-                          ? error.message
-                          : 'No se pudieron cargar tus tareas.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: () => ref.invalidate(tasksProvider),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
+                error: (error, _) => ErrorState(
+                  message: error is Failure
+                      ? error.message
+                      : 'No se pudieron cargar tus tareas.',
+                  onRetry: () => ref.invalidate(tasksProvider),
                 ),
                 data: (items) => items.isEmpty
                     ? Padding(

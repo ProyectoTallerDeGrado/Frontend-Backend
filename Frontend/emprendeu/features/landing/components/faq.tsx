@@ -7,9 +7,17 @@ import { Container, SectionHeading } from "./primitives";
  * Preguntas frecuentes con `<details name="faq">` nativo: accesible por teclado y lector de pantalla
  * sin JavaScript, y solo una abierta a la vez. La transición de altura es CSS (`.faq-item`).
  */
+const FAQ_JSON_LD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+}).replace(/</g, "\\u003c");
+
 export function Faq() {
   return (
     <section id="preguntas" aria-labelledby="faq-title" className="scroll-mt-20 bg-background pb-24 sm:pb-32">
+      {/* Datos estructurados para buscadores: salen del mismo `FAQ` que se muestra. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSON_LD }} />
       <Container className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
         <SectionHeading id="faq-title" size="md">
           Lo que más nos preguntan.

@@ -1,0 +1,24 @@
+name: mobile
+
+on:
+  push:
+    paths: ["Frontend/app_emprendeu/**", ".github/workflows/mobile.yml"]
+  pull_request:
+    paths: ["Frontend/app_emprendeu/**", ".github/workflows/mobile.yml"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend/app_emprendeu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      # Los tests de integracion contra el backend real son opt-in y no corren aqui.
+      - run: flutter test

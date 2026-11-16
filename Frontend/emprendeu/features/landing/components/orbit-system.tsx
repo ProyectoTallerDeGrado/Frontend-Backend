@@ -13,7 +13,8 @@ const RINGS = [
 
 /** Satélites: etiqueta, anillo y ángulo inicial (grados, 0 = arriba). */
 const SATELLITES: { label: (typeof ORBIT_LABELS)[number]; ring: 0 | 1 | 2; angle: number; tone: string }[] = [
-  { label: "Retos y XP", ring: 0, angle: 55, tone: "bg-primary text-white" },
+  // Ningún satélite va en el anillo interior: ahí la etiqueta tapaba el «Tu idea» del núcleo.
+  { label: "Retos y XP", ring: 1, angle: 46, tone: "bg-primary text-white ring-1 ring-white/30" },
   { label: "Mentorías", ring: 1, angle: -48, tone: "bg-white text-navy-950" },
   { label: "Comunidad", ring: 1, angle: 140, tone: "bg-navy-900 text-white ring-1 ring-white/30" },
   { label: "Coach IA", ring: 2, angle: 220, tone: "bg-accent-bright text-on-accent" },

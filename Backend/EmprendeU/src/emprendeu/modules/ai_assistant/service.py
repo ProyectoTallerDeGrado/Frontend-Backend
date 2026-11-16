@@ -5,14 +5,18 @@ from __future__ import annotations
 import math
 import re
 import unicodedata
-from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from collections import Counter, defaultdict
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
+from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.core.config import get_settings
-from emprendeu.core.errors import Forbidden, PayloadTooLarge
+from emprendeu.core.errors import Forbidden, NotFoundError, PayloadTooLarge
+from emprendeu.core.mailer import Mailer
 from emprendeu.core.pagination import Page, PageParams
+from emprendeu.core.periods import period_bounds
 from emprendeu.modules.ai_assistant import schemas as s
 from emprendeu.modules.ai_assistant.chunking import chunk_text
 from emprendeu.modules.ai_assistant.exceptions import (
@@ -33,10 +37,18 @@ from emprendeu.modules.ai_assistant.models import (
     MensajeIa,
 )
 from emprendeu.modules.ai_assistant.repository import AssistantRepository
-from emprendeu.modules.ai_assistant.sentiment import score
+from emprendeu.modules.ai_assistant.sentiment import (
+    CLASSIFY_PROMPT,
+    EMOTIONS,
+    TOPICS,
+    analyze_lexical,
+    parse_model_reply,
+)
 from emprendeu.modules.audit import AuditService
 from emprendeu.modules.entrepreneurs import EntrepreneurService
-from emprendeu.modules.users import CurrentUser
+from emprendeu.modules.mentoring import MentoringService
+from emprendeu.modules.users import CurrentUser, build_user_service
+from emprendeu.modules.ventures import VentureService
 
 FALLBACK = (
     "No encontré información suficiente en la base documental del CIE-U "
@@ -52,6 +64,57 @@ SYSTEM_PROMPT = (
     "usando SOLO el contexto entregado. Si el contexto no alcanza, dilo. "
     "No des asesoria legal ni financiera definitiva.\n\nContexto:\n{context}"
 )
+
+
+# Se antepone a la respuesta cuando el mensaje muestra senales de riesgo.
+SUPPORT_NOTE = (
+    "Suena a que estás pasando por un momento difícil, y es válido sentirse así. "
+    "Te recomiendo hablarlo con tu asesor del CIE-U: no tienes que cargar con esto "
+    "a solas."
+)
+
+# Bienestar: periodo por defecto, minimo de mensajes para dar un nivel y umbrales.
+WELLBEING_DEFAULT_DAYS = 28
+WELLBEING_MIN_MESSAGES = 3
+WELLBEING_RED = -0.3  # promedio igual o menor: rojo
+WELLBEING_AMBER = 0.0  # promedio igual o menor: ambar
+WELLBEING_DROP = 0.25  # caida frente al periodo anterior: ambar
+WELLBEING_TREND = 0.1  # cambio minimo para decir que sube o baja
+WELLBEING_WEEKS = 12  # semanas de la serie del detalle
+REPORT_ROLES = ("coordinador", "administrador")
+_LEVEL_ORDER = {"rojo": 0, "ambar": 1, "verde": 2, "sin_datos": 3}
+
+
+class RiskNotifier(Protocol):
+    """Avisa al personal de una senal de riesgo (lo implementa `risk_alerts.py`)."""
+
+    async def notify(self, emprendedor_id: int) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class PendingAnalysis:
+    """Lo que la tarea en segundo plano necesita para afinar un analisis.
+
+    El texto solo vive en memoria durante la peticion: no se guarda.
+    """
+
+    analysis_id: int
+    emprendedor_id: int
+    mensaje: str
+    riesgo: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ChatOutcome:
+    reply: s.ChatReply
+    pending: PendingAnalysis
+
+
+class WellbeingNotFound(NotFoundError):
+    code = "wellbeing_not_found"
+
+    def __init__(self) -> None:
+        super().__init__("Emprendedor no encontrado.")
 
 
 # Brechas de la base: ventana por defecto, topes y similitud para unir preguntas.
@@ -108,11 +171,20 @@ def _week_key(moment: datetime) -> str:
 
 
 class AssistantService:
-    def __init__(self, session: AsyncSession, llm: LLMClient | None = None) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        llm: LLMClient | None = None,
+        notifier: RiskNotifier | None = None,
+    ) -> None:
+        self._session = session
         self._repo = AssistantRepository(session)
         self._llm_or_none = llm
+        self._notifier = notifier
         self._audit = AuditService(session)
         self._entrepreneurs = EntrepreneurService(session)
+        self._mentoring = MentoringService(session)
+        self._ventures = VentureService(session)
 
     @property
     def _llm(self) -> LLMClient:
@@ -423,6 +495,12 @@ class AssistantService:
         )
 
     async def chat(self, user: CurrentUser, body: s.ChatRequest) -> s.ChatReply:
+        return (await self.chat_detailed(user, body)).reply
+
+    async def chat_detailed(
+        self, user: CurrentUser, body: s.ChatRequest
+    ) -> ChatOutcome:
+        """Responde y deja listo lo que hace falta para afinar el analisis de animo."""
         ref = await self._entrepreneurs.ref_for_user(user.usuario_id)
         if ref is None:
             raise NotEntrepreneur
@@ -455,16 +533,22 @@ class AssistantService:
             fecha=now(),
         )
         await self._repo.add(question)
-        # RF07: el analisis de sentimiento se guarda anonimizado. Solo el indice
-        # numerico, la fecha y el emprendedor; sin texto y sin enlace al mensaje.
-        await self._repo.add(
-            AnalisisSentimiento(
-                emprendedor_id=ref.emprendedor_id,
-                mensaje_ia_id=None,
-                indice=score(body.mensaje),
-                fecha=now(),
-            )
+        # RF07: del analisis se guarda el indice, la emocion, el tema y si hay riesgo,
+        # con la fecha y el emprendedor; nunca el texto ni el enlace al mensaje.
+        # Aqui va el analisis por palabras (inmediato); el modelo lo afina despues.
+        first = analyze_lexical(body.mensaje)
+        analysis = AnalisisSentimiento(
+            emprendedor_id=ref.emprendedor_id,
+            mensaje_ia_id=None,
+            indice=first.indice,
+            fecha=now(),
+            emocion=first.emocion,
+            tema=first.tema,
+            riesgo=first.riesgo,
+            origen="servidor",
+            metodo=first.metodo,
         )
+        await self._repo.add(analysis)
         try:
             sources = await self._retrieve(body.mensaje)
             if sources:
@@ -483,6 +567,8 @@ class AssistantService:
             # Nada a medias: ni la conversacion nueva, ni la pregunta, ni el sentimiento.
             await self._repo.rollback()
             raise
+        if first.riesgo:
+            answer = f"{SUPPORT_NOTE}\n\n{answer}"
         reply = MensajeIa(
             conversacion_ia_id=conversation.conversacion_ia_id,
             tipo="asistente",
@@ -494,7 +580,7 @@ class AssistantService:
         conversation.fecha_fin = now()
         await self._repo.commit()
         lowered = body.mensaje.lower()
-        return s.ChatReply(
+        reply_out = s.ChatReply(
             conversacion_id=conversation.conversacion_ia_id,
             pregunta=self._message_out(question),
             respuesta=self._message_out(reply),
@@ -504,8 +590,331 @@ class AssistantService:
                 s.SourceOut(documento_conocimiento_id=doc_id, titulo=title)
                 for doc_id, title in cited
             ],
-            derivar_mentor=not titles or any(k in lowered for k in HANDOFF_KEYWORDS),
+            derivar_mentor=first.riesgo
+            or not titles
+            or any(k in lowered for k in HANDOFF_KEYWORDS),
         )
+        return ChatOutcome(
+            reply_out,
+            PendingAnalysis(
+                analysis.analisis_sentimiento_id,
+                ref.emprendedor_id,
+                body.mensaje,
+                first.riesgo,
+            ),
+        )
+
+    # --- animo: afinado con el modelo y coach local ----------------------------
+
+    async def refine_sentiment(self, pending: PendingAnalysis) -> None:
+        """Despues de responder: el modelo afina el analisis y, si hay riesgo, se avisa.
+
+        Si el modelo no responde o devuelve algo fuera de las listas, queda el analisis
+        por palabras. Nunca falla hacia afuera: es una tarea en segundo plano.
+        """
+        riesgo = pending.riesgo
+        if get_settings().ai_sentiment_model and self._llm_or_none is not None:
+            try:
+                raw = await self._llm_or_none.chat(CLASSIFY_PROMPT, pending.mensaje)
+            except AIUnavailable:
+                raw = ""
+            refined = parse_model_reply(raw, pending.mensaje)
+            row = await self._repo.get_analysis(pending.analysis_id)
+            if refined is not None and row is not None:
+                row.indice = refined.indice  # type: ignore[assignment]  # Numeric acepta float
+                row.emocion = refined.emocion
+                row.tema = refined.tema
+                row.riesgo = refined.riesgo
+                row.metodo = refined.metodo
+                riesgo = refined.riesgo
+                await self._repo.commit()
+        if riesgo and self._notifier is not None:
+            await self._notifier.notify(pending.emprendedor_id)
+
+    async def sync_sentiment(
+        self, user: CurrentUser, body: s.SentimentSync
+    ) -> s.SentimentSyncResult:
+        """Resultados del coach local (sin internet). Llega la clasificacion, no el texto.
+
+        Idempotente por `referencia_cliente`: reenviar un lote no duplica nada.
+        """
+        ref = await self._entrepreneurs.ref_for_user(user.usuario_id)
+        if ref is None:
+            raise NotEntrepreneur
+        unique = {item.referencia_cliente: item for item in body.items}
+        known = await self._repo.existing_references(ref.emprendedor_id, list(unique))
+        moment = now()
+        fresh = [item for key, item in unique.items() if key not in known]
+        await self._repo.add_all(
+            [
+                AnalisisSentimiento(
+                    emprendedor_id=ref.emprendedor_id,
+                    mensaje_ia_id=None,
+                    indice=round(item.indice, 5),
+                    # El reloj del celular puede estar adelantado.
+                    fecha=min(item.fecha.astimezone(UTC), moment),
+                    emocion=item.emocion,
+                    tema=item.tema,
+                    riesgo=item.riesgo,
+                    origen="local",
+                    metodo="lexico",
+                    referencia_cliente=item.referencia_cliente,
+                )
+                for item in fresh
+            ]
+        )
+        await self._repo.commit()
+        if self._notifier is not None and any(item.riesgo for item in fresh):
+            await self._notifier.notify(ref.emprendedor_id)
+        return s.SentimentSyncResult(
+            registrados=len(fresh), duplicados=len(body.items) - len(fresh)
+        )
+
+    # --- bienestar (solo personal) ---------------------------------------------
+
+    async def _scope(self, actor: CurrentUser) -> list[int] | None:
+        """Emprendedores que el actor puede ver; `None` = todos.
+
+        Un asesor solo ve a los integrantes de sus emprendimientos asignados.
+        """
+        if actor.rol != "asesor":
+            return None
+        ids: dict[int, None] = {}
+        for a in await self._mentoring.list_assignments(actor.usuario_id, None):
+            if a.estado != "activa":
+                continue
+            for eid in await self._entrepreneurs.entrepreneur_ids_of_venture(
+                a.emprendimiento_id
+            ):
+                ids[eid] = None
+        return list(ids)
+
+    @staticmethod
+    def _period(desde: date | None, hasta: date | None) -> tuple[date, date]:
+        end = hasta or now().date()
+        start = desde or end - timedelta(days=WELLBEING_DEFAULT_DAYS - 1)
+        return (start, end) if start <= end else (end, start)
+
+    @staticmethod
+    def _top(values: list[str | None], order: tuple[str, ...]) -> str | None:
+        """La clave mas frecuente; en empate, la primera segun `order`."""
+        counts = Counter(v for v in values if v)
+        if not counts:
+            return None
+        best = max(counts.values())
+        return next(k for k in order if counts.get(k) == best)
+
+    def _summarize(
+        self,
+        emprendedor_id: int,
+        current: list[AnalisisSentimiento],
+        previous: list[AnalisisSentimiento],
+        names: dict[int, str],
+        ventures: list[str],
+    ) -> s.WellbeingRow:
+        avg = (
+            round(sum(float(r.indice or 0) for r in current) / len(current), 4)
+            if current
+            else None
+        )
+        before = (
+            round(sum(float(r.indice or 0) for r in previous) / len(previous), 4)
+            if len(previous) >= WELLBEING_MIN_MESSAGES
+            else None
+        )
+        risks = sum(1 for r in current if r.riesgo)
+        delta = avg - before if avg is not None and before is not None else None
+        if risks:
+            nivel = "rojo"
+        elif avg is None or len(current) < WELLBEING_MIN_MESSAGES:
+            nivel = "sin_datos"
+        elif avg <= WELLBEING_RED:
+            nivel = "rojo"
+        elif avg <= WELLBEING_AMBER or (delta is not None and delta <= -WELLBEING_DROP):
+            nivel = "ambar"
+        else:
+            nivel = "verde"
+        tendencia = None
+        if delta is not None:
+            tendencia = (
+                "sube"
+                if delta >= WELLBEING_TREND
+                else "baja"
+                if delta <= -WELLBEING_TREND
+                else "estable"
+            )
+        # Lo que conviene atender va primero: una emocion dificil gana el empate.
+        emotion_order = (
+            "desanimo",
+            "frustracion",
+            "estres",
+            "preocupacion",
+            "motivacion",
+            "tranquilidad",
+            "neutral",
+        )
+        return s.WellbeingRow(
+            emprendedor_id=emprendedor_id,
+            nombre=names.get(emprendedor_id, "Emprendedor"),
+            emprendimientos=ventures,
+            nivel=nivel,  # type: ignore[arg-type]  # una de las cuatro claves
+            indice_promedio=avg,
+            indice_anterior=before,
+            tendencia=tendencia,  # type: ignore[arg-type]
+            emocion_principal=self._top([r.emocion for r in current], emotion_order),  # type: ignore[arg-type]
+            tema_principal=self._top([r.tema for r in current], TOPICS),  # type: ignore[arg-type]
+            mensajes=len(current),
+            senales_riesgo=risks,
+            ultima_fecha=max((r.fecha for r in current if r.fecha), default=None),
+        )
+
+    async def _rows(
+        self, start: date, end: date, scope: list[int] | None
+    ) -> tuple[list[s.WellbeingRow], dict[int, list[AnalisisSentimiento]]]:
+        since, until = period_bounds(start, end)
+        assert since is not None and until is not None
+        span = until - since
+        current: dict[int, list[AnalisisSentimiento]] = defaultdict(list)
+        previous: dict[int, list[AnalisisSentimiento]] = defaultdict(list)
+        for row in await self._repo.analyses_between(since - span, until, scope):
+            bucket = (
+                current if row.fecha is not None and row.fecha >= since else previous
+            )
+            bucket[row.emprendedor_id].append(row)
+        ids = list(current)
+        names = await self._entrepreneurs.names_by_entrepreneur(ids)
+        venture_ids = {
+            eid: await self._entrepreneurs.venture_ids_of_entrepreneur(eid)
+            for eid in ids
+        }
+        venture_names = await self._ventures.names_by_ids(
+            sorted({v for vs in venture_ids.values() for v in vs})
+        )
+        rows = [
+            self._summarize(
+                eid,
+                current[eid],
+                previous.get(eid, []),
+                names,
+                [venture_names[v] for v in venture_ids[eid] if v in venture_names],
+            )
+            for eid in ids
+        ]
+        rows.sort(
+            key=lambda r: (
+                _LEVEL_ORDER[r.nivel],
+                r.indice_promedio if r.indice_promedio is not None else 0.0,
+                r.nombre,
+            )
+        )
+        return rows, current
+
+    async def wellbeing(
+        self, actor: CurrentUser, desde: date | None, hasta: date | None
+    ) -> s.WellbeingReport:
+        """Animo por emprendedor en el periodo, del mas preocupante al que mejor va."""
+        start, end = self._period(desde, hasta)
+        rows, _ = await self._rows(start, end, await self._scope(actor))
+        return s.WellbeingReport(
+            desde=start,
+            hasta=end,
+            minimo_mensajes=WELLBEING_MIN_MESSAGES,
+            emprendedores=rows,
+        )
+
+    async def wellbeing_detail(
+        self,
+        actor: CurrentUser,
+        emprendedor_id: int,
+        desde: date | None,
+        hasta: date | None,
+    ) -> s.WellbeingDetail:
+        """Detalle de una persona. Cada consulta queda en auditoria."""
+        if await self._entrepreneurs.ref_for_entrepreneur(emprendedor_id) is None:
+            raise WellbeingNotFound
+        scope = await self._scope(actor)
+        if scope is not None and emprendedor_id not in scope:
+            raise Forbidden("Solo puedes ver a los emprendedores que tienes asignados.")
+        start, end = self._period(desde, hasta)
+        rows, current = await self._rows(start, end, [emprendedor_id])
+        names = await self._entrepreneurs.names_by_entrepreneur([emprendedor_id])
+        summary = (
+            rows[0] if rows else self._summarize(emprendedor_id, [], [], names, [])
+        )
+        mine = current.get(emprendedor_id, [])
+        weeks: dict[str, list[float]] = defaultdict(list)
+        for _, when, idx in await self._repo.sentiment_since(
+            now() - timedelta(weeks=WELLBEING_WEEKS), emprendedor_id
+        ):
+            weeks[_week_key(when)].append(idx)
+
+        def counts(
+            values: list[str | None], order: tuple[str, ...]
+        ) -> list[s.CountOut]:
+            found = Counter(v for v in values if v)
+            return [
+                s.CountOut(clave=k, total=found[k])
+                for k in sorted(found, key=lambda k: (-found[k], order.index(k)))
+            ]
+
+        await self._audit.record(
+            actor.usuario_id,
+            "negocio.bienestar",
+            summary.nombre,
+            tabla="emprendedor",
+            id_registro=emprendedor_id,
+        )
+        await self._repo.commit()
+        return s.WellbeingDetail(
+            desde=start,
+            hasta=end,
+            resumen=summary,
+            semanas=[
+                s.SentimentPoint(
+                    semana=week,
+                    indice_promedio=round(sum(v) / len(v), 4),
+                    mensajes=len(v),
+                )
+                for week, v in sorted(weeks.items())
+            ],
+            emociones=counts([r.emocion for r in mine], EMOTIONS),
+            temas=counts([r.tema for r in mine], TOPICS),
+            por_origen=counts([r.origen for r in mine], ("servidor", "local")),
+        )
+
+    async def weekly_report(self, mailer: Mailer) -> int:
+        """Informe semanal por correo a coordinacion y administracion.
+
+        Solo totales: sin nombres, porque el correo no es un canal para datos de
+        animo de una persona. Devuelve a cuantos destinatarios se envio.
+        """
+        end = now().date()
+        start = end - timedelta(days=6)
+        rows, _ = await self._rows(start, end, None)
+        level = Counter(r.nivel for r in rows)
+        risks = sum(r.senales_riesgo for r in rows)
+        body = "\n".join(
+            [
+                f"Bienestar de los emprendedores, del {start:%d/%m/%Y} al {end:%d/%m/%Y}.",
+                "",
+                f"Necesitan atencion (rojo): {level['rojo']}",
+                f"Para seguir de cerca (ambar): {level['ambar']}",
+                f"Van bien (verde): {level['verde']}",
+                f"Con pocos mensajes para evaluar: {level['sin_datos']}",
+                f"Senales de riesgo en la semana: {risks}",
+                "",
+                f"Detalle por persona: {get_settings().web_url.rstrip('/')}/wellbeing",
+                "",
+                "Es una senal orientativa a partir de las conversaciones con el coach, "
+                "no un diagnostico. No se guarda el texto de los mensajes.",
+            ]
+        )
+        recipients = await build_user_service(self._session).emails_by_roles(
+            REPORT_ROLES
+        )
+        for email in recipients:
+            await mailer.send(email, "CIE-U · Informe semanal de bienestar", body)
+        return len(recipients)
 
     async def my_conversations(self, user: CurrentUser) -> list[s.ConversationOut]:
         ref = await self._entrepreneurs.ref_for_user(user.usuario_id)

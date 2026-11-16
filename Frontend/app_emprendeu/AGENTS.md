@@ -81,7 +81,8 @@ lib/
 │   ├── app.dart              # MaterialApp.router
 │   ├── router.dart           # go_router: rutas de cada feature + barra inferior (StatefulShellRoute)
 │   ├── providers.dart        # raíz de composición: une las implementaciones `data` de cada feature
-│   └── theme/                # ThemeData, tokens de color y tipografía
+│   └── theme/                # ThemeData completo (AppBar, botones, inputs, chips, tarjetas, hojas, diálogos),
+│                             # app_colors.dart y app_tokens.dart (AppSpacing, AppRadii, AppMotion)
 ├── core/
 │   ├── config/               # env, base url, flavors
 │   ├── network/              # cliente Dio, AuthInterceptor, eventos de sesión, mapeo de errores
@@ -104,7 +105,8 @@ lib/
 │           ├── widgets/      # widgets propios de la feature
 │           └── controllers/  # notifiers/providers de Riverpod + estado de la pantalla
 └── shared/
-    └── widgets/              # AppShell y AppBottomNav; widgets reutilizables entre features
+    └── widgets/              # AppShell y AppBottomNav; motion.dart (FadeUp, PopIn, RippleBurst, TypingDots,
+                              # Skeleton) y state_views.dart (ErrorState, EmptyState)
 test/                         # espejo exacto de lib/
 ```
 
@@ -155,6 +157,20 @@ test/                         # espejo exacto de lib/
   «cargando»).
 - Las pantallas con scroll tienen *pull to refresh* y las listas `AsyncValue` muestran
   cargando / error con `Failure.message` / vacío.
+
+### Tema, movimiento y estados
+
+- **El tema manda.** `AppTheme` estiliza todos los componentes de Material: un `OutlinedButton`, un chip o un
+  `TextField` sin estilo propio ya salen con la marca. No copies `styleFrom` ni `OutlineInputBorder` en las pantallas;
+  solo se sobrescribe lo que de verdad difiere (campos sobre navy, la burbuja del Coach).
+- **Movimiento** (`shared/widgets/motion.dart`, duraciones y curvas en `AppMotion`): todo respeta
+  `MediaQuery.disableAnimations`. `FadeUp` es para lo que **llega** (un resultado, un banner), no para cada fila de
+  una lista. Las animaciones de entrada son finitas y sin `Timer` (los retrasos van en un `Interval`).
+- **Celebración**: subir de nivel o ganar una insignia abre `showCelebration` (`gamification`), a pantalla completa y
+  con háptica; agendar una mentoría termina en una pantalla de confirmación. Un `SnackBar` queda para avisos menores.
+- **Errores y vacíos**: `ErrorState` y `EmptyState` (`shared/widgets/state_views.dart`). No se arma otro
+  «texto + Reintentar» a mano.
+- **Cambio de pestaña** con un fundido corto en `AppShell` (no remonta las ramas) y háptica en la barra inferior.
 
 ### Sin conexión (cola y sincronización)
 

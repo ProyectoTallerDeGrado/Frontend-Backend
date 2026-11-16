@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Annotated
+from datetime import date, datetime
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 Title = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=240)
@@ -101,6 +101,99 @@ class SentimentPoint(BaseModel):
     semana: str
     indice_promedio: float
     mensajes: int
+
+
+# Mismas claves que `sentiment.EMOTIONS` / `sentiment.TOPICS` y que los CHECK de la tabla.
+Emotion = Literal[
+    "motivacion",
+    "tranquilidad",
+    "neutral",
+    "preocupacion",
+    "estres",
+    "frustracion",
+    "desanimo",
+]
+Topic = Literal[
+    "finanzas",
+    "ventas_clientes",
+    "equipo",
+    "tiempo_estudios",
+    "producto",
+    "tramites",
+    "personal",
+    "otro",
+]
+WellbeingLevel = Literal["rojo", "ambar", "verde", "sin_datos"]
+
+
+class SentimentSyncItem(BaseModel):
+    """Resultado de un mensaje analizado en el celular (coach sin internet).
+
+    No hay campo de texto, y `extra="forbid"` rechaza cualquier otro: el mensaje
+    no sale del telefono.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    referencia_cliente: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=8, max_length=64)
+    ]
+    fecha: datetime
+    indice: Annotated[float, Field(ge=-1, le=1)]
+    emocion: Emotion
+    tema: Topic
+    riesgo: bool = False
+
+
+class SentimentSync(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: Annotated[list[SentimentSyncItem], Field(min_length=1, max_length=100)]
+
+
+class SentimentSyncResult(BaseModel):
+    registrados: int
+    duplicados: int
+
+
+class CountOut(BaseModel):
+    clave: str
+    total: int
+
+
+class WellbeingRow(BaseModel):
+    """Animo de un emprendedor en el periodo. Sin texto de sus mensajes."""
+
+    emprendedor_id: int
+    nombre: str
+    emprendimientos: list[str]
+    nivel: WellbeingLevel
+    indice_promedio: float | None
+    indice_anterior: float | None  # periodo anterior de igual duracion
+    tendencia: Literal["sube", "baja", "estable"] | None
+    emocion_principal: Emotion | None
+    tema_principal: Topic | None
+    mensajes: int
+    senales_riesgo: int
+    ultima_fecha: datetime | None
+
+
+class WellbeingReport(BaseModel):
+    desde: date
+    hasta: date
+    # Con menos mensajes que esto no se asigna nivel (`sin_datos`).
+    minimo_mensajes: int
+    emprendedores: list[WellbeingRow]
+
+
+class WellbeingDetail(BaseModel):
+    desde: date
+    hasta: date
+    resumen: WellbeingRow
+    semanas: list[SentimentPoint]
+    emociones: list[CountOut]
+    temas: list[CountOut]
+    por_origen: list[CountOut]  # servidor | local
 
 
 class KnowledgeGap(BaseModel):

@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import psycopg
@@ -98,7 +99,7 @@ async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
 async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
     """Cliente HTTP; `client._transport.app.state.fake_llm` es el LLM simulado."""
     from emprendeu.core.mailer import get_mailer
-    from emprendeu.db.session import get_session
+    from emprendeu.db.session import get_session, get_session_factory
     from emprendeu.main import create_app
     from emprendeu.modules.ai_assistant import get_llm
     from tests.fakes import FakeLLM, FakeMailer
@@ -113,6 +114,13 @@ async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
         yield session
 
     app.dependency_overrides[get_session] = _override
+
+    # Las tareas en segundo plano usan la misma sesion (y transaccion) del test.
+    @asynccontextmanager
+    async def _same_session() -> AsyncIterator[AsyncSession]:
+        yield session
+
+    app.dependency_overrides[get_session_factory] = lambda: _same_session
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as c:

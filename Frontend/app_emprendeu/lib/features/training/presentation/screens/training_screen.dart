@@ -6,6 +6,7 @@ import '../../../../core/error/failure.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../domain/entities/training.dart';
 import '../controllers/training_providers.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Capacitaciones del programa: inscribirse y ver la asistencia propia (CU29).
 class TrainingScreen extends ConsumerWidget {
@@ -41,20 +42,11 @@ class TrainingScreen extends ConsumerWidget {
                   padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (error, _) => Column(
-                  children: [
-                    Text(
-                      error is Failure
-                          ? error.message
-                          : 'No se pudieron cargar las capacitaciones.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: () => ref.invalidate(trainingsProvider),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
+                error: (error, _) => ErrorState(
+                  message: error is Failure
+                      ? error.message
+                      : 'No se pudieron cargar las capacitaciones.',
+                  onRetry: () => ref.invalidate(trainingsProvider),
                 ),
                 data: (list) => list.items.isEmpty
                     ? Padding(

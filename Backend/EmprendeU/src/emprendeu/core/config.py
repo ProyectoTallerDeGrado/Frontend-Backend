@@ -33,6 +33,9 @@ class Settings(BaseSettings):
 
     # Origenes permitidos para CORS (la web en desarrollo corre en :3000).
     cors_origins: list[str] = ["http://localhost:3000"]
+    # Proxies cuya cabecera X-Forwarded-For se cree (IPs o redes CIDR): el servidor de la
+    # web y el proxy inverso. De cualquier otro origen la cabecera se ignora.
+    trusted_proxies: list[str] = ["127.0.0.1", "::1"]
 
     # Zona horaria de negocio (agenda de mentorias) y etapa minima para agendar.
     app_timezone: str = "America/La_Paz"
@@ -51,6 +54,11 @@ class Settings(BaseSettings):
     # tiene relacion llega a 0.60; con 0.55 se colaban fuentes falsas. Ajustable por entorno.
     ai_min_similarity: float = 0.65
     ai_top_k: int = 4
+    # Tras responder, el modelo clasifica el animo del mensaje (una llamada mas por
+    # mensaje). Con `false` queda solo el analisis por palabras.
+    ai_sentiment_model: bool = True
+    # URL publica del panel web: va en los correos (informe semanal de bienestar).
+    web_url: str = "http://localhost:3000"
 
     # Correo saliente (recuperacion de contrasena). Sin `smtp_host` no se envia nada.
     smtp_host: str = ""

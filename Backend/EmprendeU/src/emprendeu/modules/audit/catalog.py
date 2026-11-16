@@ -27,6 +27,7 @@ ACTION_LABELS: dict[str, str] = {
     "negocio.habilitar_asesor": "Cambió la habilitación de un asesor",
     "negocio.alerta": "Gestionó una alerta de seguimiento",
     "negocio.reporte": "Exportó un reporte",
+    "negocio.bienestar": "Consultó el bienestar de un emprendedor",
     "negocio.sesion": "Gestionó una sesión de acompañamiento",
     "negocio.compromiso": "Gestionó un compromiso",
     "negocio.recomendacion": "Registró una recomendación",

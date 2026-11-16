@@ -8,6 +8,7 @@ import '../../../auth/index.dart';
 import '../../../ventures/index.dart';
 import '../../domain/entities/evidence.dart';
 import '../controllers/documents_providers.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Documentos del emprendimiento: ver, subir y eliminar los propios (CU30).
 class DocumentsScreen extends ConsumerWidget {
@@ -153,20 +154,11 @@ class _DocumentsState extends ConsumerState<_Documents> {
               padding: EdgeInsets.symmetric(vertical: 40),
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (error, _) => Column(
-              children: [
-                Text(
-                  error is Failure
-                      ? error.message
-                      : 'No se pudieron cargar los documentos.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () => ref.invalidate(ventureEvidenceProvider),
-                  child: const Text('Reintentar'),
-                ),
-              ],
+            error: (error, _) => ErrorState(
+              message: error is Failure
+                  ? error.message
+                  : 'No se pudieron cargar los documentos.',
+              onRetry: () => ref.invalidate(ventureEvidenceProvider),
             ),
             data: (items) => items.isEmpty
                 ? Padding(

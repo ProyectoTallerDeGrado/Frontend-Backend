@@ -19,14 +19,15 @@ export function StaffStrip() {
             se quede atrás.
           </p>
         </div>
-        <ul className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+        <ul>
           {STAFF_POINTS.map((p) => {
             const Icon = ICONS[p.icon];
             return (
-              <li key={p.text} className="flex items-center gap-4 rounded-xl bg-card px-5 py-4 text-[16px] font-semibold text-navy-950">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
-                  <Icon aria-hidden="true" className="size-5" />
-                </span>
+              <li
+                key={p.text}
+                className="flex items-center gap-4 border-t border-primary/20 py-5 text-lg font-semibold text-navy-950 first:border-t-0"
+              >
+                <Icon aria-hidden="true" className="size-6 shrink-0 text-primary" />
                 {p.text}
               </li>
             );

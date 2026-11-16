@@ -102,7 +102,7 @@ function AddForm({ trainingId, enrolled }: { trainingId: number; enrolled: Set<n
         <ul aria-label="Resultados" className="flex max-h-56 flex-col overflow-y-auto rounded-xl border border-border">
           {results.length === 0 && <li className="px-4 py-3 text-sm text-muted-foreground">Sin resultados.</li>}
           {results.map((o) => (
-            <li key={o.id} className="border-t border-[#eef2fa] first:border-t-0">
+            <li key={o.id} className="border-t border-muted first:border-t-0">
               <button
                 type="button"
                 onClick={() => setChosen(o)}

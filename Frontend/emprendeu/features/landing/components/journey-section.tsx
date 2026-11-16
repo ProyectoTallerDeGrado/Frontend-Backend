@@ -99,9 +99,7 @@ export function JourneySection() {
               const Icon = STAGE_ICONS[i];
               return (
                 <li key={s.name} data-part={`journey-stage journey-stage-${i}`}>
-                  <span className="mb-4 flex size-12 items-center justify-center rounded-xl bg-navy-950 text-white">
-                    <Icon aria-hidden="true" className="size-6" />
-                  </span>
+                  <Icon aria-hidden="true" className="mb-4 size-7 text-primary" />
                   <h3 className="font-heading text-2xl font-bold tracking-[-.02em]">{s.name}</h3>
                   <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{s.text}</p>
                 </li>

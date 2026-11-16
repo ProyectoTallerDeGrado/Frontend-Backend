@@ -88,7 +88,6 @@ export function AppShowcase() {
         <div className="mt-14 grid gap-12 lg:grid-cols-[minmax(0,420px)_1fr] lg:gap-20">
           <div className="lg:sticky lg:top-24 lg:h-fit">
             <div aria-hidden="true" className="relative mx-auto w-[290px]">
-              <span className="landing-glow absolute -inset-16 -z-10 [--glow-strength:22%]" />
               <div className="rounded-[46px] bg-navy-950 p-3 shadow-phone">
                 <div data-part="phone-display" className="relative h-[580px] overflow-hidden rounded-[36px] bg-card text-foreground">
                   <div className="flex h-9 items-center justify-between px-6 pt-1 text-[11px] font-bold">

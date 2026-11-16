@@ -108,7 +108,8 @@ export function Hero() {
             )}
           </p>
         </div>
-        <div className="relative text-on-navy-dim">
+        {/* Margen lateral en pantallas chicas: las etiquetas del anillo exterior no se cortan en el borde. */}
+        <div className="relative px-7 text-on-navy-dim sm:px-0">
           <OrbitSystem />
         </div>
       </Container>

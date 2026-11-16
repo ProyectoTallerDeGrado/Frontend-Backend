@@ -114,13 +114,13 @@ export function SheetFooter({ pending, label }: { pending: boolean; label: strin
           <Button
             type="button"
             variant="outline"
-            className="h-[50px] flex-1 rounded-xl border-border-strong text-[15px] font-semibold"
+            className="h-13 flex-1 rounded-xl border-border-strong text-[15px] font-semibold"
           />
         }
       >
         Cancelar
       </SheetClose>
-      <Button type="submit" disabled={pending} className="h-[50px] flex-[1.4] rounded-xl text-[15px] font-bold">
+      <Button type="submit" disabled={pending} className="h-13 flex-[1.4] rounded-xl text-[15px] font-bold">
         {pending && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
         {label}
       </Button>

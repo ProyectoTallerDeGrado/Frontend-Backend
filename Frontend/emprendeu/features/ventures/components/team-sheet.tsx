@@ -116,7 +116,7 @@ function TeamManager({ venture, entrepreneurs }: { venture: Venture; entrepreneu
           )}
         </Field>
         <FormError message={adding.error} />
-        <Button type="submit" disabled={adding.pending || entrepreneurId === null} className="h-[50px] rounded-xl text-[15px] font-bold">
+        <Button type="submit" disabled={adding.pending || entrepreneurId === null} className="h-13 rounded-xl text-[15px] font-bold">
           {adding.pending && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
           Agregar al equipo
         </Button>

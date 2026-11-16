@@ -55,7 +55,7 @@ y [dialecto Psycopg de SQLAlchemy](https://docs.sqlalchemy.org/en/20/dialects/po
 > Estado real hoy: **backend completo** (fases 0 a 9 de [`ROADMAP.md`](ROADMAP.md)).
 > Los 11 módulos tienen persistencia, servicio, repositorio, esquemas y router; hay
 > infraestructura transversal (`security`, `pagination`, `logging`, `ratelimit`,
-> errores 401/403/429/413/500), 78 tests contra PostgreSQL real, Dockerfile,
+> errores 401/403/429/413/500), 119 tests contra PostgreSQL real, Dockerfile,
 > `docker-compose.yml` y CI. Lo único externo que falta para operar es Ollama
 > (opcional: sin él el coach responde 503 y el resto funciona).
 
@@ -84,6 +84,7 @@ src/emprendeu/
 │   ├── errors.py            ✅ DomainError + handlers del formato de error global
 │   ├── security.py          ✅ hashing (pwdlib/argon2) y JWT (PyJWT, HS256)
 │   ├── ratelimit.py         ✅ limitador de intentos (login) en memoria
+│   ├── client_ip.py         ✅ IP real del cliente detras de un proxy de confianza (TRUSTED_PROXIES)
 │   ├── pagination.py        ✅ Page[T] y PageParams (?page=&page_size=)
 │   └── logging.py           ✅ structlog + middleware X-Request-ID
 ├── db/
@@ -211,7 +212,15 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 - **IA detrás de `LLMClient`** (`ai_assistant/llm.py`): Ollama en producción, un doble
   (`tests/fakes.py`) en tests, inyectado con `dependency_overrides[get_llm]`.
 - **Archivos** en disco local (`documents/storage.py`, `UPLOAD_DIR`), con nombre
-  generado, lista blanca de extensiones y tope de tamaño.
+  generado, lista blanca de extensiones y tope de tamaño. Además de la extensión se comprueba la
+  **firma del contenido** (`content_matches`: PDF, imágenes, Office; en texto, sin bytes nulos): un
+  archivo renombrado responde el mismo 415 `file_type_not_allowed` y no queda en disco.
+- **IP del cliente** (`core/client_ip.py`): los límites por IP (login, recuperación, postulaciones)
+  usan `client_ip(request)`, no `request.client.host`. La web llama a la API desde su servidor y
+  reenvía la IP del visitante en `X-Forwarded-For`; esa cabecera solo se cree si quien conecta está
+  en `TRUSTED_PROXIES` (IPs o redes CIDR; por defecto `127.0.0.1` y `::1`). Si la web corre en otra
+  máquina, o la API en Docker, hay que agregar ahí la IP o la red desde la que llega; si no, todas
+  las personas de la web comparten un solo contador.
 - **Secreto JWT:** en **todos** los entornos la API no arranca si `JWT_SECRET` tiene menos de
   32 caracteres o es el de `.env.example` (`core/config.py`). `ENVIRONMENT=production` además
   desactiva `/docs` y `/redoc`. Errores inesperados devuelven `internal_error` sin detalles.
@@ -237,7 +246,7 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
 - Detección de alertas: `uv run python -m emprendeu.modules.alerts.jobs`, o `POST /alerts/evaluate`
   (solo `config:administrativo`). En Docker corre el servicio `alerts-job` del `docker-compose.yml`
   (una pasada cada `ALERTS_INTERVAL_SECONDS`, 86400 por defecto); fuera de Docker, un cron diario.
-- Limitador de login en memoria: válido para **un** proceso; con varias réplicas hay que
+- Limitador de login en memoria (borra las claves sin intentos vigentes): válido para **un** proceso; con varias réplicas hay que
   moverlo a un almacén compartido (la interfaz no cambia).
 
 ### Decisiones de diseño tomadas durante la construcción

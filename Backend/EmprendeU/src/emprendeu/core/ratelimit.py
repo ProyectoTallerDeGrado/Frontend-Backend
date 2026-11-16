@@ -18,6 +18,10 @@ class SlidingWindowLimiter:
         hits = self._hits[key]
         while hits and now - hits[0] > self.window_seconds:
             hits.popleft()
+        if not hits:
+            # Sin intentos vigentes la clave se borra: si no, el diccionario crece con
+            # cada IP o correo que alguna vez paso por aqui.
+            del self._hits[key]
         return hits
 
     def is_blocked(self, key: str) -> bool:
@@ -30,7 +34,9 @@ class SlidingWindowLimiter:
         return max(1, int(self.window_seconds - (time.monotonic() - hits[0])))
 
     def hit(self, key: str) -> None:
-        self._prune(key, time.monotonic()).append(time.monotonic())
+        now = time.monotonic()
+        self._prune(key, now)
+        self._hits[key].append(now)
 
     def reset(self, key: str | None = None) -> None:
         if key is None:

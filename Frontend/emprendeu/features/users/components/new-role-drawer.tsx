@@ -50,7 +50,7 @@ function Form({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             placeholder="p. ej. auditor"
-            className="h-[50px] rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-base"
+            className="h-13 rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-base"
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -61,7 +61,7 @@ function Form({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
             id="nr-desc"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
-            className="h-[50px] rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-base"
+            className="h-13 rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-base"
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -72,7 +72,7 @@ function Form({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
             id="nr-clone"
             value={clonarDe ?? ""}
             onChange={(e) => setClonarDe(e.target.value ? Number(e.target.value) : null)}
-            className="h-[50px] rounded-xl border-[1.5px] border-border-strong bg-card px-3 text-base"
+            className="h-13 rounded-xl border-[1.5px] border-border-strong bg-card px-3 text-base"
           >
             <option value="">Ningún rol (empezar con una plantilla)</option>
             {roles.map((r) => (
@@ -105,11 +105,11 @@ function Form({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
       </div>
       <div className="flex gap-3 border-t border-border px-7 py-5">
         <SheetClose
-          render={<Button type="button" variant="outline" className="h-[50px] flex-1 rounded-xl border-border-strong text-[15px] font-semibold" />}
+          render={<Button type="button" variant="outline" className="h-13 flex-1 rounded-xl border-border-strong text-[15px] font-semibold" />}
         >
           Cancelar
         </SheetClose>
-        <Button type="submit" disabled={pending} className="h-[50px] flex-[1.4] rounded-xl text-[15px] font-bold">
+        <Button type="submit" disabled={pending} className="h-13 flex-[1.4] rounded-xl text-[15px] font-bold">
           {pending && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
           Crear rol
         </Button>

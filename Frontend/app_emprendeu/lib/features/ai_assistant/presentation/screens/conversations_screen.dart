@@ -7,6 +7,7 @@ import '../../../../core/error/failure.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../domain/entities/conversation_summary.dart';
 import '../controllers/assistant_providers.dart';
+import '../../../../shared/widgets/state_views.dart';
 
 /// Conversaciones anteriores con el coach: elegir una la reabre en el chat (CU11).
 class ConversationsScreen extends ConsumerWidget {
@@ -58,20 +59,11 @@ class ConversationsScreen extends ConsumerWidget {
                   padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (error, _) => Column(
-                  children: [
-                    Text(
-                      error is Failure
-                          ? error.message
-                          : 'No se pudieron cargar las conversaciones.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: () => ref.invalidate(conversationsProvider),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
+                error: (error, _) => ErrorState(
+                  message: error is Failure
+                      ? error.message
+                      : 'No se pudieron cargar las conversaciones.',
+                  onRetry: () => ref.invalidate(conversationsProvider),
                 ),
                 data: (items) => items.isEmpty
                     ? Padding(

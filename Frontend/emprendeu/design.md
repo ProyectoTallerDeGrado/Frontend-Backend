@@ -40,10 +40,17 @@ El panel creció a 19 secciones; esta revisión lo ordena sin cambiar la marca.
   `on-navy-dim`, `primary-hover`, `on-accent`, `info-foreground`. No queda hex en crudo en el código.
 - El login dice «Panel del personal del CIE-U» (ya no es solo para el administrador).
 
-### Landing pública (`/`) — revisada el 2026-11-14
+### Landing pública (`/`) — revisada el 2026-11-15
 
 Para estudiantes que emprenden; el Resumen del panel pasó a `/panel`. Concepto **«Tu idea, en órbita»**:
 el núcleo es la idea y lo que gira alrededor es lo que da el CIE-U. Animaciones con anime.js 4.
+
+**Ajustes del 2026-11-15.** Ningún satélite va en el anillo interior (la etiqueta tapaba «Tu idea»);
+bajo `lg` hay menú de secciones en la cabecera; «Pausar animaciones» es solo icono bajo `sm`. La
+postulación (`/apply`) continúa la portada: panel azul de marca con los tres pasos a la izquierda
+(en pantallas chicas, panel corto y sin órbita) y el formulario a la derecha, con «Volver al inicio».
+Las páginas 404 y de error usan el mismo fondo azul con órbita. Imagen para compartir: titular sobre
+azul, 1200 × 630.
 
 **Principio: un solo momento grande.** La escena Problema → Giro es el único efecto protagonista; el
 resto se mueve poco y siempre con un propósito. Nada de marquesinas, botones magnéticos ni parallax.
@@ -244,13 +251,18 @@ Cargar con `next/font/google` (no `<link>`) y asignar a `--font-sans` (DM Sans) 
 
 ### 3.4 Movimiento
 
+> **Regla:** un solo momento animado por pantalla y movimiento que responde a una acción. Lo que entra
+> desacelera (`ease-enter`), lo que sale dura menos (`ease-exit`) y el rebote (`ease-spring`) se reserva para
+> confirmar. No se repite `fadeUp` en cada bloque: en login y postulación solo entra el titular del panel de marca.
+
 | Animación | Detalle |
 |---|---|
 | `fadeUp` | `opacity 0→1`, `translateY(14–18px)→0`, .4–.7 s, escalonada por `delay` (35–120 ms por ítem) |
 | `slideIn` (formulario login) | `translateX(28px)→0`, .8 s, delay .15 s |
 | `growX` | barras de «Usuarios por rol»: `scaleX 0→1`, .9 s, delay 200 ms + 120 ms por barra |
-| `drawerIn` | `translateX(100%)→0`, .38 s `cubic-bezier(.2,.8,.2,1)` |
-| `toastIn` | `translateY(16px) scale(.96)→none`, .35 s |
+| `drawerIn` | `translateX(100%)→0`, .38 s `cubic-bezier(.2,.8,.2,1)`; sale en .2 s. Fondo `navy-950` al 55 %, sin desenfoque |
+| `toastIn` / `toastOut` | `translateY(16px) scale(.96)→none`, .35 s; sale en .18 s |
+| `shimmer` | brillo que cruza los esqueletos de carga, 1.6 s lineal |
 | `flash` | fondo `blue-100 → transparent`, 2.2 s (fila recién creada / entrada de auditoría nueva) |
 | `pulseDot` | halo verde de 8 px en estado «Operativo», 2.2 s infinito |
 | `popIn` | `scale(.6→1.08→1)` para tarjetas de insignias y confirmación |
@@ -329,7 +341,7 @@ Layout `flex-wrap`, `min-height: 100vh`, fondo `surface-muted`.
 - Pie: tarjeta de usuario (`rgba(255,255,255,.07)`, radio 14): avatar circular 40 px `blue-600` con iniciales,
   nombre (14/600) y rol (12 px `#B4C4EE`) + enlace «Cerrar sesión» (icono log-out, 44 px).
 
-**Cabecera de página** (`animation: fadeUp`): `h1` + subtítulo a la izquierda; acciones a la derecha:
+**Cabecera de página** (sin animación propia: ya entra con la transición de página): `h1` + subtítulo a la izquierda; acciones a la derecha:
 «Nuevo usuario» (solo Usuarios) y «Exportar CSV» (solo Auditoría).
 
 | Vista | Título | Subtítulo |

@@ -47,7 +47,7 @@ function Form({ onDone }: { onDone: () => void }) {
             </div>
           </div>
         )}
-        <Button type="button" onClick={onDone} className="h-[50px] rounded-xl text-[15px] font-bold">
+        <Button type="button" onClick={onDone} className="h-13 rounded-xl text-[15px] font-bold">
           Listo
         </Button>
       </div>

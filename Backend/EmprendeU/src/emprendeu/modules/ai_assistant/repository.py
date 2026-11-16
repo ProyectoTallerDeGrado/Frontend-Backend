@@ -222,3 +222,31 @@ class AssistantRepository:
         return [
             (r[0], r[1], float(r[2])) for r in (await self._session.execute(stmt)).all()
         ]
+
+    async def get_analysis(self, analysis_id: int) -> AnalisisSentimiento | None:
+        return await self._session.get(AnalisisSentimiento, analysis_id)
+
+    async def analyses_between(
+        self,
+        start: datetime,
+        end: datetime,
+        emprendedor_ids: list[int] | None = None,
+    ) -> list[AnalisisSentimiento]:
+        """Analisis con fecha en `[start, end)`; `emprendedor_ids` acota el alcance."""
+        stmt = select(AnalisisSentimiento).where(
+            AnalisisSentimiento.fecha >= start,
+            AnalisisSentimiento.fecha < end,
+            AnalisisSentimiento.indice.is_not(None),
+        )
+        if emprendedor_ids is not None:
+            stmt = stmt.where(AnalisisSentimiento.emprendedor_id.in_(emprendedor_ids))
+        return list((await self._session.execute(stmt)).scalars().all())
+
+    async def existing_references(
+        self, emprendedor_id: int, references: list[str]
+    ) -> set[str]:
+        stmt = select(AnalisisSentimiento.referencia_cliente).where(
+            AnalisisSentimiento.emprendedor_id == emprendedor_id,
+            AnalisisSentimiento.referencia_cliente.in_(references),
+        )
+        return {r for r in (await self._session.execute(stmt)).scalars().all() if r}

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_tokens.dart';
 import '../../domain/entities/gamification_profile.dart';
 
 /// XP total, nivel y barra de avance hacia el siguiente nivel.
@@ -27,10 +28,17 @@ class XpLevelCard extends StatelessWidget {
           const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: (p.progressPct / 100).clamp(0, 1),
-              minHeight: 10,
-              semanticsLabel: 'Avance hacia el siguiente nivel',
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: (p.progressPct / 100).clamp(0, 1)),
+              duration: MediaQuery.of(context).disableAnimations
+                  ? Duration.zero
+                  : AppMotion.celebrate,
+              curve: AppMotion.enter,
+              builder: (context, value, _) => LinearProgressIndicator(
+                value: value,
+                minHeight: 10,
+                semanticsLabel: 'Avance hacia el siguiente nivel',
+              ),
             ),
           ),
           const SizedBox(height: 8),

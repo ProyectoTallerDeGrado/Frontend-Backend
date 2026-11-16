@@ -2,6 +2,7 @@
 
 from emprendeu.modules.ai_assistant.exceptions import AIUnavailable
 from emprendeu.modules.ai_assistant.models import EMBEDDING_DIM
+from emprendeu.modules.ai_assistant.sentiment import CLASSIFY_PROMPT
 
 KEYWORDS = ("costos", "ventas", "marketing", "modelo")
 
@@ -15,6 +16,10 @@ class FakeLLM:
         self.last_history: list[tuple[str, str]] = []
         self.chat_calls = 0
         self.embed_calls = 0
+        self.classify_calls = 0
+        self.classify_down = False
+        # Lo que "responde el modelo" al clasificar el animo de un mensaje.
+        self.classify_reply = "no es json"
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         self.embed_calls += 1
@@ -29,6 +34,12 @@ class FakeLLM:
         question: str,
         history: list[tuple[str, str]] | None = None,
     ) -> str:
+        if system == CLASSIFY_PROMPT:
+            # Clasificacion de animo: no cuenta como respuesta del coach.
+            self.classify_calls += 1
+            if self.down or self.classify_down:
+                raise AIUnavailable
+            return self.classify_reply
         self.chat_calls += 1
         if self.down:
             raise AIUnavailable

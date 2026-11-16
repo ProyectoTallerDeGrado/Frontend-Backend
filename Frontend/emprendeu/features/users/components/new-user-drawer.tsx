@@ -52,7 +52,7 @@ function Form({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
             </div>
           </div>
         )}
-        <Button type="button" onClick={onDone} className="h-[50px] rounded-xl text-[15px] font-bold">
+        <Button type="button" onClick={onDone} className="h-13 rounded-xl text-[15px] font-bold">
           Listo
         </Button>
       </div>
@@ -73,7 +73,7 @@ function Form({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
             defaultValue={state.values?.name ?? ""}
             placeholder="Nombre y apellidos"
             aria-invalid={errors.name ? true : undefined}
-            className="h-[50px] rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-base"
+            className="h-13 rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-base"
           />
           {errors.name && <span className="text-[13px] font-semibold text-destructive">{errors.name}</span>}
         </div>
@@ -89,7 +89,7 @@ function Form({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
             defaultValue={state.values?.email ?? ""}
             placeholder="nombre@uagrm.edu.bo"
             aria-invalid={errors.email ? true : undefined}
-            className="h-[50px] rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-base"
+            className="h-13 rounded-xl border-[1.5px] border-border-strong bg-card px-4 text-base"
           />
           {errors.email && <span className="text-[13px] font-semibold text-destructive">{errors.email}</span>}
         </div>
@@ -128,10 +128,10 @@ function Form({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
         )}
       </div>
       <div className="flex gap-3 border-t border-border px-7 py-5">
-        <SheetClose render={<Button type="button" variant="outline" className="h-[50px] flex-1 rounded-xl border-border-strong text-[15px] font-semibold" />}>
+        <SheetClose render={<Button type="button" variant="outline" className="h-13 flex-1 rounded-xl border-border-strong text-[15px] font-semibold" />}>
           Cancelar
         </SheetClose>
-        <Button type="submit" disabled={pending} className="h-[50px] flex-[1.4] rounded-xl text-[15px] font-bold">
+        <Button type="submit" disabled={pending} className="h-13 flex-[1.4] rounded-xl text-[15px] font-bold">
           {pending && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
           Registrar usuario
         </Button>
@@ -146,7 +146,7 @@ export function NewUserDrawer({ roles }: { roles: Role[] }) {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
-          <Button className="h-12 gap-2 rounded-xl px-5 text-[15px] font-bold hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-10px_rgba(31,79,214,.75)]" />
+          <Button className="h-12 gap-2 rounded-xl px-5 text-[15px] font-bold hover:-translate-y-0.5 hover:shadow-cta" />
         }
       >
         <Plus aria-hidden="true" className="size-[18px]" strokeWidth={2.4} />
