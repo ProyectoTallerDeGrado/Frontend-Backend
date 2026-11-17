@@ -157,6 +157,19 @@ consumidos desde componentes cliente.
 - **Postulación** (`/apply`, `ApplyView` en `features/entrepreneurs`): pantalla dividida con el
   `BrandPanel` de `auth` (variante `compact`, con su propio mensaje) y los pasos `APPLY_STEPS` que
   exporta el barrel de `landing`; enlace «Volver al inicio» y, al enviar, qué pasa después.
+- **Asistente de ayuda** (`features/ai_assistant`: `HelpChat`, `stores/help-chat-store.ts`, `askHelpAction`): botón
+  flotante abajo a la derecha en todo el área autenticada (lo compone `app/(app)/layout.tsx` y `AppShell` lo pinta
+  en su ranura `overlays`). Chat con `POST /ai/help` (Gemini o, sin cupo, la guía sin IA, marcada como tal),
+  preguntas sugeridas según la ruta (`help-suggestions.ts`), Markdown mínimo sin HTML, `Esc` cierra. La conversación
+  vive solo en el store (se conserva al navegar, se pierde al recargar). Los avisos (`Toaster`) suben a `bottom-24`
+  para no tapar el botón.
+- **Tutorial guiado** (`features/auth/components/tour/`: `GuidedTour`, `RestartTourButton`, `tour-steps.ts`; store
+  `features/auth/stores/tour-store.ts`): si `/auth/me` trae `tutorial_completado_at = null`, arranca solo al entrar.
+  Oscurece la pantalla, recorta el elemento del paso (`data-tour="nav"`, `nav-group-<grupo>`, `account`, `help`) y
+  explica cada grupo del menú **ya filtrado por permisos** (los pasos los arma el layout en el servidor). Sin elemento
+  visible (menú cerrado en el celular) el globo va centrado. Teclado: `←`/`→`, `Esc` salta. Terminar o saltar llama a
+  `completeTutorialAction` (`POST /auth/me/tutorial`). «Ver el tutorial del sistema» (pie del chat y «Mi cuenta») lo repite.
+  Al agregar una pantalla al `NAV`, añade su texto en `SCREEN_TEXT` de `tour-steps.ts` y en `help_guide.py` del backend.
 - **Páginas de estado**: `app/not-found.tsx` y `app/error.tsx` usan `components/layout/status-screen.tsx`;
   dentro del panel, `app/(app)/error.tsx` (el menú sigue en pantalla) y `app/(app)/loading.tsx`. En
   Next 16 el error recibe `retry` (no `reset`).

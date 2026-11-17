@@ -1,0 +1,18 @@
+# HTTPS automático con Let's Encrypt para los dos dominios (ver .env).
+{
+	email {$ACME_EMAIL}
+}
+
+{$WEB_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	# Subidas de documentos: el backend acepta hasta 10 MB.
+	request_body {
+		max_size 12MB
+	}
+	reverse_proxy api:8000
+}

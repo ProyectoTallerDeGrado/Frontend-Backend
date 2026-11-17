@@ -216,3 +216,29 @@ class KnowledgeGaps(BaseModel):
 class AIStatus(BaseModel):
     ollama_disponible: bool
     documentos_activos: int
+
+
+# --- asistente de ayuda del panel web -----------------------------------------
+
+
+class HelpTurn(BaseModel):
+    rol: Literal["user", "assistant"]
+    texto: Annotated[str, StringConstraints(max_length=4000)]
+
+
+class HelpRequest(BaseModel):
+    mensaje: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)
+    ]
+    # Ruta del panel en la que esta la persona (p. ej. `/ventures/12`).
+    ruta: Annotated[str | None, StringConstraints(max_length=200)] = None
+    # Turnos previos de la conversacion (no se guardan en el servidor).
+    historial: Annotated[list[HelpTurn], Field(max_length=20)] = []
+
+
+class HelpReply(BaseModel):
+    respuesta: str
+    # `ia` = Gemini; `guia` = respuesta de la guia sin IA (sin clave, sin cuota o caido).
+    origen: Literal["ia", "guia"]
+    # Llamadas a la IA que quedan hoy; `null` si respondio la guia.
+    restantes_hoy: int | None

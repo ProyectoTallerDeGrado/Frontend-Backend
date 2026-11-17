@@ -107,6 +107,24 @@ async def me(current: CurrentUserDep, service: UserServiceDep) -> CurrentUserOut
     return _current_out(user, current)
 
 
+@auth_router.post("/me/tutorial", response_model=CurrentUserOut)
+async def complete_tutorial(
+    current: CurrentUserDep, service: UserServiceDep
+) -> CurrentUserOut:
+    """El usuario termino o salto el tutorial guiado: no se vuelve a mostrar."""
+    user = await service.set_tutorial(current.usuario_id, completed=True)
+    return _current_out(user, current)
+
+
+@auth_router.delete("/me/tutorial", response_model=CurrentUserOut)
+async def restart_tutorial(
+    current: CurrentUserDep, service: UserServiceDep
+) -> CurrentUserOut:
+    """Vuelve a mostrar el tutorial en el proximo ingreso (boton Ver tutorial de nuevo)."""
+    user = await service.set_tutorial(current.usuario_id, completed=False)
+    return _current_out(user, current)
+
+
 @auth_router.post("/change-password", response_model=TokenResponse)
 async def change_password(
     body: PasswordChange, current: CurrentUserDep, service: UserServiceDep

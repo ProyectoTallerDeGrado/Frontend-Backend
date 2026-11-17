@@ -1,5 +1,9 @@
 export { logoutAction } from "./server/actions";
 export { AccountView } from "./components/account-view";
+export { GuidedTour } from "./components/tour/guided-tour";
+export { RestartTourButton } from "./components/tour/restart-tour-button";
+export { buildTourSteps, tourGroupId } from "./components/tour/tour-steps";
+export type { TourStep } from "./components/tour/tour-steps";
 export { BrandPanel } from "./components/brand-panel";
 export { LoginView } from "./components/login-view";
 export { ForgotPasswordView } from "./components/forgot-password-view";

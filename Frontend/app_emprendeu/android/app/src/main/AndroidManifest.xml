@@ -2,6 +2,8 @@
     xmlns:tools="http://schemas.android.com/tools">
     <!-- La app consume la API del CIE-U por red. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 13+: mostrar notificaciones push (la app pide el permiso al entrar). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- open_filex los declara, pero la app solo abre archivos de su almacenamiento
          privado (con su FileProvider): no hace falta leer fotos, videos ni audio. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
@@ -34,6 +36,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Canal de Android para los push de FCM (lo crea MainActivity). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="emprendeu_avisos" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

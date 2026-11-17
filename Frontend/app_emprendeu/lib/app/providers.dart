@@ -6,6 +6,7 @@ import '../features/documents/index.dart';
 import '../features/gamification/index.dart';
 import '../features/mentoring/index.dart';
 import '../features/needs/index.dart';
+import '../features/notifications/index.dart';
 import '../features/training/index.dart';
 import '../features/ventures/index.dart';
 
@@ -19,4 +20,5 @@ final List<Override> appOverrides = [
   ...needsDataOverrides,
   ...trainingDataOverrides,
   ...assistantDataOverrides,
+  ...notificationsDataOverrides,
 ];

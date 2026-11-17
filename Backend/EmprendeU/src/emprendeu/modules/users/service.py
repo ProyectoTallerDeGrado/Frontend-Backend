@@ -182,6 +182,15 @@ class UserService:
             raise UserNotFound
         return user
 
+    async def set_tutorial(self, usuario_id: int, *, completed: bool) -> Usuario:
+        """Marca (o reinicia) el tutorial guiado de la web del usuario."""
+        user = await self.get_user(usuario_id)
+        await self._repo.set_tutorial_completed(
+            user, datetime.now(UTC) if completed else None
+        )
+        await self._repo.commit()
+        return user
+
     async def current_user(self, user: Usuario) -> CurrentUser:
         return CurrentUser(
             usuario_id=user.usuario_id,

@@ -8,7 +8,7 @@ export function Toaster() {
   const toasts = useToastStore((s) => s.toasts);
   const dismiss = useToastStore((s) => s.dismiss);
   return (
-    <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[80] flex flex-col items-end gap-3 sm:inset-x-auto sm:right-7 sm:bottom-7">
+    <div className="pointer-events-none fixed inset-x-4 bottom-22 z-[80] flex flex-col items-end gap-3 sm:inset-x-auto sm:right-7 sm:bottom-24">
       {toasts.map((t) => (
         <div
           key={t.id}

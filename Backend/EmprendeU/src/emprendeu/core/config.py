@@ -57,6 +57,17 @@ class Settings(BaseSettings):
     # Tras responder, el modelo clasifica el animo del mensaje (una llamada mas por
     # mensaje). Con `false` queda solo el analisis por palabras.
     ai_sentiment_model: bool = True
+    # Asistente de ayuda de la web (como usar el sistema): Google Gemini. Sin clave,
+    # o agotada la cuota diaria, responde con preguntas frecuentes sin llamar a Gemini.
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_timeout_seconds: float = 30.0
+    help_daily_limit: int = 50
+    # Notificaciones push de la app movil (Firebase Cloud Messaging, API HTTP v1).
+    # Ruta al JSON de la cuenta de servicio de Firebase; sin ella las notificaciones
+    # quedan solo en la bandeja de la app (no se envia nada a FCM).
+    fcm_credentials_file: str = ""
+    fcm_timeout_seconds: float = 10.0
     # URL publica del panel web: va en los correos (informe semanal de bienestar).
     web_url: str = "http://localhost:3000"
 

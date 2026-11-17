@@ -16,6 +16,8 @@ type AppShellProps = {
   user: ShellUser;
   groups: NavGroup[];
   logoutAction: () => Promise<void>;
+  /** Piezas flotantes del área autenticada (chat de ayuda, tutorial guiado) que compone el layout. */
+  overlays?: ReactNode;
   children: ReactNode;
 };
 
@@ -44,6 +46,7 @@ function UserFooter({ user, logoutAction }: { user: ShellUser; logoutAction: () 
     <div className="flex flex-col gap-1.5 border-t border-white/10 pt-4">
       <Link
         href="/account"
+        data-tour="account"
         className="flex items-center gap-3 rounded-[14px] bg-white/[.07] p-3 outline-none transition-colors hover:bg-white/[.12] focus-visible:ring-3 focus-visible:ring-white/40"
       >
         <span
@@ -71,7 +74,7 @@ function UserFooter({ user, logoutAction }: { user: ShellUser; logoutAction: () 
 }
 
 /** Estructura del área autenticada: sidebar azul fijo + contenido. Recibe todo por props (sin negocio). */
-export function AppShell({ user, groups, logoutAction, children }: AppShellProps) {
+export function AppShell({ user, groups, logoutAction, overlays, children }: AppShellProps) {
   const footer = <UserFooter user={user} logoutAction={logoutAction} />;
   return (
     <div className="min-h-screen lg:flex">
@@ -99,6 +102,7 @@ export function AppShell({ user, groups, logoutAction, children }: AppShellProps
           <PageTransition>{children}</PageTransition>
         </div>
       </main>
+      {overlays}
       <Toaster />
     </div>
   );

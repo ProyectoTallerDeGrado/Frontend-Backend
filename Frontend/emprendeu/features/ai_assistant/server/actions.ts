@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { ApiError } from "@/lib/api-client";
 import { authedFetch } from "@/features/auth";
 
-import { validateKnowledgeFile } from "../schemas/ai-schemas";
-import type { ActionResult } from "../types";
+import { HELP_HISTORY_MAX, HELP_MESSAGE_MAX, helpReplySchema, validateKnowledgeFile } from "../schemas/ai-schemas";
+import type { ActionResult, HelpMessage, HelpResult } from "../types";
 
 function uploadMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -69,4 +69,31 @@ export async function deactivateKnowledgeAction(id: number, title: string): Prom
   }
   revalidatePath("/knowledge");
   return { ok: true, message: `Documento desactivado: ${title}. El coach ya no lo usa.` };
+}
+
+/**
+ * Asistente de ayuda del panel: pregunta cómo usar el sistema. El backend responde con
+ * Gemini o, si no hay cuota o falla, con la guía sin IA; nunca guarda la conversación.
+ */
+export async function askHelpAction(
+  message: string,
+  history: Pick<HelpMessage, "role" | "text">[],
+  route: string,
+): Promise<HelpResult> {
+  const text = message.trim().slice(0, HELP_MESSAGE_MAX);
+  if (!text) return { ok: false, message: "Escribe tu pregunta." };
+  try {
+    const data = await authedFetch("/ai/help", {
+      method: "POST",
+      body: {
+        mensaje: text,
+        ruta: route.slice(0, 200),
+        historial: history.slice(-HELP_HISTORY_MAX).map((m) => ({ rol: m.role, texto: m.text.slice(0, 4000) })),
+      },
+      timeoutMs: 40_000,
+    });
+    return { ok: true, reply: helpReplySchema.parse(data) };
+  } catch {
+    return { ok: false, message: "No pude responder ahora. Revisa tu conexión e intenta de nuevo." };
+  }
 }

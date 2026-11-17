@@ -177,3 +177,12 @@ export async function logoutAction(): Promise<void> {
   if (await getSessionToken()) await clearSessionToken();
   redirect("/login");
 }
+
+/** El usuario terminó o saltó el tutorial guiado: no se le vuelve a mostrar al entrar. */
+export async function completeTutorialAction(): Promise<void> {
+  try {
+    await authedFetch("/auth/me/tutorial", { method: "POST" });
+  } catch {
+    // Si falla, el tutorial vuelve a aparecer en el próximo ingreso: no hay nada que avisar.
+  }
+}

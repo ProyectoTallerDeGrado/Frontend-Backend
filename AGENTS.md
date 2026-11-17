@@ -20,10 +20,15 @@ EmprendeU/
 ├── CLAUDE.md              ← @AGENTS.md
 ├── Backend/
 │   └── EmprendeU/         API HTTP  · Python 3.13 + FastAPI + uv
-└── Frontend/
-    ├── emprendeu/         Web       · Next.js 16 (App Router) + React 19 + TS
-    └── app_emprendeu/     Móvil     · Flutter / Dart 3.13
+├── Frontend/
+│   ├── emprendeu/         Web       · Next.js 16 (App Router) + React 19 + TS
+│   └── app_emprendeu/     Móvil     · Flutter / Dart 3.13
+├── deploy/aws-ec2/        Producción: compose, Caddy (HTTPS), scripts de la instancia EC2
+└── doc/                   Documentación de funcionalidades y despliegue
 ```
+
+> **Despliegue**: push a `main` → `.github/workflows/deploy.yml` (pruebas, imágenes en GHCR, SSH a EC2).
+> Guía completa en `doc/despliegue-aws.md`.
 
 | App | Ruta | Stack | Arquitectura designada | Detalle |
 |---|---|---|---|---|
@@ -39,9 +44,9 @@ Mentorías y el Perfil completo).
 
 - **Backend**: todas las dependencias (ejecución y `dev`) están instaladas y
   bloqueadas en `uv.lock`. Existe la app ASGI (`emprendeu.main:create_app`), la
-  configuración por entorno, el engine async, y los **modelos SQLAlchemy de las 42
-  tablas del schema `cieu`** (las 38 del modelo original + `perfil_mentor`,
-  `disponibilidad_mentor`, `parametros_seguimiento` y `postulaciones`) repartidos en 11 módulos. El
+  configuración por entorno, el engine async, y los **modelos SQLAlchemy de las tablas del schema `cieu`** (las 38 del modelo original + las nuevas,
+  como `perfil_mentor`, `disponibilidad_mentor`, `parametros_seguimiento`, `postulaciones`, `notificaciones` y
+  `dispositivos_push`) repartidos en 12 módulos. El
   esquema parte de `Backend/EmprendeU/database/EmprendeU_postgresql.sql`, hoy reemplazado por la referencia
   `database/cieu_schema_completo.sql`, y evoluciona solo con migraciones de Alembic (ver `AGENTS.md` del backend).
   **Backend completo** (fases 0 a 9): los 11 módulos exponen HTTP bajo `/api/v1`, con
@@ -50,11 +55,11 @@ Mentorías y el Perfil completo).
 - **Web**: tokens de marca, fuentes, auth conectada (cookie `httpOnly`, `proxy.ts`) y el
   **panel de administración completo** (Resumen, Usuarios, Roles y permisos, Parámetros,
   Catálogos y XP, Auditoría) conectado al backend, con permisos por rol. Mentorías (asignaciones, disponibilidad y sesiones), Emprendimientos (avanzar etapa e historial), Alertas, Dashboard, Reportes (vista previa y CSV), Emprendedores (registro con documento único), Emprendimientos (crear, editar, progreso), Base de conocimiento del coach (subir documentos y ver su estado) y Mi cuenta. Recuperación de contraseña, exportación de reportes a Excel, Capacitaciones (crear, editar,
-  participantes y asistencia) y documentos del emprendimiento (subir, descargar, eliminar).
+  participantes y asistencia) y documentos del emprendimiento (subir, descargar, eliminar). **Asistente de ayuda** (botón flotante abajo a la derecha, Gemini con respaldo de guía sin IA) y **tutorial guiado** en el primer ingreso (ver `doc/chatbot-y-tutorial.md`).
 - **Móvil**: tema, router con barra inferior, `core/` (red, errores, almacenamiento, conectividad) y
   las features `auth`, `ventures`, `gamification` (Camino), `mentoring` (compromisos y avances con cola
   sin conexión) y `home` (Inicio), todas **conectadas al backend**. Mentorías (agendar y ver las sesiones, con
-  filtros por estado y periodo), recuperación de contraseña por correo (código de 6 dígitos), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia (`documents`) el Coach IA (chat con fuentes; **también en el celular sin internet**: IA descargable desde Perfil con RAG local sobre los documentos del CIE-U y los archivos propios del emprendedor, que no salen del teléfono) cambio de contraseña, capacitaciones (inscribirse y ver la asistencia) y documentos del emprendimiento (ver, subir, abrir/descargar, eliminar). Tiene tests de integración opt-in contra el backend real.
+  filtros por estado y periodo), recuperación de contraseña por correo (código de 6 dígitos), historial del emprendimiento, Perfil (XP, insignias, editar el emprendimiento), hitos con evidencia (`documents`) el Coach IA (chat con fuentes; **también en el celular sin internet**: IA descargable desde Perfil con RAG local sobre los documentos del CIE-U y los archivos propios del emprendedor, que no salen del teléfono) cambio de contraseña, capacitaciones (inscribirse y ver la asistencia), documentos del emprendimiento (ver, subir, abrir/descargar, eliminar) y **notificaciones push** (Firebase Cloud Messaging) con bandeja de avisos en la app (ver `doc/notificaciones-push.md`). Tiene tests de integración opt-in contra el backend real.
 - **Diseño visual**: `Frontend/emprendeu/design.md` (panel de administración) y
   `Frontend/app_emprendeu/design.md` (app del emprendedor), basados en el mockup del CIE-U.
 

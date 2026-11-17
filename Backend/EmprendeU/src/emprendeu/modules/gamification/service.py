@@ -31,6 +31,7 @@ from emprendeu.modules.gamification.models import (
     Reto,
 )
 from emprendeu.modules.gamification.repository import GamificationRepository, now
+from emprendeu.modules.notifications import NotificationService
 from emprendeu.modules.users import CurrentUser
 from emprendeu.modules.ventures import VentureService
 
@@ -64,6 +65,7 @@ class GamificationService:
         self._entrepreneurs = EntrepreneurService(session)
         self._ventures = VentureService(session)
         self._documents = DocumentService(session)
+        self._notifications = NotificationService(session)
 
     # --- API publica para otros modulos --------------------------------------
 
@@ -84,6 +86,14 @@ class GamificationService:
         for name in names:
             if await self._grant(ref.emprendedor_id, name):
                 granted.append(name)
+                # Llega por algo que hizo otra persona (el mentor): se le avisa.
+                await self._notifications.notify(
+                    [usuario_id],
+                    "insignia_ganada",
+                    "¡Ganaste una insignia!",
+                    f"Desbloqueaste «{name}». Mírala en tu perfil.",
+                    route="/account",
+                )
         return granted
 
     async def is_challenge_completed(

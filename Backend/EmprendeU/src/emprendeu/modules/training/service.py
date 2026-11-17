@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from emprendeu.core.config import get_settings
 from emprendeu.core.errors import DomainError, NotFoundError
 from emprendeu.core.pagination import PageParams
 from emprendeu.modules.entrepreneurs import EntrepreneurService
+from emprendeu.modules.notifications import NotificationService
 from emprendeu.modules.training import schemas as s
 from emprendeu.modules.training.exceptions import (
     AlreadyEnrolled,
@@ -40,10 +43,20 @@ def _out(
     )
 
 
+def _day(moment: datetime | None) -> str:
+    if moment is None:
+        return "fecha por confirmar"
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    tz = ZoneInfo(get_settings().app_timezone)
+    return moment.astimezone(tz).strftime("%d/%m %H:%M")
+
+
 class TrainingService:
     def __init__(self, session: AsyncSession) -> None:
         self._repo = TrainingRepository(session)
         self._entrepreneurs = EntrepreneurService(session)
+        self._notifications = NotificationService(session)
 
     async def _training(self, capacitacion_id: int) -> Capacitacion:
         found = await self._repo.get(capacitacion_id)
@@ -54,6 +67,13 @@ class TrainingService:
     async def create(self, body: s.TrainingCreate) -> s.TrainingOut:
         row = Capacitacion(**body.model_dump(), estado="programada")
         await self._repo.add(row)
+        await self._notifications.notify(
+            await self._entrepreneurs.active_user_ids(),
+            "capacitacion_nueva",
+            "Nueva capacitación disponible",
+            f"{row.titulo} · {_day(row.fecha)}. Inscríbete desde la app.",
+            route="/training",
+        )
         await self._repo.commit()
         return _out(row, 0)
 
@@ -105,6 +125,15 @@ class TrainingService:
     ) -> s.ParticipantOut:
         training = await self._training(capacitacion_id)
         row = await self._add(training, body.emprendedor_id)
+        ref = await self._entrepreneurs.ref_for_entrepreneur(body.emprendedor_id)
+        if ref is not None:
+            await self._notifications.notify(
+                [ref.usuario_id],
+                "capacitacion_inscrito",
+                "Te inscribieron en una capacitación",
+                f"{training.titulo} · {_day(training.fecha)}",
+                route="/training",
+            )
         await self._repo.commit()
         return self._participant_out(row)
 

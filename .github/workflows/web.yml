@@ -5,6 +5,8 @@ on:
     paths: ["Frontend/emprendeu/**", ".github/workflows/web.yml"]
   pull_request:
     paths: ["Frontend/emprendeu/**", ".github/workflows/web.yml"]
+  # El despliegue (deploy.yml) reutiliza estas pruebas antes de publicar imágenes.
+  workflow_call:
 
 jobs:
   check:

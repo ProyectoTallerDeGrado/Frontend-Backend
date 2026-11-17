@@ -45,3 +45,15 @@ export function validateKnowledgeFile(file: { name: string; size: number } | nul
   if (file.size > KNOWLEDGE_MAX_MB * 1024 * 1024) return `El archivo supera ${KNOWLEDGE_MAX_MB} MB.`;
   return null;
 }
+
+/** Respuesta de `POST /ai/help` (asistente de ayuda del panel). */
+export const helpReplySchema = z.object({
+  respuesta: z.string(),
+  /** `ia` = Gemini; `guia` = respuesta de la guía sin IA (sin clave, sin cuota o caído). */
+  origen: z.enum(["ia", "guia"]),
+  restantes_hoy: z.number().nullable(),
+});
+
+/** Lo que el asistente de ayuda acepta por mensaje (igual que el backend). */
+export const HELP_MESSAGE_MAX = 1000;
+export const HELP_HISTORY_MAX = 6;

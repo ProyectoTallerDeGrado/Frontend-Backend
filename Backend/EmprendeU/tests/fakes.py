@@ -71,3 +71,40 @@ class FakeMailer:
         match = re.search(r"\b(\d{6})\b", self.sent[-1][2])
         assert match
         return match.group(1)
+
+
+class FakeHelpLLM:
+    """Doble de Gemini para el asistente de ayuda."""
+
+    def __init__(self) -> None:
+        self.configured = True
+        self.down = False
+        self.calls = 0
+        self.last_system = ""
+        self.last_history: list[tuple[str, str]] = []
+
+    async def chat(
+        self,
+        system: str,
+        question: str,
+        history: list[tuple[str, str]] | None = None,
+    ) -> str:
+        self.calls += 1
+        if self.down:
+            raise AIUnavailable
+        self.last_system = system
+        self.last_history = list(history or [])
+        return "Respuesta de ayuda generada por la IA."
+
+
+class FakePushDispatcher:
+    """Guarda los push que se habrian enviado (tras cada commit)."""
+
+    def __init__(self) -> None:
+        self.messages: list = []
+
+    async def deliver(self, messages: list) -> None:
+        self.messages.extend(messages)
+
+    def to(self, usuario_id: int) -> list:
+        return [m for m in self.messages if usuario_id in m.user_ids]

@@ -5,16 +5,14 @@ on:
     paths: ["Backend/EmprendeU/**", ".github/workflows/backend.yml"]
   pull_request:
     paths: ["Backend/EmprendeU/**", ".github/workflows/backend.yml"]
+  # El despliegue (deploy.yml) reutiliza estas pruebas antes de publicar imágenes.
+  workflow_call:
 
 # Credenciales de la base y secreto JWT SOLO para este CI (base efimera). Si defines los
 # secretos CI_DB_PASSWORD y CI_JWT_SECRET en GitHub se usan en su lugar; los valores de
 # respaldo son desechables y no sirven para nada fuera de este contenedor.
-env:
-  PG_USER: emprendeu
-  PG_DB: emprendeu
-  PG_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'ci-solo-pruebas-db' }}
-  JWT_SECRET: ${{ secrets.CI_JWT_SECRET || 'ci-secret-solo-para-pruebas-0123456789abcdef' }}
-
+# (GitHub no permite el contexto `env` en `services` ni en el `env` del job: por eso
+# los valores van escritos en cada sitio.)
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,15 +23,16 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg17
         env:
-          POSTGRES_USER: ${{ env.PG_USER }}
-          POSTGRES_PASSWORD: ${{ env.PG_PASSWORD }}
-          POSTGRES_DB: ${{ env.PG_DB }}
+          POSTGRES_USER: emprendeu
+          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'ci-solo-pruebas-db' }}
+          POSTGRES_DB: emprendeu
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U ${{ env.PG_USER }}"
+          --health-cmd "pg_isready -U emprendeu"
           --health-interval 5s --health-timeout 3s --health-retries 10
     env:
-      DATABASE_URL: postgresql+psycopg://${{ env.PG_USER }}:${{ env.PG_PASSWORD }}@localhost:5432/${{ env.PG_DB }}
+      DATABASE_URL: postgresql+psycopg://emprendeu:${{ secrets.CI_DB_PASSWORD || 'ci-solo-pruebas-db' }}@localhost:5432/emprendeu
+      JWT_SECRET: ${{ secrets.CI_JWT_SECRET || 'ci-secret-solo-para-pruebas-0123456789abcdef' }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

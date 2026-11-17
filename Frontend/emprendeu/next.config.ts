@@ -13,6 +13,8 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Servidor autocontenido para la imagen Docker (ver Dockerfile).
+  output: "standalone",
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
