@@ -11,6 +11,8 @@ export const apiUserSchema = z.object({
   rol: z.string().nullable(),
   ultimo_acceso: z.string().nullable(),
   fecha_registro: z.string().nullable(),
+  /** Cuándo terminó o saltó el tutorial guiado; `null` = se le muestra al entrar. */
+  tutorial_completado_at: z.string().nullable().default(null),
   permisos: z.array(z.string()).default([]),
 });
 

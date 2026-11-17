@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from emprendeu.modules.ai_assistant.models import (
     AnalisisSentimiento,
+    AyudaUsoDiario,
     ConversacionIa,
     DocumentoConocimiento,
     FragmentoDocumento,
@@ -250,3 +252,45 @@ class AssistantRepository:
             AnalisisSentimiento.referencia_cliente.in_(references),
         )
         return {r for r in (await self._session.execute(stmt)).scalars().all() if r}
+
+
+class HelpUsageRepository:
+    """Contador diario de llamadas a Gemini del asistente de ayuda."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def calls_on(self, day: date) -> int:
+        value = await self._session.scalar(
+            select(AyudaUsoDiario.llamadas).where(AyudaUsoDiario.fecha == day)
+        )
+        return int(value or 0)
+
+    async def reserve_call(self, day: date, limit: int) -> int | None:
+        """Suma una llamada si no se paso el tope; devuelve el total o `None` si no hay cupo.
+
+        Atomico (`INSERT ... ON CONFLICT DO UPDATE ... WHERE`): dos peticiones a la vez
+        no pueden pasarse del limite.
+        """
+        stmt = (
+            insert(AyudaUsoDiario)
+            .values(fecha=day, llamadas=1)
+            .on_conflict_do_update(
+                index_elements=[AyudaUsoDiario.fecha],
+                set_={"llamadas": AyudaUsoDiario.llamadas + 1},
+                where=AyudaUsoDiario.llamadas < limit,
+            )
+            .returning(AyudaUsoDiario.llamadas)
+        )
+        if limit <= 0:
+            return None
+        value = await self._session.scalar(stmt)
+        await self._session.commit()
+        return None if value is None else int(value)
+
+    async def release_call(self, day: date) -> None:
+        """Devuelve el cupo de una llamada que fallo (Gemini no respondio)."""
+        row = await self._session.get(AyudaUsoDiario, day)
+        if row is not None and row.llamadas > 0:
+            row.llamadas -= 1
+            await self._session.commit()

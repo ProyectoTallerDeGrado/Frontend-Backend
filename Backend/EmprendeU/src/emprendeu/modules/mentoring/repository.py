@@ -292,6 +292,26 @@ class MentoringRepository:
             stmt = stmt.where(Compromiso.estado == estado)
         return list((await self._session.execute(stmt)).scalars().all())
 
+    async def sessions_starting_between(
+        self, start: datetime, end: datetime
+    ) -> list[SesionAcompanamiento]:
+        stmt = select(SesionAcompanamiento).where(
+            SesionAcompanamiento.estado == "programada",
+            SesionAcompanamiento.fecha_programada > start,
+            SesionAcompanamiento.fecha_programada <= end,
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
+    async def commitments_due_between(
+        self, start: datetime, end: datetime
+    ) -> list[Compromiso]:
+        stmt = select(Compromiso).where(
+            Compromiso.estado == "pendiente",
+            Compromiso.fecha_limite > start,
+            Compromiso.fecha_limite <= end,
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
     async def overdue_by_venture(self, moment: datetime) -> dict[int, int]:
         stmt = (
             select(Compromiso.emprendimiento_id, func.count())

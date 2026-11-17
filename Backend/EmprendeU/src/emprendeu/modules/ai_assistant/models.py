@@ -3,7 +3,7 @@ sentimiento y base de conocimiento fragmentada."""
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from pgvector.sqlalchemy import Vector
@@ -11,6 +11,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Identity,
@@ -237,3 +238,18 @@ class FragmentoDocumento(Base):
     )
 
     documento: Mapped[DocumentoConocimiento] = relationship(back_populates="fragmentos")
+
+
+class AyudaUsoDiario(Base):
+    """Llamadas al proveedor externo (Gemini) del asistente de ayuda, por dia UTC.
+
+    Sirve para respetar la cuota gratuita (`HELP_DAILY_LIMIT`) aunque la API se reinicie.
+    """
+
+    __tablename__ = "ayuda_uso_diario"
+    __table_args__ = (
+        CheckConstraint("llamadas >= 0", name="ck_ayuda_uso_diario_llamadas"),
+    )
+
+    fecha: Mapped[date] = mapped_column(Date, primary_key=True)
+    llamadas: Mapped[int] = mapped_column(Integer, server_default=text("0"))

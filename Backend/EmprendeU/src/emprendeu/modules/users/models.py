@@ -53,6 +53,10 @@ class Usuario(Base):
     password_changed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
+    # Cuando termino (o salto) el tutorial guiado de la web; NULL = aun no lo vio.
+    tutorial_completado_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
 
     roles: Mapped[list[RolUsuario]] = relationship(back_populates="usuario")
 

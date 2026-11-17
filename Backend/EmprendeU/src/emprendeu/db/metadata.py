@@ -18,6 +18,7 @@ from emprendeu.modules import (  # noqa: F401  (import por efecto: registra las 
     gamification,
     indicators,
     mentoring,
+    notifications,
     training,
     users,
     ventures,

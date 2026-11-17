@@ -9,6 +9,7 @@ import 'package:app_emprendeu/features/documents/index.dart';
 import 'package:app_emprendeu/features/gamification/index.dart';
 import 'package:app_emprendeu/features/mentoring/index.dart';
 import 'package:app_emprendeu/features/needs/index.dart';
+import 'package:app_emprendeu/features/notifications/index.dart';
 import 'package:app_emprendeu/features/training/index.dart';
 import 'package:app_emprendeu/features/ventures/index.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,7 @@ import '../features/auth/fake_auth_repository.dart';
 import '../features/documents/fake_documents.dart';
 import '../features/mentoring/fake_booking_repository.dart';
 import '../features/needs/fake_needs_repository.dart';
+import '../features/notifications/fake_notifications.dart';
 import '../features/training/fake_training_repository.dart';
 import 'fakes.dart';
 
@@ -46,6 +48,8 @@ class TestWorld {
     FakeEvidencePicker? picker,
     FakeFileOpener? opener,
     FakeConnectivity? connectivity,
+    FakeNotificationsRepository? notifications,
+    FakePushMessaging? push,
   }) : auth = auth ?? FakeAuthRepository(),
        ventures =
            ventures ??
@@ -70,7 +74,9 @@ class TestWorld {
        training = training ?? FakeTrainingRepository(),
        picker = picker ?? FakeEvidencePicker(),
        opener = opener ?? FakeFileOpener(),
-       connectivity = connectivity ?? FakeConnectivity();
+       connectivity = connectivity ?? FakeConnectivity(),
+       notifications = notifications ?? FakeNotificationsRepository(),
+       push = push ?? FakePushMessaging(enabled: false);
 
   final FakeAuthRepository auth;
   final FakeVenturesRepository ventures;
@@ -89,6 +95,8 @@ class TestWorld {
   final FakeEvidencePicker picker;
   final FakeFileOpener opener;
   final FakeConnectivity connectivity;
+  final FakeNotificationsRepository notifications;
+  final FakePushMessaging push;
   final store = InMemoryKeyValueStore();
 }
 
@@ -123,6 +131,8 @@ Future<void> pumpApp(
         evidencePickerProvider.overrideWithValue(world.picker),
         fileOpenerProvider.overrideWithValue(world.opener),
         connectivitySourceProvider.overrideWithValue(world.connectivity),
+        notificationsRepositoryProvider.overrideWithValue(world.notifications),
+        pushMessagingProvider.overrideWithValue(world.push),
         keyValueStoreProvider.overrideWithValue(world.store),
         // Sin E/S real: dentro de `testWidgets` (tiempo simulado) no termina
         // nunca. Los archivos propios son dobles; el limpiador ignora el error.

@@ -48,3 +48,9 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+// Notificaciones push: con `google-services.json` (consola de Firebase) se configura
+// Firebase; sin él la app compila igual y funciona solo con la bandeja de avisos.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}

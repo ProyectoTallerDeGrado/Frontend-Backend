@@ -85,6 +85,7 @@ class UserOut(BaseModel):
     rol: str | None
     ultimo_acceso: datetime | None
     fecha_registro: datetime | None
+    tutorial_completado_at: datetime | None = None
 
     @classmethod
     def from_model(cls, usuario: Usuario) -> UserOut:
@@ -98,6 +99,7 @@ class UserOut(BaseModel):
             rol=usuario.roles[0].rol.nombre if usuario.roles else None,
             ultimo_acceso=usuario.ultimo_acceso,
             fecha_registro=usuario.fecha_registro,
+            tutorial_completado_at=usuario.tutorial_completado_at,
         )
 
 

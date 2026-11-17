@@ -13,7 +13,7 @@
 | Gestor / build | **uv** (`uv_build` como build-backend) | instalado |
 | Framework HTTP | **FastAPI** `>=0.142.2` | en uso (`emprendeu.main:create_app`) |
 | Servidor ASGI | **uvicorn[standard]** `>=0.54.0` | instalado |
-| ORM | **SQLAlchemy 2.x async** | en uso: 43 modelos declarativos |
+| ORM | **SQLAlchemy 2.x async** | en uso: 46 modelos declarativos |
 | Driver | **psycopg 3** (`postgresql+psycopg://`) | instalado |
 | Migraciones | **Alembic** (plantilla `async`) | en uso, con migración base |
 | Layout | `src/` layout, paquete `emprendeu` | instalado |
@@ -53,7 +53,7 @@ Referencias: [dependencias con uv](https://docs.astral.sh/uv/concepts/projects/d
 y [dialecto Psycopg de SQLAlchemy](https://docs.sqlalchemy.org/en/20/dialects/postgresql.html#module-sqlalchemy.dialects.postgresql.psycopg).
 
 > Estado real hoy: **backend completo** (fases 0 a 9 de [`ROADMAP.md`](ROADMAP.md)).
-> Los 11 módulos tienen persistencia, servicio, repositorio, esquemas y router; hay
+> Los 12 módulos tienen persistencia, servicio, repositorio, esquemas y router; hay
 > infraestructura transversal (`security`, `pagination`, `logging`, `ratelimit`,
 > errores 401/403/429/413/500), 119 tests contra PostgreSQL real, Dockerfile,
 > `docker-compose.yml` y CI. Lo único externo que falta para operar es Ollama
@@ -90,7 +90,7 @@ src/emprendeu/
 ├── db/
 │   ├── base.py              ✅ Base declarativa con MetaData(schema="cieu")
 │   ├── session.py           ✅ engine async + dependencia get_session
-│   ├── metadata.py          ✅ unico punto que importa los modelos de los 11 modulos
+│   ├── metadata.py          ✅ unico punto que importa los modelos de los 12 modulos
 │   ├── seed.py              ✅ datos de demostracion (una vez, solo con la base vacia); ver database/SEED.md
 │   └── migrations/          ✅ Alembic (plantilla async)
 │       ├── env.py           ✅ URL desde Settings, include_schemas, CREATE SCHEMA
@@ -114,9 +114,9 @@ src/emprendeu/
 tests/                       ✅ tests de integracion end-to-end de la API (+ conftest.py raiz con la BD de pruebas)
 ```
 
-## 3b. Los 11 modulos y sus tablas
+## 3b. Los 12 modulos y sus tablas
 
-Las 38 tablas originales del schema `cieu` (y 4 nuevas, marcadas con `*`) estan repartidas asi. Nombres de modulo en
+Las 38 tablas originales del schema `cieu` (y las nuevas, marcadas con `*`) estan repartidas asi. Nombres de modulo en
 ingles; nombres de tabla y columna en espanol, porque los fija la base.
 
 | Modulo | Tablas |
@@ -127,11 +127,12 @@ ingles; nombres de tabla y columna en espanol, porque los fija la base.
 | `mentoring` | `tipo`, `sesiones_acompanamiento`, `sesion_participantes`, `compromisos`, `seguimientos`, `recomendaciones`, `asignaciones`, `perfil_mentor`*, `disponibilidad_mentor`* |
 | `training` | `capacitaciones`, `capacitacion_participantes` |
 | `gamification` | `insignias`, `emprendedor_insignias`, `retos`, `emprendimiento_retos`, `movimientos_xp` |
-| `ai_assistant` | `conversaciones_ia`, `mensajes_ia`, `analisis_sentimiento`, `documentos_conocimiento`, `fragmentos_documento` |
+| `ai_assistant` | `conversaciones_ia`, `mensajes_ia`, `analisis_sentimiento`, `documentos_conocimiento`, `fragmentos_documento`, `ayuda_uso_diario`* |
 | `indicators` | `tipos_indicadores`, `valores_indicadores` |
 | `alerts` | `tipos`, `alertas`, `parametros_seguimiento`* |
 | `documents` | `documentos` |
 | `audit` | `bitacora` |
+| `notifications` | `notificaciones`*, `dispositivos_push`* |
 
 Al anadir un modulo: registrarlo en esta tabla, en `db/metadata.py` y, si expone
 HTTP, en `api/v1.py`.
@@ -178,7 +179,7 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 
 | Módulo | Endpoints principales |
 |---|---|
-| `users` ✅ | `POST /auth/login`, `/auth/register`, `/auth/change-password`, `/auth/forgot-password` y `/auth/reset-password` (código de 6 dígitos por correo), `GET /auth/me`; `GET/POST /users`, `PATCH /users/{id}/estado`, `/users/{id}/rol`; `GET/POST /roles`, `PATCH/DELETE /roles/{id}` (solo roles personalizados), `GET/PUT /roles/{id}/permissions` |
+| `users` ✅ | `POST/DELETE /auth/me/tutorial` (marca o reinicia el tutorial guiado de la web), `POST /auth/login`, `/auth/register`, `/auth/change-password`, `/auth/forgot-password` y `/auth/reset-password` (código de 6 dígitos por correo), `GET /auth/me`; `GET/POST /users`, `PATCH /users/{id}/estado`, `/users/{id}/rol`; `GET/POST /roles`, `PATCH/DELETE /roles/{id}` (solo roles personalizados), `GET/PUT /roles/{id}/permissions` |
 | `audit` ✅ | `GET /audit`, `GET /audit/export` (CSV); `AuditService.record(...)` para el resto de módulos |
 | `entrepreneurs` ✅ | `GET/POST /entrepreneurs` (el alta crea usuario + emprendedor), `/entrepreneurs/me` (GET/PATCH), `/entrepreneurs/{id}` |
 | `ventures` ✅ | `/stages`, `/ventures` (CRUD, `/me`, `PUT /{id}/stage`, historial), equipo (`GET/POST /ventures/{id}/members`, `PATCH/DELETE /ventures/{id}/members/{emprendedor_id}`), hitos (`/milestones`), necesidades (`/needs`) |
@@ -186,8 +187,9 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 | `mentoring` ✅ | `/mentoring/mentors` (+ `PUT {id}/enabled`, perfil, `slots`, horarios: `GET/PUT/POST {id}/availability`, `PATCH/DELETE /availability/{id}`), `booking-status`, `sessions` (agendar, `me` y lista con filtros `estado/desde/hasta`, `register`, completar, cancelar), `commitments` (`POST`, `me`), `recommendations` (`POST`, `me`), `progress`, `POST /mentoring/sync`, `assignments`, historial `GET /mentoring/ventures/{id}/history` y `/ventures/me/history` |
 | `alerts` ✅ | `GET/PUT /alerts/settings`, `GET /alerts`, `PATCH /alerts/{id}` (`revisada`, `atendida`, `descartada`), `POST /alerts/evaluate`; tarea `alerts/jobs.py` |
 | `indicators` ✅ | `GET /indicators/overview` (resumen del panel), `GET /indicators/health` (puntaje de salud), `GET /indicators/dashboard` (filtros `desde`, `hasta`, `etapa_id`), `GET /indicators/reports/{kind}` y `/export` (CSV) con `kind` ∈ `resumen`, `sesiones`, `alertas`, `indicadores`; tipos y valores por emprendimiento |
-| `ai_assistant` ✅ | `POST /ai/chat`, `GET /ai/conversations/me` y `/{id}/messages`, `GET/POST /ai/knowledge` (texto), `POST /ai/knowledge/upload` (archivo txt/md/pdf/docx), `DELETE /ai/knowledge/{id}` (desactivar), `GET /ai/knowledge/index` y `GET /ai/knowledge/{id}/fragments` (índice descargable del coach local, paginado), `GET /ai/knowledge/gaps` (preguntas sin respuesta agrupadas), `GET /ai/status`, `GET /ai/sentiment/{emprendedor_id}` |
+| `ai_assistant` ✅ | `POST /ai/help` (asistente de ayuda del panel, Gemini), `POST /ai/chat`, `GET /ai/conversations/me` y `/{id}/messages`, `GET/POST /ai/knowledge` (texto), `POST /ai/knowledge/upload` (archivo txt/md/pdf/docx), `DELETE /ai/knowledge/{id}` (desactivar), `GET /ai/knowledge/index` y `GET /ai/knowledge/{id}/fragments` (índice descargable del coach local, paginado), `GET /ai/knowledge/gaps` (preguntas sin respuesta agrupadas), `GET /ai/status`, `GET /ai/sentiment/{emprendedor_id}` |
 | `training` ✅ | `/training` (CRUD, `me`, inscripción, participantes, asistencia) |
+| `notifications` ✅ | `GET /notifications` (bandeja propia, paginada, `?solo_no_leidas=`), `GET /notifications/unread-count`, `POST /notifications/{id}/read`, `POST /notifications/read-all`, `PUT /notifications/devices` (registrar token FCM), `DELETE /notifications/devices/{token}`; tarea `mentoring/jobs.py` (recordatorios) |
 | `documents` ✅ | `POST /documents` (multipart, `emprendimiento_id` y `hito_id` opcionales), listado (filtros `emprendimiento_id`, `hito_id`), `download`, `DELETE` |
 
 ### Convenciones que ya están fijadas en el código
@@ -201,6 +203,7 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 - **Orden de dependencias entre módulos:** `audit`, `entrepreneurs` → `users` →
   `ventures` → `gamification` → `mentoring` → `ai_assistant` → `alerts` → `indicators`.
   `training` y `documents` solo dependen de `entrepreneurs`/`audit`/`users`.
+  `notifications` solo depende de `users`; lo usan `ventures`, `gamification`, `mentoring` y `training`.
 - **Alcance por rol:** los permisos `modulo:accion` mandan, pero un **emprendedor
   solo ve sus propios emprendimientos** aunque la matriz le dé `consulta`.
   `CurrentUser.can_staff(permiso)` y `require_staff_permission(...)` expresan
@@ -209,6 +212,29 @@ Todos cuelgan de `/api/v1`. `✅` = completo y con tests (`tests/test_*_api.py`)
 - **Servicios sin `Request`.** Cada servicio recibe `AsyncSession` (y, si hace falta,
   `LLMClient`) y hace su propio `commit`. `AuditService.record` no hace commit: lo
   hace quien lo llama, para que el cambio y su bitácora vayan en la misma transacción.
+- **Asistente de ayuda del panel web** (`ai_assistant/help_service.py`, `gemini.py`, `help_guide.py`):
+  `POST /ai/help` (cualquier usuario autenticado) explica **cómo usar el sistema**. Usa Google Gemini
+  (`GEMINI_API_KEY`, `GEMINI_MODEL`, por defecto `gemini-2.5-flash`) detrás de `HelpLLM` (doble `FakeHelpLLM` en
+  `tests/fakes.py`, inyectado con `dependency_overrides[get_help_llm]`). El prompt lleva la guía de `help_guide.py`
+  **filtrada por el rol** y la ruta en la que está la persona. La cuota gratuita se respeta con `ayuda_uso_diario`
+  (un contador por día UTC, incremento atómico `INSERT … ON CONFLICT … WHERE llamadas < límite`; `HELP_DAILY_LIMIT`, 50).
+  Sin clave, sin cupo o con Gemini caído responde la guía sin IA (`origen: "guia"`, elige el tema por palabras) y
+  la llamada fallida devuelve su cupo. No guarda la conversación ni analiza el ánimo (el historial lo manda el cliente).
+  **Si cambia una pantalla o el menú de la web, se actualiza `help_guide.py` en el mismo cambio.**
+- **Tutorial guiado**: `usuario.tutorial_completado_at` (`NULL` = mostrarlo al entrar) va en `/auth/me`;
+  `POST /auth/me/tutorial` lo marca y `DELETE` lo reinicia. Migración `509235c3a151` (también crea `ayuda_uso_diario`).
+- **Notificaciones** (`modules/notifications`, ver `doc/notificaciones-push.md` en la raíz): otros módulos llaman
+  `NotificationService(session).notify(user_ids, tipo, titulo, cuerpo, route=…, key=…)` **antes** de su propio
+  `commit`. El aviso entra en `notificaciones` (la bandeja de la app) en la misma transacción y el push se manda
+  **solo tras el commit** (evento `after_commit` de la sesión; si hay rollback no sale nada) en una tarea en segundo
+  plano que abre su propia sesión, envía por FCM HTTP v1 (`push.py`, cuenta de servicio en `FCM_CREDENTIALS_FILE`,
+  JWT RS256 con `pyjwt[crypto]`) y borra los tokens que FCM declara inválidos. Sin credenciales no se envía nada.
+  `key` evita repetir un aviso programado (`uq_notificaciones_clave`). Quien hace la acción no recibe su propio aviso.
+  Disparadores: `mentoring` (agendada para el equipo, realizada/registrada, cancelada, compromiso nuevo,
+  recomendación nueva, recordatorios), `training` (nueva capacitación a todos los emprendedores activos, inscripción
+  por coordinación), `ventures` (cambio de etapa) y `gamification` (insignia por evento externo). En tests,
+  `set_push_dispatcher(FakePushDispatcher)` (lo hace `conftest.py`) y `await wait_for_pushes()` antes de comprobar.
+  Migración `4941fe5dc407`.
 - **IA detrás de `LLMClient`** (`ai_assistant/llm.py`): Ollama en producción, un doble
   (`tests/fakes.py`) en tests, inyectado con `dependency_overrides[get_llm]`.
 - **Archivos** en disco local (`documents/storage.py`, `UPLOAD_DIR`), con nombre
@@ -243,6 +269,8 @@ error del backend aún van sin tildes: los clientes traducen los códigos que mu
   igual que `db/metadata.py`: ningún módulo lo importa.
 - Migraciones: `uv run alembic upgrade head` (en Docker, `docker compose run --rm migrate`).
 - Primer administrador: `uv run python -m emprendeu.modules.users.cli create-admin ...`.
+- Recordatorios (mentorías en 24 h, compromisos en 48 h): `uv run python -m emprendeu.modules.mentoring.jobs`
+  (cron cada hora); en Docker, el servicio `reminders-job` (`REMINDERS_INTERVAL_SECONDS`, 3600).
 - Detección de alertas: `uv run python -m emprendeu.modules.alerts.jobs`, o `POST /alerts/evaluate`
   (solo `config:administrativo`). En Docker corre el servicio `alerts-job` del `docker-compose.yml`
   (una pasada cada `ALERTS_INTERVAL_SECONDS`, 86400 por defecto); fuera de Docker, un cron diario.

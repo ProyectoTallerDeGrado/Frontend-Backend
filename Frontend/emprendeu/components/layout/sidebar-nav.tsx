@@ -54,7 +54,8 @@ const ICONS = {
 } satisfies Record<string, LucideIcon>;
 
 export type NavItem = { href: string; label: string; icon: keyof typeof ICONS; badge?: number };
-export type NavGroup = { label: string; items: NavItem[] };
+/** `tourId`: valor de `data-tour` del grupo, para que el tutorial guiado lo resalte. */
+export type NavGroup = { label: string; items: NavItem[]; tourId?: string };
 
 /** ¿`href` es la sección en la que está el usuario? (`/` solo coincide consigo misma). */
 export function isActiveHref(pathname: string, href: string): boolean {
@@ -100,7 +101,7 @@ export function SidebarNav({ groups, onNavigate }: { groups: NavGroup[]; onNavig
   }, [activeHref, closed]);
 
   return (
-    <nav ref={navRef} aria-label="Secciones" className="relative flex flex-col gap-4">
+    <nav ref={navRef} aria-label="Secciones" data-tour="nav" className="relative flex flex-col gap-4">
       {marker && (
         <span
           aria-hidden="true"
@@ -114,7 +115,7 @@ export function SidebarNav({ groups, onNavigate }: { groups: NavGroup[]; onNavig
         const listId = `nav-${group.label.toLowerCase().replace(/\s+/g, "-")}`;
         const showHeading = groups.length > 1 && group.items.length > 1;
         return (
-          <div key={group.label} className="flex flex-col gap-0.5">
+          <div key={group.label} data-tour={group.tourId} className="flex flex-col gap-0.5">
             {showHeading && (
               <button
                 type="button"

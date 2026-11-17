@@ -14,6 +14,7 @@ from emprendeu.modules.entrepreneurs.router import router as entrepreneurs_route
 from emprendeu.modules.gamification.router import router as gamification_router
 from emprendeu.modules.indicators.router import router as indicators_router
 from emprendeu.modules.mentoring.router import router as mentoring_router
+from emprendeu.modules.notifications.router import router as notifications_router
 from emprendeu.modules.training.router import router as training_router
 from emprendeu.modules.users import router as users_router
 from emprendeu.modules.ventures.router import router as ventures_router
@@ -32,3 +33,4 @@ api_router.include_router(alerts_router)
 api_router.include_router(indicators_router)
 api_router.include_router(training_router)
 api_router.include_router(documents_router)
+api_router.include_router(notifications_router)

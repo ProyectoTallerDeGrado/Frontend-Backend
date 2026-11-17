@@ -55,6 +55,7 @@ from emprendeu.modules.mentoring.repository import (
     MentoringRepository,
     now,
 )
+from emprendeu.modules.notifications import NotificationService
 from emprendeu.modules.users import CurrentUser, build_user_service
 from emprendeu.modules.ventures import VentureService
 
@@ -77,12 +78,21 @@ class VentureActivity:
 
 
 STREAK_WEEKS = 4
+# Recordatorios (tarea `mentoring.jobs`): sesiones que empiezan y compromisos que
+# vencen dentro de estas ventanas.
+SESSION_REMINDER = timedelta(hours=24)
+COMMITMENT_REMINDER = timedelta(hours=48)
 # Duracion de cada turno que se ofrece dentro de un intervalo disponible.
 SLOT_MINUTES = 60
 
 
 def _tz() -> ZoneInfo:
     return ZoneInfo(get_settings().app_timezone)
+
+
+def _when(moment: datetime) -> str:
+    """Fecha y hora local corta para el texto de un aviso (p. ej. 18/11 15:00)."""
+    return moment.astimezone(_tz()).strftime("%d/%m %H:%M")
 
 
 class MentoringService:
@@ -93,11 +103,58 @@ class MentoringService:
         self._entrepreneurs = EntrepreneurService(session)
         self._ventures = VentureService(session)
         self._gamification = GamificationService(session)
+        self._notifications = NotificationService(session)
 
     # --- API publica para otros modulos --------------------------------------
 
     async def overdue_by_venture(self) -> dict[int, int]:
         return await self._repo.overdue_by_venture(now())
+
+    async def send_reminders(self) -> tuple[int, int]:
+        """Avisa de las mentorias de las proximas 24 h y de los compromisos que
+        vencen en 48 h. Cada aviso sale una sola vez (clave por sesion/compromiso).
+        Devuelve `(avisos_de_sesion, avisos_de_compromiso)`."""
+        moment = now()
+        sessions = await self._repo.sessions_starting_between(
+            moment, moment + SESSION_REMINDER
+        )
+        parts = await self._repo.participants(
+            [r.sesion_acompanamiento_id for r in sessions]
+        )
+        sent_sessions = 0
+        for r in sessions:
+            sid = r.sesion_acompanamiento_id
+            learners = [
+                p.usuario_id
+                for p in parts.get(sid, [])
+                if p.rol_participante == LEARNER_ROLE
+            ]
+            assert r.fecha_programada is not None
+            sent_sessions += await self._notifications.notify(
+                learners,
+                "recordatorio_sesion",
+                "Tienes una mentoría pronto",
+                f"{r.tema or 'Mentoría'} · {_when(r.fecha_programada)}",
+                route=f"/mentoring/session/{sid}",
+                key=f"sesion:{sid}",
+            )
+        sent_commitments = 0
+        for c in await self._repo.commitments_due_between(
+            moment, moment + COMMITMENT_REMINDER
+        ):
+            if c.responsable_usuario_id is None or c.fecha_limite is None:
+                continue
+            sent_commitments += await self._notifications.notify(
+                [c.responsable_usuario_id],
+                "recordatorio_compromiso",
+                "Un compromiso vence pronto",
+                f"{(c.descripcion or 'Compromiso')[:120]} · vence el "
+                f"{_when(c.fecha_limite)}",
+                route="/mentoring/tasks",
+                key=f"compromiso:{c.compromiso_id}",
+            )
+        await self._repo.commit()
+        return sent_sessions, sent_commitments
 
     async def last_activity_by_venture(self) -> dict[int, datetime]:
         return await self._repo.last_activity_by_venture()
@@ -648,6 +705,14 @@ class MentoringService:
                     "mentor_id": body.mentor_id,
                 },
             )
+            team = await self._entrepreneurs.user_ids_of_venture(venture_id)
+            await self._notifications.notify(
+                [u for u in team if u != user.usuario_id],
+                "sesion_agendada",
+                "Mentoría agendada para tu equipo",
+                f"{session.tema or 'Mentoría'} · {_when(start)}",
+                route=f"/mentoring/session/{session.sesion_acompanamiento_id}",
+            )
             await self._repo.commit()
         except IntegrityError as exc:
             await self._repo.rollback()
@@ -818,6 +883,13 @@ class MentoringService:
             id_registro=sesion_id,
             despues={"accion": "completar"},
         )
+        await self._notify_learners(
+            sesion_id,
+            user.usuario_id,
+            "sesion_realizada",
+            "Tu mentoría quedó registrada",
+            f"{row.tema or 'Mentoría'}: revisa las recomendaciones y compromisos.",
+        )
         await self._repo.commit()
         return (await self._sessions_out([row]))[0]
 
@@ -881,6 +953,13 @@ class MentoringService:
                 "emprendimiento_id": body.emprendimiento_id,
             },
         )
+        await self._notify_learners(
+            sid,
+            user.usuario_id,
+            "sesion_realizada",
+            "Se registró una mentoría",
+            f"{body.tema or 'Mentoría'} · {_when(when)}",
+        )
         await self._repo.commit()
         return (await self._sessions_out([row]))[0]
 
@@ -902,8 +981,33 @@ class MentoringService:
             id_registro=sesion_id,
             despues={"accion": "cancelar"},
         )
+        if row.fecha_programada is not None:
+            await self._notify_learners(
+                sesion_id,
+                user.usuario_id,
+                "sesion_cancelada",
+                "Mentoría cancelada",
+                f"{row.tema or 'Mentoría'} del {_when(row.fecha_programada)} "
+                "se canceló. Puedes agendar otra.",
+            )
         await self._repo.commit()
         return (await self._sessions_out([row]))[0]
+
+    async def _notify_learners(
+        self, sesion_id: int, actor_id: int, kind: str, title: str, body: str
+    ) -> None:
+        parts = (await self._repo.participants([sesion_id]))[sesion_id]
+        await self._notifications.notify(
+            [
+                p.usuario_id
+                for p in parts
+                if p.rol_participante == LEARNER_ROLE and p.usuario_id != actor_id
+            ],
+            kind,
+            title,
+            body,
+            route=f"/mentoring/session/{sesion_id}",
+        )
 
     # --- compromisos -------------------------------------------------------------
 
@@ -954,6 +1058,14 @@ class MentoringService:
                 "responsable_id": responsible,
             },
         )
+        if responsible != user.usuario_id:
+            await self._notifications.notify(
+                [responsible],
+                "compromiso_nuevo",
+                "Tienes un nuevo compromiso",
+                f"{description[:120]} · vence el {_when(commitment.fecha_limite)}",
+                route="/mentoring/tasks",
+            )
         await self._repo.commit()
         return self._commitment_out(commitment)
 
@@ -1082,6 +1194,18 @@ class MentoringService:
     async def _audit_recommendation(
         self, user: CurrentUser, rec: Recomendacion
     ) -> None:
+        team = await self._entrepreneurs.user_ids_of_venture(rec.emprendimiento_id)
+        await self._notifications.notify(
+            [u for u in team if u != user.usuario_id],
+            "recomendacion_nueva",
+            "Nueva recomendación de tu mentor",
+            rec.titulo or (rec.contenido or "")[:120],
+            route=(
+                f"/mentoring/session/{rec.sesion_acompanamiento_id}"
+                if rec.sesion_acompanamiento_id
+                else "/mentoring/history"
+            ),
+        )
         await self._audit.record(
             user.usuario_id,
             "negocio.recomendacion",

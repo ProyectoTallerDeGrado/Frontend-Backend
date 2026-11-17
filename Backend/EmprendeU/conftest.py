@@ -101,14 +101,21 @@ async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
     from emprendeu.core.mailer import get_mailer
     from emprendeu.db.session import get_session, get_session_factory
     from emprendeu.main import create_app
-    from emprendeu.modules.ai_assistant import get_llm
-    from tests.fakes import FakeLLM, FakeMailer
+    from emprendeu.modules.ai_assistant import get_help_llm, get_llm
+    from emprendeu.modules.notifications import set_push_dispatcher
+    from tests.fakes import FakeHelpLLM, FakeLLM, FakeMailer, FakePushDispatcher
 
     app = create_app()
     app.state.fake_llm = FakeLLM()
     app.dependency_overrides[get_llm] = lambda: app.state.fake_llm
+    # Nunca se llama a Gemini de verdad en los tests.
+    app.state.fake_help_llm = FakeHelpLLM()
+    app.dependency_overrides[get_help_llm] = lambda: app.state.fake_help_llm
     app.state.fake_mailer = FakeMailer()
     app.dependency_overrides[get_mailer] = lambda: app.state.fake_mailer
+    # Los push nunca salen a FCM: se guardan en `app.state.fake_push`.
+    app.state.fake_push = FakePushDispatcher()
+    set_push_dispatcher(app.state.fake_push)
 
     async def _override() -> AsyncIterator[AsyncSession]:
         yield session
@@ -125,3 +132,4 @@ async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
         transport=ASGITransport(app=app), base_url="http://test"
     ) as c:
         yield c
+    set_push_dispatcher(None)

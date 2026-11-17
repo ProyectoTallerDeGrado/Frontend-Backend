@@ -12,6 +12,7 @@ from emprendeu.core.errors import Forbidden
 from emprendeu.core.pagination import PageParams
 from emprendeu.modules.audit import AuditService
 from emprendeu.modules.entrepreneurs import EntrepreneurService, MemberRef
+from emprendeu.modules.notifications import NotificationService
 from emprendeu.modules.users import CurrentUser
 from emprendeu.modules.ventures import schemas as s
 from emprendeu.modules.ventures.exceptions import (
@@ -104,6 +105,7 @@ class VentureService:
         self._repo = VentureRepository(session)
         self._audit = AuditService(session)
         self._entrepreneurs = EntrepreneurService(session)
+        self._notifications = NotificationService(session)
 
     # --- API publica para otros modulos ------------------------------------
 
@@ -493,6 +495,14 @@ class VentureService:
             f"{venture.nombre}: {stage.nombre}",
             tabla="emprendimiento_etapas",
             id_registro=emprendimiento_id,
+        )
+        team = await self._entrepreneurs.user_ids_of_venture(emprendimiento_id)
+        await self._notifications.notify(
+            [u for u in team if u != user.usuario_id],
+            "etapa_avanzada",
+            "¡Tu emprendimiento avanzó de etapa!",
+            f"{venture.nombre} ahora está en «{stage.nombre}».",
+            route="/home",
         )
         await self._repo.commit()
         return await self._out(venture, stage)

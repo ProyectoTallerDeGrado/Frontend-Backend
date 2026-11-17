@@ -134,6 +134,10 @@ class EntrepreneurService:
     async def venture_ids_of_user(self, usuario_id: int) -> list[int]:
         return await self._repo.venture_ids_of_user(usuario_id)
 
+    async def active_user_ids(self) -> list[int]:
+        """Usuarios de los emprendedores activos (avisos generales)."""
+        return await self._repo.active_user_ids()
+
     async def user_ids_of_venture(self, emprendimiento_id: int) -> list[int]:
         return await self._repo.user_ids_of_venture(emprendimiento_id)
 

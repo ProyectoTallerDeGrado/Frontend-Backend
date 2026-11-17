@@ -66,6 +66,12 @@ class UserRepository:
         usuario.ultimo_acceso = datetime.now(UTC)
         await self._session.flush()
 
+    async def set_tutorial_completed(
+        self, usuario: Usuario, when: datetime | None
+    ) -> None:
+        usuario.tutorial_completado_at = when
+        await self._session.flush()
+
     async def invalidate_resets(self, usuario_id: int) -> None:
         """Deja sin uso los codigos de restablecimiento vigentes de la cuenta."""
         await self._session.execute(

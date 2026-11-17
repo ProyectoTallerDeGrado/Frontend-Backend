@@ -11,11 +11,14 @@ from emprendeu.core.config import get_settings
 from emprendeu.core.pagination import Page, PageParamsDep
 from emprendeu.db.session import SessionFactory, get_session, get_session_factory
 from emprendeu.modules.ai_assistant import schemas as s
+from emprendeu.modules.ai_assistant.gemini import HelpLLM, get_help_llm
+from emprendeu.modules.ai_assistant.help_service import HelpService
 from emprendeu.modules.ai_assistant.llm import LLMClient, get_llm
 from emprendeu.modules.ai_assistant.risk_alerts import AlertRiskNotifier
 from emprendeu.modules.ai_assistant.service import AssistantService, PendingAnalysis
 from emprendeu.modules.users import (
     CurrentUser,
+    CurrentUserDep,
     require_permission,
     require_staff_permission,
 )
@@ -48,6 +51,17 @@ Svc = Annotated[AssistantService, Depends(_svc)]
 
 def perm(name: str) -> object:
     return Depends(require_permission(name))
+
+
+@router.post("/help", response_model=s.HelpReply)
+async def help_assistant(
+    body: s.HelpRequest,
+    user: CurrentUserDep,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    llm: Annotated[HelpLLM, Depends(get_help_llm)],
+) -> s.HelpReply:
+    """Ayuda de uso del panel (cualquier usuario autenticado). No guarda la conversacion."""
+    return await HelpService(session, llm).answer(user, body)
 
 
 @router.post("/chat", response_model=s.ChatReply)

@@ -9,6 +9,7 @@ import '../../../../shared/widgets/motion.dart';
 import '../../../auth/index.dart';
 import '../../../gamification/index.dart';
 import '../../../mentoring/index.dart';
+import '../../../notifications/index.dart';
 import '../../../ventures/index.dart';
 import '../widgets/next_challenge_card.dart';
 import '../widgets/progress_card.dart';
@@ -24,7 +25,8 @@ class HomeScreen extends ConsumerWidget {
       ..invalidate(gamificationProfileProvider)
       ..invalidate(journeyProvider)
       ..invalidate(commitmentsProvider)
-      ..invalidate(progressLogsProvider);
+      ..invalidate(progressLogsProvider)
+      ..invalidate(unreadCountProvider);
     await ref.read(syncControllerProvider.notifier).sync();
     await ref.read(myVentureProvider.future).catchError((_) => null);
   }
@@ -83,6 +85,8 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
                   const ConnectionPill(),
+                  const SizedBox(width: 8),
+                  const NotificationsBell(),
                 ],
               ),
               const SizedBox(height: 18),

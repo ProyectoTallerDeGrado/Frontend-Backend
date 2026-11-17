@@ -41,6 +41,7 @@ features **conectadas al backend**: `auth` (login, registro, sesión), `ventures
 | Leer PDF en el celular (archivos propios para la IA) | **`read_pdf_text` 0.3.1** (PDFBox en Android, PDFKit en iOS; detrás de `TextExtractor`) | `pdfrx`: su hook nativo exige `clang` en la máquina y rompía `flutter test`; `syncfusion_flutter_pdf`: licencia comercial |
 | Leer DOCX / rutas de archivos | **`archive`** + **`xml`** (el `.docx` es un ZIP con XML) y **`path_provider`** | |
 | Abrir un documento descargado (CU30) | **`open_filex` 5.0.0** (detrás de `FileOpener`, en `documents`). Sus permisos `READ_MEDIA_*` y `READ_EXTERNAL_STORAGE` se quitan en `AndroidManifest.xml` (`tools:node="remove"`): solo abre archivos privados de la app | |
+| Notificaciones push | **`firebase_core` + `firebase_messaging`** (FCM, detrás de `PushMessaging`, en `notifications`). Se configura con `android/app/google-services.json`: el plugin `com.google.gms.google-services` solo se aplica si el archivo existe, así que sin él la app compila y usa solo la bandeja | `flutter_local_notifications` (el push con la app abierta se muestra como `SnackBar`) |
 | IA en el celular (chat + embeddings) | **`flutter_edge_ai` 2.5.4 + `flutter_edge_ai_litertlm` 1.19.0**, versiones exactas (motor LiteRT-LM, detrás de `LocalAiRepository`, en `ai_assistant`) | `llama_cpp_dart` (sin mantenimiento activo); embeddings GGUF (el paquete aún no los ejecuta) |
 
 > **IA local: requisitos de plataforma.** LiteRT-LM exige `minSdk 30` (Android 11) y solo corre en
@@ -113,7 +114,7 @@ test/                         # espejo exacto de lib/
 ### Features previstas (mapa inicial — ajústalo con el usuario antes de implementar)
 
 `auth` ✅, `ventures` ✅ (editar, hitos), `gamification` ✅ (Camino, XP e insignias), `mentoring` ✅ (compromisos y avances, agendar y ver sesiones, historial),
-`documents` ✅ (evidencia de hitos), `ai_assistant` ✅ (Coach IA y conversaciones anteriores), `needs` ✅ (necesidades y dificultades), `training` ✅ (capacitaciones), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
+`documents` ✅ (evidencia de hitos), `ai_assistant` ✅ (Coach IA y conversaciones anteriores), `needs` ✅ (necesidades y dificultades), `training` ✅ (capacitaciones), `notifications` ✅ (bandeja de avisos y push), `home` ✅ — los mismos nombres que los módulos del backend y que las features de la web
 (regla global §4.6).
 
 > **`home` es una excepción documentada a la regla 6:** no tiene módulo en el backend porque
@@ -347,3 +348,23 @@ test/                         # espejo exacto de lib/
 12. **`flutter analyze` y `flutter test` deben pasar** antes de dar un cambio por
     terminado. El código generado (`*.freezed.dart`, `*.g.dart`) se produce con
     `dart run build_runner build` y no se edita a mano.
+
+### Notificaciones push (`features/notifications`)
+
+- **Bandeja** (`/notifications`, se abre con la campana de Inicio, `NotificationsBell`): avisos del backend
+  (`GET /notifications`), paginados, marcar uno o todos como leídos. Tocar un aviso abre su pantalla.
+- **Push**: `PushGate` envuelve la app en `MaterialApp.builder` (en `app/app.dart`). Con sesión abierta llama a
+  `PushController.onSession`: arranca Firebase, pide el permiso (Android 13+ / iOS), registra el token
+  (`PUT /notifications/devices`) y lo vuelve a registrar si FCM lo renueva. Un push con la app abierta se muestra
+  como `SnackBar` con «Ver»; tocar un push (app en segundo plano o cerrada) abre su ruta.
+- **Rutas seguras**: la ruta del push pasa por `safeRoute` (solo prefijos conocidos de la app); otra se ignora.
+- **Cerrar sesión** invalida el token de FCM (`deleteToken`): ya no hay JWT para borrar el dispositivo en el API, así
+  que el backend lo borra cuando FCM le responde que el token no existe.
+- **Sin Firebase** (`google-services.json` ausente, escritorio o pruebas): `start()` devuelve `false` y todo sigue con la
+  bandeja. El valor por defecto de `pushMessagingProvider` es `DisabledPushMessaging`; `data` lo cambia por
+  `FirebasePushMessaging`. Se usa el token clásico (`getToken`), que `firebase_messaging` 17 marca obsoleto: el backend
+  envía al campo `token` de FCM HTTP v1.
+- **Android**: `MainActivity` crea el canal `emprendeu_avisos` (el backend envía con ese `channel_id`); el manifiesto
+  declara `POST_NOTIFICATIONS` y el canal por defecto. **iOS** necesita además `GoogleService-Info.plist`, la capacidad
+  *Push Notifications* y la clave APNs en Firebase (ver `doc/notificaciones-push.md`).
+

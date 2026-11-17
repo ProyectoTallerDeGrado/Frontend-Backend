@@ -172,6 +172,12 @@ class EntrepreneurRepository:
         )
         return list((await self._session.execute(stmt)).scalars().all())
 
+    async def active_user_ids(self) -> list[int]:
+        rows = await self._session.scalars(
+            select(Emprendedor.usuario_id).where(Emprendedor.estado == "activo")
+        )
+        return list(rows)
+
     async def user_ids_of_venture(self, emprendimiento_id: int) -> list[int]:
         stmt = (
             select(Emprendedor.usuario_id)

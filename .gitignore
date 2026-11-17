@@ -1,1 +1,5 @@
 .claude/worktrees/
+
+# Despliegue: secretos solo en la instancia
+deploy/aws-ec2/.env
+deploy/aws-ec2/secrets/

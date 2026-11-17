@@ -2,6 +2,7 @@ import { formatWhen } from "@/lib/format";
 
 import { ROLE_LABELS, type SessionUser } from "../types";
 import { ChangePasswordForm } from "./change-password-form";
+import { RestartTourButton } from "./tour/restart-tour-button";
 
 const card =
   "rounded-2xl border border-border bg-card p-6";
@@ -36,6 +37,8 @@ export function AccountView({ user }: { user: SessionUser }) {
             </div>
           ))}
         </dl>
+        <p className="mt-5 text-[13px] leading-normal text-on-navy-muted">¿Quieres repasar dónde está cada cosa?</p>
+        <RestartTourButton className="mt-2 bg-white px-3.5 hover:bg-blue-50" />
       </aside>
     </div>
   );

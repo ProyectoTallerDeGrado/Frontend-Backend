@@ -1,7 +1,17 @@
 import { AppShell } from "@/components/layout/app-shell";
 import type { NavGroup, NavItem } from "@/components/layout/sidebar-nav";
+import { HelpChat } from "@/features/ai_assistant";
 import { countOpenAlerts } from "@/features/alerts";
-import { ROLE_LABELS, hasPermission, logoutAction, requireSession } from "@/features/auth";
+import {
+  GuidedTour,
+  RestartTourButton,
+  ROLE_LABELS,
+  buildTourSteps,
+  hasPermission,
+  logoutAction,
+  requireSession,
+  tourGroupId,
+} from "@/features/auth";
 
 type Entry = NavItem & { permission?: string; hideForRole?: string; onlyForRole?: string };
 
@@ -63,6 +73,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   const groups: NavGroup[] = NAV.map((group) => ({
     label: group.label,
+    tourId: tourGroupId(group.label),
     items: group.items.filter(allowed).map(({ href, label, icon }) => ({
       href,
       label,
@@ -76,6 +87,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       user={{ name: `${user.nombre} ${user.apellido}`, roleLabel: ROLE_LABELS[user.rol ?? ""] ?? user.rol ?? "Sin rol" }}
       groups={groups}
       logoutAction={logoutAction}
+      overlays={
+        <>
+          <HelpChat extra={<RestartTourButton />} />
+          <GuidedTour
+            steps={buildTourSteps({ firstName: user.nombre, groups })}
+            autoStart={user.tutorial_completado_at === null}
+          />
+        </>
+      }
     >
       {children}
     </AppShell>
