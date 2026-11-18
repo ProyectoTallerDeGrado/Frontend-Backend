@@ -23,7 +23,8 @@ const NAV: { label: string; items: Entry[] }[] = [
   {
     label: "Inicio",
     items: [
-      { href: "/panel", label: "Resumen", icon: "dashboard", permission: "reportes:consulta" },
+      { href: "/panel", label: "Mi panel", icon: "dashboard", permission: "asesorias:consulta", onlyForRole: "asesor" },
+      { href: "/panel", label: "Resumen", icon: "dashboard", permission: "reportes:consulta", hideForRole: "asesor" },
       { href: "/dashboard", label: "Indicadores", icon: "dashboard2", permission: "reportes:consulta", hideForRole: "emprendedor" },
       { href: "/reports", label: "Reportes", icon: "reports", permission: "reportes:consulta", hideForRole: "emprendedor" },
     ],

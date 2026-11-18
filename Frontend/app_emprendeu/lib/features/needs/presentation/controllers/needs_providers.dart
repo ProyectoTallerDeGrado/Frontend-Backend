@@ -65,6 +65,7 @@ class NeedsController extends Notifier<void> {
       case Err(:final failure):
         return failure;
     }
+    return null;
   }
 }
 

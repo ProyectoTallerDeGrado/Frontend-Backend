@@ -17,7 +17,7 @@ export type TourGroup = { label: string; items: { href: string; label: string }[
 
 /** Qué se hace en cada pantalla del menú (texto del globo del tutorial). */
 const SCREEN_TEXT: Record<string, string> = {
-  "/panel": "las cifras del programa hoy y la actividad reciente.",
+  "/panel": "el resumen de tu trabajo y las actividades que requieren atención.",
   "/dashboard": "cómo avanzan los emprendimientos, con filtros de periodo y etapa.",
   "/reports": "reportes con vista previa, descargables en Excel o CSV.",
   "/admissions": "las postulaciones: admitir crea la cuenta y el emprendimiento.",

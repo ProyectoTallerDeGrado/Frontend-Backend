@@ -9,6 +9,7 @@ cualquier otro schema.
 """
 
 import asyncio
+import sys
 from logging.config import fileConfig
 
 from alembic import context
@@ -87,7 +88,11 @@ async def run_async_migrations() -> None:
 
 
 def run_migrations_online() -> None:
-    asyncio.run(run_async_migrations())
+    # En Windows el loop por defecto es ProactorEventLoop, que psycopg async no
+    # soporta; se fuerza SelectorEventLoop. En el resto se usa el loop normal.
+    loop_factory = asyncio.SelectorEventLoop if sys.platform == "win32" else None
+    with asyncio.Runner(loop_factory=loop_factory) as runner:
+        runner.run(run_async_migrations())
 
 
 if context.is_offline_mode():

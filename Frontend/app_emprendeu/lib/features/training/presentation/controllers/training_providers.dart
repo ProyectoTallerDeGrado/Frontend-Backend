@@ -91,6 +91,7 @@ class TrainingsController extends AsyncNotifier<TrainingList> {
       case Err(:final failure):
         return failure;
     }
+    return null;
   }
 }
 

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { authedFetch } from "@/features/auth";
+import { boDay } from "@/lib/format";
 
 import {
   assignmentSchema,
@@ -57,6 +58,17 @@ function filterParams(filters: SessionFilters): URLSearchParams {
 /** Sesiones donde participa quien inició sesión (asesor), por estado y periodo. */
 export async function listMySessions(filters: SessionFilters): Promise<Session[]> {
   return sessionSchema.array().parse(await authedFetch(`/mentoring/sessions/me?${filterParams(filters)}`));
+}
+
+/** Datos y reloj capturados juntos para que el dashboard del asesor renderice una instantánea consistente. */
+export async function getAdvisorDashboardSnapshot() {
+  const [sessions, assignments] = await Promise.all([listMySessions({}), listMyAssignments()]);
+  return {
+    sessions,
+    assignments,
+    generatedAt: Date.now(),
+    currentMonth: boDay().slice(0, 7),
+  };
 }
 
 /** Todas las sesiones (coordinación y administración), paginadas. */

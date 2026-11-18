@@ -168,6 +168,7 @@ class CommitmentsController extends AsyncNotifier<List<Commitment>> {
         state = AsyncData(current);
         return failure;
     }
+    return null;
   }
 }
 
@@ -204,6 +205,7 @@ class ProgressLogsController extends AsyncNotifier<List<ProgressLog>> {
       case Err(:final failure):
         return failure;
     }
+    return null;
   }
 }
 

@@ -5,11 +5,29 @@ import { PageHeader } from "@/components/layout/page-header";
 import { RecentActivity, listAudit } from "@/features/audit";
 import { hasPermission, requireSession } from "@/features/auth";
 import { HealthAttentionCard, OverviewView, getHealth, getOverview } from "@/features/indicators";
+import { AdvisorDashboardView, getAdvisorDashboardSnapshot } from "@/features/mentoring";
+import { countOpenAlerts } from "@/features/alerts";
 
 export const metadata: Metadata = { title: "Resumen · CIE-U" };
 
 export default async function HomePage() {
   const user = await requireSession();
+  if (user.rol === "asesor") {
+    const [snapshot, health, openAlerts] = await Promise.all([
+      getAdvisorDashboardSnapshot(),
+      getHealth(),
+      countOpenAlerts(),
+    ]);
+    return (
+      <AdvisorDashboardView
+        firstName={user.nombre}
+        snapshot={snapshot}
+        health={health}
+        openAlerts={openAlerts}
+        canManageAvailability={hasPermission(user, "asesorias:modificacion")}
+      />
+    );
+  }
   if (!hasPermission(user, "reportes:consulta")) return <NoAccess section="el resumen" />;
 
   const seesHealth = user.rol !== "emprendedor" && hasPermission(user, "seguimiento:consulta");

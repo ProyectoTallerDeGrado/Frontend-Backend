@@ -78,7 +78,12 @@ consumidos desde componentes cliente.
   con `GET /sessions/me`, el resto la lista paginada `GET /sessions`; filtros de estado y periodo en la URL;
   acciones «Registrar sesión», «Realizada», «Recomendar» y «Compromiso» en hojas laterales). Las pantallas
   que cargan datos viven en `features/mentoring/components/screens.tsx` y las páginas de `app/` son de una
-  línea. La lista de emprendimientos para los selectores llega por el barrel de `ventures`
+  línea. El asesor recibe en `/panel` un dashboard propio (`AdvisorDashboardView`, mismo diseño que el Resumen de
+  coordinación: banda de marca con órbitas, tarjetas y listas) con sus emprendimientos asignados, sus mentorías
+  (próximas, por registrar, realizadas este mes, compromisos), alertas abiertas y el semáforo de salud de sus
+  emprendimientos. `/panel` compone los datos por barrel (`getAdvisorDashboardSnapshot`, `getHealth`,
+  `countOpenAlerts`); el cálculo está en `features/mentoring/advisor-dashboard.ts`. El acceso «Mi panel» aparece en
+  el sidebar. La lista de emprendimientos para los selectores llega por el barrel de `ventures`
   (`listVentureOptions`). Horas en Bolivia (UTC−4 fijo, `lib/format.ts: toBoIso`).
 - **Seguimiento** (fase 3): `features/ventures` (`VenturesScreen`: lista y «Avanzar etapa», que solo ofrece
   la siguiente etapa), `features/alerts` (`AlertsScreen`: revisada/atendida/descartada, quién la atendió; el

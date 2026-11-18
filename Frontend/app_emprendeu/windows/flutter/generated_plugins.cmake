@@ -5,8 +5,8 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   firebase_core
-  flutter_edge_ai
   flutter_secure_storage_windows
+  flutter_edge_ai
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

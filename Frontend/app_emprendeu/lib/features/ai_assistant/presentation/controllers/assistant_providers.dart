@@ -124,6 +124,7 @@ class CoachChatController extends AsyncNotifier<ChatState> {
         state = AsyncData(current.copyWith(sending: false));
         return failure;
     }
+    return null;
   }
 
   Future<Failure?> _sendOnDevice(ChatState before, String text) async {
@@ -149,6 +150,7 @@ class CoachChatController extends AsyncNotifier<ChatState> {
         state = AsyncData(before);
         return failure;
     }
+    return null;
   }
 
   /// Reabre la conversación [id]. `null` si salió bien o el [Failure] para mostrarlo.
@@ -165,6 +167,7 @@ class CoachChatController extends AsyncNotifier<ChatState> {
       case Err(:final failure):
         return failure;
     }
+    return null;
   }
 
   /// Empieza una conversación nueva. En línea, la anterior sigue guardada en el

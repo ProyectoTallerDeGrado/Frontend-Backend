@@ -9,9 +9,9 @@ import connectivity_plus
 import file_picker_darwin
 import firebase_core
 import firebase_messaging
-import flutter_edge_ai
 import flutter_secure_storage_darwin
 import large_file_handler
+import flutter_edge_ai
 import shared_preferences_foundation
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
@@ -19,8 +19,8 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))
   FLTFirebaseCorePlugin.register(with: registry.registrar(forPlugin: "FLTFirebaseCorePlugin"))
   FLTFirebaseMessagingPlugin.register(with: registry.registrar(forPlugin: "FLTFirebaseMessagingPlugin"))
-  FlutterEdgeAiPlugin.register(with: registry.registrar(forPlugin: "FlutterEdgeAiPlugin"))
   FlutterSecureStorageDarwinPlugin.register(with: registry.registrar(forPlugin: "FlutterSecureStorageDarwinPlugin"))
   LargeFileHandlerPlugin.register(with: registry.registrar(forPlugin: "LargeFileHandlerPlugin"))
+  FlutterEdgeAiPlugin.register(with: registry.registrar(forPlugin: "FlutterEdgeAiPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
 }

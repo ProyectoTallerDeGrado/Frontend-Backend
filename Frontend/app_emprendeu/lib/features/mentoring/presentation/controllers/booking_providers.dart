@@ -132,6 +132,7 @@ class BookingController extends Notifier<void> {
         }
         return failure;
     }
+    return null;
   }
 
   Future<Failure?> book({
@@ -158,6 +159,7 @@ class BookingController extends Notifier<void> {
         if (failure is SlotUnavailableFailure) ref.invalidate(slotsProvider);
         return failure;
     }
+    return null;
   }
 }
 

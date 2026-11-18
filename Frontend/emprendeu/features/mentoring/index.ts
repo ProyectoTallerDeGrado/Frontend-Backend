@@ -1,4 +1,6 @@
 export { AssignmentsScreen, AvailabilityScreen, SessionsScreen } from "./components/screens";
+export { AdvisorDashboardView } from "./components/advisor-dashboard-view";
+export { getAdvisorDashboardSnapshot } from "./server/queries";
 export type { SessionFilters } from "./types";
 export { HistoryScreen } from "./components/history-screen";
 export { parseHistoryFilters } from "./history-filters";
