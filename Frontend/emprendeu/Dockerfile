@@ -20,6 +20,8 @@ RUN pnpm build
 
 FROM node:22-alpine AS run
 WORKDIR /app
+# Vincula el paquete de GHCR con el repositorio (permite descargarlo con el GITHUB_TOKEN).
+LABEL org.opencontainers.image.source="https://github.com/ProyectoTallerDeGrado/Frontend-Backend"
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \

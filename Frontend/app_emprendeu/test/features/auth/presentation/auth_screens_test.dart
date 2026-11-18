@@ -1,7 +1,7 @@
 import 'package:app_emprendeu/core/error/failure.dart';
 import 'package:app_emprendeu/core/error/result.dart';
 import 'package:app_emprendeu/features/auth/domain/entities/auth_session.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/test_app.dart';
@@ -21,7 +21,9 @@ Future<void> _tap(WidgetTester tester, String text) async {
   await tester.pump(const Duration(milliseconds: 300));
   await tester.tap(find.text(text));
   await tester.pump();
-  await tester.pump(const Duration(milliseconds: 300));
+  // La transición de página de material_ui dura más: hasta que termina, la ruta
+  // anterior sigue en pantalla y sus campos coinciden con los de la nueva.
+  await tester.pump(const Duration(seconds: 1));
 }
 
 void main() {

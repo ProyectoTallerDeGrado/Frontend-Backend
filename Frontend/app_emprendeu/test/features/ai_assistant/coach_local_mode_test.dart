@@ -3,7 +3,7 @@ import 'package:app_emprendeu/features/ai_assistant/domain/entities/knowledge_ma
 import 'package:app_emprendeu/features/ai_assistant/domain/entities/local_ai_status.dart';
 import 'package:app_emprendeu/features/ai_assistant/domain/entities/local_knowledge_status.dart';
 import 'package:app_emprendeu/features/ai_assistant/domain/usecases/local_coach_usecases.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_app.dart';

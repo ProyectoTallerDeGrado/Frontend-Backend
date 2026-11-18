@@ -1,6 +1,9 @@
 # Imagen de la API. Build: docker build -t emprendeu-api .
 FROM python:3.13-slim AS base
 
+# Vincula el paquete de GHCR con el repositorio (permite descargarlo con el GITHUB_TOKEN).
+LABEL org.opencontainers.image.source="https://github.com/ProyectoTallerDeGrado/Frontend-Backend"
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_COMPILE_BYTECODE=1 \

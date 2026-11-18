@@ -1,7 +1,7 @@
 import 'package:app_emprendeu/app/theme/app_theme.dart';
 import 'package:app_emprendeu/features/gamification/domain/entities/completion_result.dart';
 import 'package:app_emprendeu/features/gamification/presentation/widgets/celebration_dialog.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> _open(WidgetTester tester, CompletionResult result) async {
