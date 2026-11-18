@@ -1,0 +1,68 @@
+% Manual de usuario de EmprendeU. Compilar con pdfLaTeX (dos pasadas): pdflatex manual_usuario.tex
+\documentclass[12pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{tgtermes}                 % Times New Roman (clon metrico, paquete texlive-tex-gyre)
+\usepackage[spanish,es-noshorthands]{babel}
+\addto\captionsspanish{%
+  \renewcommand{\tablename}{Tabla}%
+  \renewcommand{\listtablename}{ÍNDICE DE TABLAS}%
+  \renewcommand{\listfigurename}{ÍNDICE DE FIGURAS}%
+  \renewcommand{\contentsname}{ÍNDICE GENERAL}%
+}
+\usepackage[letterpaper,margin=2.54cm]{geometry}
+\usepackage{etoolbox}
+\usepackage{setspace}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\parindent}{1.27cm}
+\setlength{\parskip}{0pt}
+\raggedright
+\setlist{itemsep=2pt,topsep=4pt,parsep=0pt}
+\setlist[enumerate,itemize]{leftmargin=1.27cm}
+
+% Encabezado APA: número de página arriba a la derecha
+\fancypagestyle{apa}{\fancyhf{}\fancyhead[R]{\thepage}\renewcommand{\headrulewidth}{0pt}}
+\setlength{\headheight}{14.5pt}
+
+% Títulos (niveles APA 1 a 3)
+\titleformat{\section}{\normalfont\bfseries\centering}{}{0pt}{}
+\titleformat{\subsection}{\normalfont\bfseries\raggedright}{}{0pt}{}
+\titleformat{\subsubsection}{\normalfont\bfseries\itshape\raggedright}{}{0pt}{}
+\titlespacing*{\section}{0pt}{0pt}{0pt}
+\titlespacing*{\subsection}{0pt}{0pt}{0pt}
+\titlespacing*{\subsubsection}{0pt}{0pt}{0pt}
+
+% Figuras y tablas: «Figura N» en negrita, título en cursiva en la línea siguiente
+\captionsetup{labelsep=newline,labelfont=bf,textfont=it,justification=raggedright,singlelinecheck=off,skip=4pt}
+\captionsetup[table]{position=top}
+
+% Índices con la misma sangría jerárquica
+\renewcommand{\cftsecfont}{\bfseries}
+\setlength{\cftsubsecindent}{1.27cm}
+\setlength{\cftsubsubsecindent}{2.54cm}
+\renewcommand{\cftfigpresnum}{Figura\ }
+\renewcommand{\cfttabpresnum}{Tabla\ }
+\setlength{\cftfignumwidth}{2.2cm}\setlength{\cfttabnumwidth}{2cm}
+\setlength{\cftsecnumwidth}{0pt}\setlength{\cftsubsecnumwidth}{0pt}\setlength{\cftsubsubsecnumwidth}{0pt}
+\renewcommand{\cftdot}{.}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\setcounter{tocdepth}{3}
+
+% Referencias con sangría francesa
+\newenvironment{hangref}{\par\singlespacing\setlength{\parindent}{-1.27cm}\setlength{\leftskip}{1.27cm}}{\par}
+
+% Listas y tablas a interlineado sencillo; el texto corrido, doble
+\AtBeginEnvironment{enumerate}{\singlespacing}
+\AtBeginEnvironment{itemize}{\singlespacing}
+\sloppy

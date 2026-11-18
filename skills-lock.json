@@ -12,6 +12,13 @@
       "sourceType": "github",
       "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
       "computedHash": "ff6863fc7c1be035b294703b2e7c90b2197548985ca4cb98f58740a7e84dc0cc"
+    },
+    "ultrademo-rerun": {
+      "source": "new-xp/ultrademo",
+      "commit": "db123521f765940a2438dc59d33596082dd63705",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ultrademo-rerun/SKILL.md",
+      "computedHash": "589fe9cb9821381ece1cc6f281d06323b9c63fe8a5261521018df64a2b7cfe54"
     }
   }
 }

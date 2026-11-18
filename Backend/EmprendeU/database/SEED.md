@@ -1,4 +1,4 @@
-# Datos de demostración (seed)
+kit# Datos de demostración (seed)
 
 Script: `src/emprendeu/db/seed.py`. Carga personas y actividad **coherentes con el programa
 del CIE-U** para poder probar la web y la app sin tener que capturar nada a mano.
