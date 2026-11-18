@@ -3,7 +3,7 @@ import 'package:app_emprendeu/features/documents/domain/entities/picked_file.dar
 import 'package:app_emprendeu/features/gamification/domain/entities/gamification_profile.dart';
 import 'package:app_emprendeu/features/ventures/domain/entities/milestone.dart';
 import 'package:app_emprendeu/features/ventures/domain/entities/venture.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fakes.dart';
