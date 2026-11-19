@@ -7,6 +7,7 @@ import '../../domain/usecases/logout_usecase.dart';
 import '../../domain/usecases/password_reset_usecases.dart';
 import '../../domain/usecases/register_usecase.dart';
 import '../../domain/usecases/restore_session_usecase.dart';
+import '../../domain/usecases/set_tutorial_usecase.dart';
 
 /// Contrato del repositorio. La implementación real se inyecta en la raíz de la
 /// app (`app/providers.dart`), así `presentation` nunca importa `data`.
@@ -44,4 +45,8 @@ final restoreSessionUseCaseProvider = Provider(
 
 final logoutUseCaseProvider = Provider(
   (ref) => LogoutUseCase(ref.watch(authRepositoryProvider)),
+);
+
+final setTutorialUseCaseProvider = Provider(
+  (ref) => SetTutorialUseCase(ref.watch(authRepositoryProvider)),
 );

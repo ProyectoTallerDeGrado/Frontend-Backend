@@ -35,6 +35,9 @@ abstract interface class AuthRepository {
   /// Usuario dueño del token (`GET /auth/me`).
   Future<Result<AuthUser>> fetchCurrentUser(String token);
 
+  /// Marca el tutorial guiado como visto (`completed: true`) o lo reinicia.
+  Future<Result<AuthUser>> setTutorial({required bool completed});
+
   Future<String?> readToken();
   Future<void> saveToken(String token);
   Future<void> clearToken();

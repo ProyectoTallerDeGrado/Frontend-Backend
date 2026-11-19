@@ -349,6 +349,14 @@ test/                         # espejo exacto de lib/
     terminado. El código generado (`*.freezed.dart`, `*.g.dart`) se produce con
     `dart run build_runner build` y no se edita a mano.
 
+### Tutorial guiado (`features/auth/presentation/tour/`)
+
+- Recorrido de primer ingreso con spotlight sobre elementos reales, que cambia de pestaña al avanzar. Vive en `auth`
+  (como en la web) y se monta en `AppShell`; las demás features solo marcan elementos con `TourTarget` (barrel de `auth`).
+- Bandera en el backend: `AuthUser.tutorialCompletadoAt` (`GET /auth/me`); termina con `POST /auth/me/tutorial`
+  (`SetTutorialUseCase`, `AuthController.setTutorialCompleted`). Se repite desde Perfil → «Ver el tutorial de la app».
+- Al añadir una pantalla, agrega su paso en `tour_steps.dart`. Detalle en `doc/chatbot-y-tutorial.md` §8.
+
 ### Notificaciones push (`features/notifications`)
 
 - **Bandeja** (`/notifications`, se abre con la campana de Inicio, `NotificationsBell`): avisos del backend

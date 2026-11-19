@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../shared/widgets/motion.dart';
+import '../../../auth/index.dart';
 import '../../../mentoring/index.dart';
 import '../../domain/usecases/assistant_usecases.dart';
 import '../assistant_routes.dart';
@@ -210,10 +211,13 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
                   style: text.bodyMedium?.copyWith(color: AppColors.accentOn),
                 ),
               ),
-            _Composer(
-              controller: _input,
-              sending: chat.value?.sending ?? false,
-              onSend: _send,
+            TourTarget(
+              id: 'coach-input',
+              child: _Composer(
+                controller: _input,
+                sending: chat.value?.sending ?? false,
+                onSend: _send,
+              ),
             ),
           ],
         ),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "55739422163",
+    "project_id": "emprendeu-5eb04",
+    "storage_bucket": "emprendeu-5eb04.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55739422163:android:0ff4c1331471add6924b26",
+        "android_client_info": {
+          "package_name": "com.example.app_emprendeu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZYrBKhJ4OlceXc9-9YxWxw9qBY_DUrPQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

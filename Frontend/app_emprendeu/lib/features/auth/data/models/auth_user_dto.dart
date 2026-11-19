@@ -17,6 +17,7 @@ abstract class AuthUserDto with _$AuthUserDto {
     required String email,
     String? rol,
     @Default(<String>[]) List<String> permisos,
+    @JsonKey(name: 'tutorial_completado_at') DateTime? tutorialCompletadoAt,
   }) = _AuthUserDto;
 
   factory AuthUserDto.fromJson(Map<String, dynamic> json) =>
@@ -29,5 +30,6 @@ abstract class AuthUserDto with _$AuthUserDto {
     email: email,
     rol: rol,
     permisos: permisos,
+    tutorialCompletadoAt: tutorialCompletadoAt,
   );
 }

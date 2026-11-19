@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/utils/date_format.dart';
+import '../../../auth/index.dart';
 import '../../domain/entities/booking_status.dart';
 import '../../domain/entities/mentoring_session.dart';
 import '../controllers/booking_providers.dart';
@@ -77,16 +78,22 @@ class _MentoringScreenState extends ConsumerState<MentoringScreen> {
                 style: text.bodyMedium?.copyWith(color: AppColors.muted),
               ),
               const SizedBox(height: 18),
-              _BookingCta(status: status),
+              TourTarget(
+                id: 'mentoring-book',
+                child: _BookingCta(status: status),
+              ),
               const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => context.push(MentoringRoutes.history),
-                icon: const Icon(Icons.timeline, size: 20),
-                label: const Text('Ver historial del emprendimiento'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+              TourTarget(
+                id: 'mentoring-history',
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push(MentoringRoutes.history),
+                  icon: const Icon(Icons.timeline, size: 20),
+                  label: const Text('Ver historial del emprendimiento'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),

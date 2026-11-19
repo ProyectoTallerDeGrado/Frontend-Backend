@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AuthUserDto {
 
-@JsonKey(name: 'usuario_id') int get usuarioId; String get nombre; String get apellido; String get email; String? get rol; List<String> get permisos;
+@JsonKey(name: 'usuario_id') int get usuarioId; String get nombre; String get apellido; String get email; String? get rol; List<String> get permisos;@JsonKey(name: 'tutorial_completado_at') DateTime? get tutorialCompletadoAt;
 /// Create a copy of AuthUserDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $AuthUserDtoCopyWith<AuthUserDto> get copyWith => _$AuthUserDtoCopyWithImpl<Auth
 @override
 bool operator ==(Object other) {
   final _this = this as AuthUserDto;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthUserDto&&(identical(other.usuarioId, _this.usuarioId) || other.usuarioId == _this.usuarioId)&&(identical(other.nombre, _this.nombre) || other.nombre == _this.nombre)&&(identical(other.apellido, _this.apellido) || other.apellido == _this.apellido)&&(identical(other.email, _this.email) || other.email == _this.email)&&(identical(other.rol, _this.rol) || other.rol == _this.rol)&&const DeepCollectionEquality().equals(other.permisos, _this.permisos));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthUserDto&&(identical(other.usuarioId, _this.usuarioId) || other.usuarioId == _this.usuarioId)&&(identical(other.nombre, _this.nombre) || other.nombre == _this.nombre)&&(identical(other.apellido, _this.apellido) || other.apellido == _this.apellido)&&(identical(other.email, _this.email) || other.email == _this.email)&&(identical(other.rol, _this.rol) || other.rol == _this.rol)&&const DeepCollectionEquality().equals(other.permisos, _this.permisos)&&(identical(other.tutorialCompletadoAt, _this.tutorialCompletadoAt) || other.tutorialCompletadoAt == _this.tutorialCompletadoAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as AuthUserDto;
-  return Object.hash(runtimeType,_this.usuarioId,_this.nombre,_this.apellido,_this.email,_this.rol,const DeepCollectionEquality().hash(_this.permisos));
+  return Object.hash(runtimeType,_this.usuarioId,_this.nombre,_this.apellido,_this.email,_this.rol,const DeepCollectionEquality().hash(_this.permisos),_this.tutorialCompletadoAt);
 }
 
 @override
 String toString() {
   final _this = this as AuthUserDto;
-  return 'AuthUserDto(usuarioId: ${_this.usuarioId}, nombre: ${_this.nombre}, apellido: ${_this.apellido}, email: ${_this.email}, rol: ${_this.rol}, permisos: ${_this.permisos})';
+  return 'AuthUserDto(usuarioId: ${_this.usuarioId}, nombre: ${_this.nombre}, apellido: ${_this.apellido}, email: ${_this.email}, rol: ${_this.rol}, permisos: ${_this.permisos}, tutorialCompletadoAt: ${_this.tutorialCompletadoAt})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $AuthUserDtoCopyWith<$Res>  {
   factory $AuthUserDtoCopyWith(AuthUserDto value, $Res Function(AuthUserDto) _then) = _$AuthUserDtoCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'usuario_id') int usuarioId, String nombre, String apellido, String email, String? rol, List<String> permisos
+@JsonKey(name: 'usuario_id') int usuarioId, String nombre, String apellido, String email, String? rol, List<String> permisos,@JsonKey(name: 'tutorial_completado_at') DateTime? tutorialCompletadoAt
 });
 
 
@@ -71,7 +71,7 @@ class _$AuthUserDtoCopyWithImpl<$Res>
 
 /// Create a copy of AuthUserDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? usuarioId = null,Object? nombre = null,Object? apellido = null,Object? email = null,Object? rol = freezed,Object? permisos = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? usuarioId = null,Object? nombre = null,Object? apellido = null,Object? email = null,Object? rol = freezed,Object? permisos = null,Object? tutorialCompletadoAt = freezed,}) {
   return _then(AuthUserDto(
 usuarioId: null == usuarioId ? _self.usuarioId : usuarioId // ignore: cast_nullable_to_non_nullable
 as int,nombre: null == nombre ? _self.nombre : nombre // ignore: cast_nullable_to_non_nullable
@@ -79,7 +79,8 @@ as String,apellido: null == apellido ? _self.apellido : apellido // ignore: cast
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,rol: freezed == rol ? _self.rol : rol // ignore: cast_nullable_to_non_nullable
 as String?,permisos: null == permisos ? _self.permisos : permisos // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,tutorialCompletadoAt: freezed == tutorialCompletadoAt ? _self.tutorialCompletadoAt : tutorialCompletadoAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -164,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'usuario_id')  int usuarioId,  String nombre,  String apellido,  String email,  String? rol,  List<String> permisos)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'usuario_id')  int usuarioId,  String nombre,  String apellido,  String email,  String? rol,  List<String> permisos, @JsonKey(name: 'tutorial_completado_at')  DateTime? tutorialCompletadoAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AuthUserDto() when $default != null:
-return $default(_that.usuarioId,_that.nombre,_that.apellido,_that.email,_that.rol,_that.permisos);case _:
+return $default(_that.usuarioId,_that.nombre,_that.apellido,_that.email,_that.rol,_that.permisos,_that.tutorialCompletadoAt);case _:
   return orElse();
 
 }
@@ -185,10 +186,10 @@ return $default(_that.usuarioId,_that.nombre,_that.apellido,_that.email,_that.ro
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'usuario_id')  int usuarioId,  String nombre,  String apellido,  String email,  String? rol,  List<String> permisos)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'usuario_id')  int usuarioId,  String nombre,  String apellido,  String email,  String? rol,  List<String> permisos, @JsonKey(name: 'tutorial_completado_at')  DateTime? tutorialCompletadoAt)  $default,) {final _that = this;
 switch (_that) {
 case _AuthUserDto():
-return $default(_that.usuarioId,_that.nombre,_that.apellido,_that.email,_that.rol,_that.permisos);case _:
+return $default(_that.usuarioId,_that.nombre,_that.apellido,_that.email,_that.rol,_that.permisos,_that.tutorialCompletadoAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +206,10 @@ return $default(_that.usuarioId,_that.nombre,_that.apellido,_that.email,_that.ro
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'usuario_id')  int usuarioId,  String nombre,  String apellido,  String email,  String? rol,  List<String> permisos)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'usuario_id')  int usuarioId,  String nombre,  String apellido,  String email,  String? rol,  List<String> permisos, @JsonKey(name: 'tutorial_completado_at')  DateTime? tutorialCompletadoAt)?  $default,) {final _that = this;
 switch (_that) {
 case _AuthUserDto() when $default != null:
-return $default(_that.usuarioId,_that.nombre,_that.apellido,_that.email,_that.rol,_that.permisos);case _:
+return $default(_that.usuarioId,_that.nombre,_that.apellido,_that.email,_that.rol,_that.permisos,_that.tutorialCompletadoAt);case _:
   return null;
 
 }
@@ -220,7 +221,7 @@ return $default(_that.usuarioId,_that.nombre,_that.apellido,_that.email,_that.ro
 @JsonSerializable()
 
 class _AuthUserDto extends AuthUserDto {
-  const _AuthUserDto({@JsonKey(name: 'usuario_id') required this.usuarioId, required this.nombre, required this.apellido, required this.email, this.rol,  List<String> permisos = const <String>[]}): _permisos = permisos,super._();
+  const _AuthUserDto({@JsonKey(name: 'usuario_id') required this.usuarioId, required this.nombre, required this.apellido, required this.email, this.rol,  List<String> permisos = const <String>[], @JsonKey(name: 'tutorial_completado_at') this.tutorialCompletadoAt}): _permisos = permisos,super._();
   factory _AuthUserDto.fromJson(Map<String, dynamic> json) => _$AuthUserDtoFromJson(json);
 
 @override@JsonKey(name: 'usuario_id') final  int usuarioId;
@@ -235,6 +236,7 @@ class _AuthUserDto extends AuthUserDto {
   return EqualUnmodifiableListView(_permisos);
 }
 
+@override@JsonKey(name: 'tutorial_completado_at') final  DateTime? tutorialCompletadoAt;
 
 /// Create a copy of AuthUserDto
 /// with the given fields replaced by the non-null parameter values.
@@ -249,18 +251,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthUserDto&&(identical(other.usuarioId, usuarioId) || other.usuarioId == usuarioId)&&(identical(other.nombre, nombre) || other.nombre == nombre)&&(identical(other.apellido, apellido) || other.apellido == apellido)&&(identical(other.email, email) || other.email == email)&&(identical(other.rol, rol) || other.rol == rol)&&const DeepCollectionEquality().equals(other.permisos, _permisos));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthUserDto&&(identical(other.usuarioId, usuarioId) || other.usuarioId == usuarioId)&&(identical(other.nombre, nombre) || other.nombre == nombre)&&(identical(other.apellido, apellido) || other.apellido == apellido)&&(identical(other.email, email) || other.email == email)&&(identical(other.rol, rol) || other.rol == rol)&&const DeepCollectionEquality().equals(other.permisos, _permisos)&&(identical(other.tutorialCompletadoAt, tutorialCompletadoAt) || other.tutorialCompletadoAt == tutorialCompletadoAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,usuarioId,nombre,apellido,email,rol,const DeepCollectionEquality().hash(_permisos));
+    return Object.hash(runtimeType,usuarioId,nombre,apellido,email,rol,const DeepCollectionEquality().hash(_permisos),tutorialCompletadoAt);
 }
 
 @override
 String toString() {
-    return 'AuthUserDto(usuarioId: $usuarioId, nombre: $nombre, apellido: $apellido, email: $email, rol: $rol, permisos: $permisos)';
+    return 'AuthUserDto(usuarioId: $usuarioId, nombre: $nombre, apellido: $apellido, email: $email, rol: $rol, permisos: $permisos, tutorialCompletadoAt: $tutorialCompletadoAt)';
 }
 
 
@@ -271,7 +273,7 @@ abstract mixin class _$AuthUserDtoCopyWith<$Res> implements $AuthUserDtoCopyWith
   factory _$AuthUserDtoCopyWith(_AuthUserDto value, $Res Function(_AuthUserDto) _then) = __$AuthUserDtoCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'usuario_id') int usuarioId, String nombre, String apellido, String email, String? rol, List<String> permisos
+@JsonKey(name: 'usuario_id') int usuarioId, String nombre, String apellido, String email, String? rol, List<String> permisos,@JsonKey(name: 'tutorial_completado_at') DateTime? tutorialCompletadoAt
 });
 
 
@@ -288,7 +290,7 @@ class __$AuthUserDtoCopyWithImpl<$Res>
 
 /// Create a copy of AuthUserDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? usuarioId = null,Object? nombre = null,Object? apellido = null,Object? email = null,Object? rol = freezed,Object? permisos = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? usuarioId = null,Object? nombre = null,Object? apellido = null,Object? email = null,Object? rol = freezed,Object? permisos = null,Object? tutorialCompletadoAt = freezed,}) {
   return _then(_AuthUserDto(
 usuarioId: null == usuarioId ? _self.usuarioId : usuarioId // ignore: cast_nullable_to_non_nullable
 as int,nombre: null == nombre ? _self.nombre : nombre // ignore: cast_nullable_to_non_nullable
@@ -296,7 +298,8 @@ as String,apellido: null == apellido ? _self.apellido : apellido // ignore: cast
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,rol: freezed == rol ? _self.rol : rol // ignore: cast_nullable_to_non_nullable
 as String?,permisos: null == permisos ? _self._permisos : permisos // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,tutorialCompletadoAt: freezed == tutorialCompletadoAt ? _self.tutorialCompletadoAt : tutorialCompletadoAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

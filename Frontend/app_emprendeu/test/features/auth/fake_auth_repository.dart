@@ -4,12 +4,14 @@ import 'package:app_emprendeu/features/auth/domain/entities/auth_session.dart';
 import 'package:app_emprendeu/features/auth/domain/entities/auth_user.dart';
 import 'package:app_emprendeu/features/auth/domain/repositories/auth_repository.dart';
 
-const entrepreneur = AuthUser(
+/// Ya vio el tutorial: si no, el recorrido arrancaría solo y taparía las pantallas bajo prueba.
+final entrepreneur = AuthUser(
   id: 7,
   nombre: 'Camila',
   apellido: 'Justiniano',
   email: 'camila@correo.com',
   rol: 'emprendedor',
+  tutorialCompletadoAt: DateTime.utc(2026),
 );
 
 const staffUser = AuthUser(
@@ -54,9 +56,7 @@ class FakeAuthRepository implements AuthRepository {
   Future<Result<AuthSession>> login(String email, String password) async {
     loginCalls++;
     return loginResult ??
-        const Result.ok(
-          AuthSession(accessToken: 'tok-123', user: entrepreneur),
-        );
+        Result.ok(AuthSession(accessToken: 'tok-123', user: entrepreneur));
   }
 
   @override
@@ -78,9 +78,7 @@ class FakeAuthRepository implements AuthRepository {
     lastCurrentPassword = currentPassword;
     lastNewPassword = newPassword;
     return changePasswordResult ??
-        const Result.ok(
-          AuthSession(accessToken: 'tok-nuevo', user: entrepreneur),
-        );
+        Result.ok(AuthSession(accessToken: 'tok-nuevo', user: entrepreneur));
   }
 
   @override
@@ -105,7 +103,26 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<Result<AuthUser>> fetchCurrentUser(String token) async =>
-      meResult ?? const Result.ok(entrepreneur);
+      meResult ?? Result.ok(entrepreneur);
+
+  int setTutorialCalls = 0;
+  bool? lastTutorialCompleted;
+
+  @override
+  Future<Result<AuthUser>> setTutorial({required bool completed}) async {
+    setTutorialCalls++;
+    lastTutorialCompleted = completed;
+    return Result.ok(
+      AuthUser(
+        id: entrepreneur.id,
+        nombre: entrepreneur.nombre,
+        apellido: entrepreneur.apellido,
+        email: entrepreneur.email,
+        rol: entrepreneur.rol,
+        tutorialCompletadoAt: completed ? DateTime.utc(2026, 1, 1) : null,
+      ),
+    );
+  }
 
   @override
   Future<String?> readToken() async => token;

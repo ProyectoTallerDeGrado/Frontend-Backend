@@ -7,7 +7,7 @@
 abstract final class AppConfig {
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.0.137:8000/api/v1',
+    defaultValue: 'https://api.emprendeu.me/api/v1',
   );
 
   /// Modelo de chat de la IA local (formato `.litertlm`). Gemma 4 E2B, Apache-2.0,

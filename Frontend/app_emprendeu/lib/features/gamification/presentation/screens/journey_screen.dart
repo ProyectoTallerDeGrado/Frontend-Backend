@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/failure.dart';
+import '../../../auth/index.dart';
 import '../../../ventures/index.dart';
 import '../../domain/entities/completion_result.dart';
 import '../../domain/entities/journey.dart';
@@ -105,46 +106,49 @@ class _JourneyBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Semantics(
-                      header: true,
-                      child: Text('Mi camino', style: text.headlineMedium),
+              TourTarget(
+                id: 'journey-header',
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Semantics(
+                        header: true,
+                        child: Text('Mi camino', style: text.headlineMedium),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.navy900,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.bolt,
-                          size: 16,
-                          color: AppColors.accentSoft,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${journey.xp} XP',
-                          style: text.bodyMedium?.copyWith(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.navy900,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.bolt,
+                            size: 16,
+                            color: AppColors.accentSoft,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Text(
+                            '${journey.xp} XP',
+                            style: text.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
               SizedBox(
