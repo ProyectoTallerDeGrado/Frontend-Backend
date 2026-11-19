@@ -1,17 +1,18 @@
-# app_emprendeu
+# EmprendeU — app móvil
 
-A new Flutter project.
+App del emprendedor (Flutter). Arquitectura y reglas en `AGENTS.md`.
 
-## Getting Started
+## Requisitos
 
-This project is a starting point for a Flutter application.
+- **Flutter `>=3.50.0`** (Dart `^3.13.5`). Todo el equipo debe usar la misma versión
+  estable: si el build de Android falla por versiones de Gradle, AGP o Kotlin,
+  ejecuta `flutter upgrade` y luego `flutter clean`.
+- Versiones de Android fijadas en el repo: Gradle `9.5.0`, AGP `9.1.1`, Kotlin `2.4.20`.
+  Súbelas junto con Flutter cuando una versión nueva las exija.
 
-A few resources to get you started if this is your first Flutter project:
+## Ejecutar
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+```
