@@ -12,6 +12,8 @@ import '../../../training/index.dart';
 import '../../../ventures/index.dart';
 import '../auth_routes.dart';
 import '../controllers/auth_controller.dart';
+import '../tour/tour_controller.dart';
+import '../tour/tour_targets.dart';
 
 /// Pestaña «Perfil»: identidad, emprendimiento, XP e insignias, accesos y cierre de sesión.
 class AccountScreen extends ConsumerWidget {
@@ -78,36 +80,45 @@ class AccountScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.xl),
-              const MyVentureCard(),
+              const TourTarget(id: 'account-venture', child: MyVentureCard()),
               const SizedBox(height: 14),
-              const XpBadgesSection(),
+              const TourTarget(id: 'account-xp', child: XpBadgesSection()),
               const SizedBox(height: 14),
-              const LocalAiSection(),
+              const TourTarget(id: 'account-ai', child: LocalAiSection()),
               const SizedBox(height: 14),
-              _MenuGroup(
-                rows: [
-                  if (ref.watch(myVentureProvider).value != null) ...[
+              TourTarget(
+                id: 'account-menu',
+                child: _MenuGroup(
+                  rows: [
+                    if (ref.watch(myVentureProvider).value != null) ...[
+                      _MenuRow(
+                        icon: Icons.support_agent_outlined,
+                        label: 'Necesidades y dificultades',
+                        onTap: () => context.push(NeedsRoutes.list),
+                      ),
+                      _MenuRow(
+                        icon: Icons.folder_open_outlined,
+                        label: 'Documentos',
+                        onTap: () => context.push(DocumentsRoutes.list),
+                      ),
+                    ],
                     _MenuRow(
-                      icon: Icons.support_agent_outlined,
-                      label: 'Necesidades y dificultades',
-                      onTap: () => context.push(NeedsRoutes.list),
-                    ),
-                    _MenuRow(
-                      icon: Icons.folder_open_outlined,
-                      label: 'Documentos',
-                      onTap: () => context.push(DocumentsRoutes.list),
+                      icon: Icons.school_outlined,
+                      label: 'Capacitaciones',
+                      onTap: () => context.push(TrainingRoutes.list),
                     ),
                   ],
-                  _MenuRow(
-                    icon: Icons.school_outlined,
-                    label: 'Capacitaciones',
-                    onTap: () => context.push(TrainingRoutes.list),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 14),
               _MenuGroup(
                 rows: [
+                  _MenuRow(
+                    icon: Icons.explore_outlined,
+                    label: 'Ver el tutorial de la app',
+                    onTap: () =>
+                        ref.read(tourControllerProvider.notifier).start(),
+                  ),
                   _MenuRow(
                     icon: Icons.lock_outline,
                     label: 'Cambiar contraseña',

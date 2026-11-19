@@ -7,6 +7,7 @@ class AuthUser {
     required this.email,
     required this.rol,
     this.permisos = const [],
+    this.tutorialCompletadoAt,
   });
 
   final int id;
@@ -15,6 +16,11 @@ class AuthUser {
   final String email;
   final String? rol;
   final List<String> permisos;
+
+  /// Cuándo terminó (o saltó) el tutorial guiado; `null` = aún no lo ha visto.
+  final DateTime? tutorialCompletadoAt;
+
+  bool get hasSeenTutorial => tutorialCompletadoAt != null;
 
   String get fullName => '$nombre $apellido'.trim();
 

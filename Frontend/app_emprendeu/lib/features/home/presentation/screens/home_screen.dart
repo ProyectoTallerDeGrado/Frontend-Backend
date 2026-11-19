@@ -86,7 +86,7 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   const ConnectionPill(),
                   const SizedBox(width: 8),
-                  const NotificationsBell(),
+                  const TourTarget(id: 'home-bell', child: NotificationsBell()),
                 ],
               ),
               const SizedBox(height: 18),
@@ -127,7 +127,10 @@ class HomeScreen extends ConsumerWidget {
     return [
       const SizedBox(height: 18),
       profile.when(
-        data: (p) => ProgressCard(profile: p, stageName: venture.stageName),
+        data: (p) => TourTarget(
+          id: 'home-progress',
+          child: ProgressCard(profile: p, stageName: venture.stageName),
+        ),
         loading: () => Semantics(
           label: 'Cargando tu progreso',
           child: const Skeleton(height: 144, radius: 24),
@@ -136,9 +139,12 @@ class HomeScreen extends ConsumerWidget {
       ),
       const SizedBox(height: 18),
       journey.maybeWhen(
-        data: (j) => NextChallengeCard(
-          journey: j,
-          onOpenJourney: () => context.go(GamificationRoutes.journey),
+        data: (j) => TourTarget(
+          id: 'home-challenge',
+          child: NextChallengeCard(
+            journey: j,
+            onOpenJourney: () => context.go(GamificationRoutes.journey),
+          ),
         ),
         orElse: () => const SizedBox.shrink(),
       ),

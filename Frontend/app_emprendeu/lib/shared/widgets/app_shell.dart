@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/app_tokens.dart';
+import '../../features/auth/index.dart';
 import '../../features/mentoring/index.dart';
 import 'app_bottom_nav.dart';
 
@@ -24,19 +25,31 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(syncControllerProvider);
-    return Scaffold(
-      body: _TabFade(
-        index: navigationShell.currentIndex,
-        child: navigationShell,
-      ),
-      bottomNavigationBar: AppBottomNav(
-        items: _items,
-        currentIndex: navigationShell.currentIndex,
-        onSelected: (i) => navigationShell.goBranch(
-          i,
-          initialLocation: i == navigationShell.currentIndex,
+    return Stack(
+      children: [
+        Scaffold(
+          body: _TabFade(
+            index: navigationShell.currentIndex,
+            child: navigationShell,
+          ),
+          bottomNavigationBar: TourTarget(
+            id: 'nav',
+            child: AppBottomNav(
+              items: _items,
+              currentIndex: navigationShell.currentIndex,
+              onSelected: (i) => navigationShell.goBranch(
+                i,
+                initialLocation: i == navigationShell.currentIndex,
+              ),
+            ),
+          ),
         ),
-      ),
+        // Tutorial de primer ingreso: va encima de todo, barra inferior incluida.
+        GuidedTour(
+          currentTab: navigationShell.currentIndex,
+          onSelectTab: navigationShell.goBranch,
+        ),
+      ],
     );
   }
 }

@@ -56,6 +56,21 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     return _apply(result);
   }
 
+  /// Marca el tutorial como visto (o lo reinicia) y actualiza el usuario en sesión.
+  /// Si falla se ignora: el tutorial volvería a salir en el próximo ingreso.
+  Future<void> setTutorialCompleted(bool completed) async {
+    final session = state.value;
+    if (session == null) return;
+    final result = await ref.read(setTutorialUseCaseProvider)(
+      completed: completed,
+    );
+    if (result case Ok(:final value)) {
+      state = AsyncData(
+        AuthSession(accessToken: session.accessToken, user: value),
+      );
+    }
+  }
+
   Future<void> logout() async {
     await ref.read(logoutUseCaseProvider)();
     await ref.read(localDataCleanerProvider).clearUserData();

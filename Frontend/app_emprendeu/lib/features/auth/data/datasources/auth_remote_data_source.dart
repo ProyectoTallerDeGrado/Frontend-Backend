@@ -54,6 +54,14 @@ class AuthRemoteDataSource {
     );
   }
 
+  /// Marca (`POST`) o reinicia (`DELETE`) el tutorial guiado del usuario actual.
+  Future<AuthUserDto> setTutorial({required bool completed}) async {
+    final response = completed
+        ? await _dio.post<Map<String, dynamic>>('/auth/me/tutorial')
+        : await _dio.delete<Map<String, dynamic>>('/auth/me/tutorial');
+    return AuthUserDto.fromJson(response.data!);
+  }
+
   Future<AuthUserDto> me(String token) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/auth/me',

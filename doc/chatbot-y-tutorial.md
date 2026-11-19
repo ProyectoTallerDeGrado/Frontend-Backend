@@ -179,3 +179,23 @@ tests, porque en este entorno no hay `GEMINI_API_KEY`. Con la clave configurada,
   - si aplica, sus preguntas en `help-suggestions.ts`.
 - Para volver a mostrarle el tutorial a alguien: `DELETE /api/v1/auth/me/tutorial` con su sesión, o el botón
   "Ver el tutorial del sistema".
+
+## 8. Tutorial guiado en la app móvil
+
+El emprendedor ve un recorrido de primer ingreso en la app (`Frontend/app_emprendeu`), con la misma bandera del
+backend que la web (`usuario.tutorial_completado_at`): se ve una vez por cuenta, en cualquier dispositivo.
+
+- **Qué hace:** oscurece la pantalla, resalta un elemento real (barra inferior, progreso, próximo reto, campana,
+  Camino, Mentorías, Coach, Perfil) y lo explica en un globo. Al avanzar cambia de pestaña solo. Controles: Saltar,
+  Anterior, Siguiente y Empezar; el botón «atrás» de Android lo salta.
+- **Cuándo sale:** ~0,7 s después de entrar si `GET /auth/me` trae `tutorial_completado_at = null`. Al terminar o saltar
+  llama a `POST /auth/me/tutorial` (si falla, vuelve a salir en el próximo ingreso).
+- **Repetirlo:** Perfil → «Ver el tutorial de la app» (local, no toca el backend hasta terminar).
+  Para forzarlo en el próximo ingreso: `DELETE /api/v1/auth/me/tutorial`.
+- **Código** (`lib/features/auth/presentation/tour/`): `tour_steps.dart` (pasos y pestañas), `tour_controller.dart`
+  (estado), `tour_targets.dart` (`TourTarget(id:, child:)` registra el `GlobalKey` de cada elemento) y
+  `guided_tour.dart` (overlay con recorte animado y globo). `AppShell` lo monta encima de la barra inferior.
+- **Mantenimiento:** al añadir una pantalla o sección importante, agrega su paso en `buildTourSteps` y envuelve el
+  elemento con `TourTarget`. Si el elemento no existe (p. ej. aún carga), el globo sale centrado.
+- **Pruebas:** `test/features/auth/presentation/guided_tour_test.dart`. El usuario de prueba `entrepreneur` ya tiene el
+  tutorial visto para que no tape las demás pantallas.

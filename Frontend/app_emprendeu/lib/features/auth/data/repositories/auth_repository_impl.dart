@@ -78,6 +78,11 @@ class AuthRepositoryImpl implements AuthRepository {
       _guard(() async => (await _remote.me(token)).toEntity());
 
   @override
+  Future<Result<AuthUser>> setTutorial({required bool completed}) => _guard(
+    () async => (await _remote.setTutorial(completed: completed)).toEntity(),
+  );
+
+  @override
   Future<String?> readToken() => _local.readToken();
 
   @override

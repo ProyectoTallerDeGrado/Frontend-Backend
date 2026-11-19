@@ -6,3 +6,6 @@ export 'presentation/controllers/auth_controller.dart'
     show AuthController, authControllerProvider;
 export 'presentation/controllers/auth_providers.dart'
     show authRepositoryProvider;
+export 'presentation/tour/guided_tour.dart' show GuidedTour;
+export 'presentation/tour/tour_controller.dart' show tourControllerProvider;
+export 'presentation/tour/tour_targets.dart' show TourTarget;
