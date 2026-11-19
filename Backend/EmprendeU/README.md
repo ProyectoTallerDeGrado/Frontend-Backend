@@ -1,4 +1,4 @@
-# Backend EmprendeU
+k# Backend EmprendeU
 
 API en Python 3.13 con FastAPI y arquitectura de monolito modular.
 Lee [AGENTS.md](AGENTS.md) antes de crear archivos o implementar módulos: define la

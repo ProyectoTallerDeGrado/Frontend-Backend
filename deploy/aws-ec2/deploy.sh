@@ -25,7 +25,8 @@ docker compose up -d --remove-orphans
 for _ in $(seq 1 30); do
   if docker compose exec -T api python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)" 2>/dev/null; then
     echo "API sana."
-    docker image prune -f >/dev/null
+    # Borra imágenes sin uso de más de 7 días (conserva las recientes para volver atrás).
+    docker image prune -af --filter "until=168h" >/dev/null
     exit 0
   fi
   sleep 3
