@@ -90,7 +90,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       logoutAction={logoutAction}
       overlays={
         <>
-          <HelpChat extra={<RestartTourButton />} />
+          <HelpChat userId={user.usuario_id} extra={<RestartTourButton />} />
           <GuidedTour
             steps={buildTourSteps({ firstName: user.nombre, groups })}
             autoStart={user.tutorial_completado_at === null}

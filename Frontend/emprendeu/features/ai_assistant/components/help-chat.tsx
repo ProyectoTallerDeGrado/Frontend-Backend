@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Fragment, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { MessageCircleQuestion, SendHorizontal, Sparkles, Trash2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -56,9 +56,16 @@ function RichText({ text }: { text: string }) {
  * Botón flotante de ayuda (abajo a la derecha) con un chat que explica cómo usar el panel.
  * `extra` va al pie del panel (p. ej. «Ver tutorial», que aporta la feature `auth`).
  */
-export function HelpChat({ extra }: { extra?: ReactNode }) {
+export function HelpChat({ extra, userId }: { extra?: ReactNode; userId: number }) {
   const pathname = usePathname();
-  const { open, pending, messages, setOpen, add, setPending, clear } = useHelpChatStore();
+  const { ownerId, open, pending, messages: stored, setOpen, add, setPending, clear, bind } = useHelpChatStore();
+  // La conversación guardada puede ser de otra persona que usó este navegador: sin dueño no se muestra nada.
+  const owned = ownerId === userId;
+  const messages = useMemo(() => (owned ? stored : []), [owned, stored]);
+
+  useEffect(() => {
+    bind(userId);
+  }, [userId, bind]);
   const [draft, setDraft] = useState("");
   const [, startTransition] = useTransition();
   const listRef = useRef<HTMLDivElement>(null);
@@ -81,13 +88,15 @@ export function HelpChat({ extra }: { extra?: ReactNode }) {
 
   function send(question: string) {
     const text = question.trim();
-    if (!text || pending) return;
+    if (!text || pending || !owned) return;
     const history = messages.map(({ role, text: t }) => ({ role, text: t }));
     add({ role: "user", text });
     setDraft("");
     setPending(true);
     startTransition(async () => {
       const result = await askHelpAction(text, history, pathname);
+      // Si cambió la sesión mientras esperaba, la respuesta no pertenece a la conversación actual.
+      if (useHelpChatStore.getState().ownerId !== userId) return;
       setPending(false);
       if (result.ok) add({ role: "assistant", text: result.reply.respuesta, origin: result.reply.origen });
       else add({ role: "assistant", text: result.message });
